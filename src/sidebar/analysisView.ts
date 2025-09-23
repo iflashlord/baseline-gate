@@ -764,36 +764,56 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .controls {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.5rem;
-        padding: 0.75rem;
-        padding-bottom: 0.5rem;
+        gap: 0.375rem;
+        padding: 0.5rem 0.75rem;
+        padding-bottom: 0.375rem;
         border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+        background: var(--vscode-sideBar-background);
       }
       .controls button {
         display: inline-flex;
         align-items: center;
-        gap: 0.4rem;
+        gap: 0.3rem;
         border: 1px solid var(--vscode-button-border, transparent);
         background: var(--vscode-button-secondaryBackground);
         color: var(--vscode-button-secondaryForeground);
-        padding: 0.25rem 0.7rem;
-        border-radius: 4px;
+        padding: 0.25rem 0.625rem;
+        border-radius: 3px;
         cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 500;
+        height: 28px;
+        min-width: 28px;
+        transition: all 0.15s ease;
+      }
+      .controls button:hover {
+        background: var(--vscode-button-secondaryHoverBackground);
+        border-color: var(--vscode-button-border);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
       .controls button.primary {
         background: var(--vscode-button-background);
         color: var(--vscode-button-foreground);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .controls button.primary:hover {
+        background: var(--vscode-button-hoverBackground);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
       }
       .controls button:disabled {
-        opacity: 0.6;
+        opacity: 0.5;
         cursor: default;
+        transform: none;
+        box-shadow: none;
       }
       .filters {
         display: grid;
         grid-template-columns: minmax(120px, 1fr);
-        gap: 0.5rem;
-        padding: 0 0.75rem 0.75rem;
+        gap: 0.375rem;
+        padding: 0 0.75rem 0.5rem;
         border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+        background: var(--vscode-sideBar-background);
       }
       @media (min-width: 420px) {
         .filters {
@@ -808,36 +828,53 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       }
       .search-box input {
         width: 100%;
-        padding: 0.35rem 0.5rem;
-        border-radius: 4px;
+        padding: 0.3rem 0.5rem;
+        border-radius: 3px;
         border: 1px solid var(--vscode-input-border, transparent);
         background: var(--vscode-input-background);
         color: var(--vscode-input-foreground);
+        font-size: 0.8rem;
+        height: 28px;
+        box-sizing: border-box;
+        transition: border-color 0.15s ease;
+      }
+      .search-box input:focus {
+        border-color: var(--vscode-focusBorder);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(90, 133, 204, 0.2);
       }
       .search-box input::placeholder {
         color: var(--vscode-input-placeholderForeground);
       }
       .severity-filter {
         display: flex;
-        gap: 0.35rem;
+        gap: 0.25rem;
         flex-wrap: wrap;
       }
       .severity-filter label {
         display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
+        gap: 0.25rem;
         border: 1px solid var(--vscode-inputOption-border, transparent);
         background: var(--vscode-inputOption-activeBackground);
         color: var(--vscode-inputOption-activeForeground);
-        padding: 0.15rem 0.6rem;
-        border-radius: 999px;
+        padding: 0.125rem 0.5rem;
+        border-radius: 12px;
         cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: 500;
+        transition: all 0.15s ease;
+        height: 26px;
       }
       .severity-filter label.inactive {
         background: transparent;
         color: var(--vscode-input-foreground);
         border-color: var(--vscode-input-border, transparent);
-        opacity: 0.7;
+        opacity: 0.65;
+      }
+      .severity-filter label:hover:not(.inactive) {
+        background: var(--vscode-inputOption-hoverBackground, var(--vscode-inputOption-activeBackground));
+        transform: translateY(-1px);
       }
       .severity-filter input {
         display: none;
@@ -845,26 +882,37 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .sort-select {
         display: flex;
         justify-content: flex-end;
-        gap: 0.5rem;
+        gap: 0.375rem;
         flex-wrap: wrap;
       }
       .sort-select select {
-        padding: 0.3rem 0.5rem;
-        border-radius: 4px;
+        padding: 0.25rem 0.4rem;
+        border-radius: 3px;
         border: 1px solid var(--vscode-dropdown-border, transparent);
         background: var(--vscode-dropdown-background);
         color: var(--vscode-dropdown-foreground);
+        font-size: 0.8rem;
+        height: 28px;
+        cursor: pointer;
+      }
+      .sort-select label {
+        font-size: 0.8rem;
+        color: var(--vscode-descriptionForeground);
+        font-weight: 500;
       }
       .summary {
-        font-size: 0.85rem;
-        opacity: 0.8;
-        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+        opacity: 0.85;
+        padding: 0.375rem 0.75rem;
+        color: var(--vscode-descriptionForeground);
+        border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+        background: var(--vscode-sideBar-background);
       }
       .content {
         flex: 1;
         display: flex;
-        gap: 0.25rem;
-        padding: 0 0.5rem 0.5rem;
+        gap: 0.1rem;
+        padding: 0.25rem 0.5rem 0.25rem;
         box-sizing: border-box;
         overflow: hidden;
         min-height: 0;
@@ -897,7 +945,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         flex: 1 1 55%;
         overflow-y: auto;
         overflow-x: hidden;
-        padding: 0.25rem 0;
+        padding: 0.125rem 0;
         display: block;
         box-sizing: border-box;
         min-height: 0;
@@ -937,22 +985,30 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       }
       .file-group {
         border: 1px solid var(--vscode-tree-indentGuidesStroke, transparent);
-        border-radius: 6px;
+        border-radius: 4px;
         background: var(--vscode-sideBarSectionHeader-background, transparent);
         overflow: hidden;
-        margin-bottom: 0.15rem;
+        margin-bottom: 0.125rem;
         display: block;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        transition: all 0.2s ease;
+      }
+      
+      .file-group:hover {
+        border-color: var(--vscode-list-hoverBackground);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
       }
       .file-header {
         display: grid;
         grid-template-columns: auto auto 1fr auto;
-        gap: 0.4rem;
+        gap: 0.375rem;
         align-items: center;
-        padding: 0.5rem 0.75rem;
+        padding: 0.375rem 0.5rem;
         background: var(--vscode-tree-tableColumnsBorder, transparent);
         cursor: pointer;
-        min-height: 44px; /* Minimum touch target size */
+        min-height: 36px;
         position: relative;
+        transition: all 0.15s ease;
       }
       
       /* Enhanced focus indicators */
@@ -960,8 +1016,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .issue:focus,
       button:focus {
         outline: 2px solid var(--vscode-focusBorder);
-        outline-offset: 2px;
-        border-radius: 4px;
+        outline-offset: 1px;
+        border-radius: 3px;
       }
       
       /* High contrast focus for better accessibility */
@@ -982,23 +1038,28 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .issue:hover {
         background: var(--vscode-list-hoverBackground);
         border-color: var(--vscode-list-hoverForeground);
+        transform: translateY(-1px);
       }
       .file-group.selected .file-header {
         background: var(--vscode-editor-selectionBackground, rgba(128, 128, 128, 0.15));
+        border-left: 3px solid var(--vscode-focusBorder);
       }
+      
       details[open] .file-header {
         border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+        background: var(--vscode-list-activeSelectionBackground, rgba(128, 128, 128, 0.1));
       }
       .file-icon {
-        width: 1.2rem;
-        height: 1.2rem;
-        border-radius: 3px;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 2px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         font-weight: 600;
-        font-size: 0.7rem;
+        font-size: 0.65rem;
         color: #fff;
+        text-transform: uppercase;
       }
       .file-icon.js { background: #f1c40f; color: #222; }
       .file-icon.ts { background: #3178c6; }
@@ -1011,13 +1072,16 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        font-weight: 600;
+        font-weight: 500;
+        font-size: 0.8rem;
+        color: var(--vscode-foreground);
       }
       .file-counts {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         display: inline-flex;
-        gap: 0.4rem;
+        gap: 0.3rem;
         color: var(--vscode-descriptionForeground);
+        font-weight: 500;
       }
       .file-counts span {
         display: inline-flex;
@@ -1025,8 +1089,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         gap: 0.2rem;
       }
       .file-counts img {
-        width: 0.75rem;
-        height: 0.75rem;
+        width: 0.7rem;
+        height: 0.7rem;
       }
       .file-meta {
         display: inline-flex;
@@ -1036,29 +1100,34 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       }
       .file-detail-button {
         border: 1px solid transparent;
-        border-radius: 4px;
+        border-radius: 3px;
         background: transparent;
         color: var(--vscode-button-secondaryForeground);
         cursor: pointer;
-        padding: 0.15rem 0.45rem;
-        font-size: 0.75rem;
+        padding: 0.125rem 0.375rem;
+        font-size: 0.7rem;
         line-height: 1.2;
+        font-weight: 500;
+        transition: all 0.15s ease;
+        height: 24px;
       }
       .file-detail-button:hover {
         color: var(--vscode-button-foreground);
+        background: var(--vscode-button-secondaryHoverBackground);
+        border-color: var(--vscode-button-border);
       }
       .file-toggle {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 0.9rem;
-        height: 0.9rem;
+        width: 0.8rem;
+        height: 0.8rem;
         color: var(--vscode-descriptionForeground);
-        transition: transform 0.15s ease;
+        transition: transform 0.2s ease;
       }
       .file-toggle::before {
         content: '▸';
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         line-height: 1;
       }
       .file-group[open] .file-toggle {
@@ -1067,42 +1136,45 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .issues {
         display: flex;
         flex-direction: column;
-        gap: 0.1rem;
-        padding: 0.3rem 0.5rem 0.45rem;
+        gap: 0.075rem;
+        padding: 0.25rem 0.375rem 0.375rem;
+        background: var(--vscode-editor-background, rgba(0, 0, 0, 0.02));
       }
       .issue {
         border: 1px solid var(--vscode-tree-indentGuidesStroke, transparent);
-        border-radius: 4px;
-        padding: 0.35rem 0.45rem;
+        border-radius: 3px;
+        padding: 0.25rem 0.375rem;
         display: grid;
         grid-template-columns: auto 1fr auto;
-        gap: 0.35rem;
+        gap: 0.3rem;
         background: var(--vscode-editor-inactiveSelection);
         cursor: pointer;
-        min-height: 44px; /* Minimum touch target size */
+        min-height: 36px;
         align-items: center;
-        transition: all 0.15s ease;
+        transition: all 0.2s ease;
+        position: relative;
       }
       
       /* Improved color contrast for better readability */
       .issue.safe { 
-        background: var(--vscode-editor-inactiveSelection, rgba(16,124,65,0.1)); 
-        border-color: rgba(16,124,65,0.3);
+        background: var(--vscode-editor-inactiveSelection, rgba(16,124,65,0.08)); 
+        border-color: rgba(16,124,65,0.2);
       }
       .issue.warning { 
-        background: rgba(249, 209, 129, 0.15); 
-        border-color: rgba(249, 209, 129, 0.4);
+        background: rgba(249, 209, 129, 0.12); 
+        border-color: rgba(249, 209, 129, 0.3);
       }
       .issue.blocked { 
-        background: rgba(209, 52, 56, 0.18); 
-        border-color: rgba(209, 52, 56, 0.4);
+        background: rgba(209, 52, 56, 0.15); 
+        border-color: rgba(209, 52, 56, 0.3);
       }
       .issue.selected {
         outline: 2px solid var(--vscode-focusBorder, rgba(90, 133, 204, 0.8));
         outline-offset: 1px;
-        box-shadow: 0 0 0 1px var(--vscode-focusBorder, rgba(90, 133, 204, 0.4));
+        box-shadow: 0 0 0 1px var(--vscode-focusBorder, rgba(90, 133, 204, 0.4)), 0 2px 8px rgba(0, 0, 0, 0.1);
         background: var(--vscode-list-activeSelectionBackground);
         color: var(--vscode-list-activeSelectionForeground);
+        transform: translateY(-1px);
       }
       
       /* Better button accessibility */
@@ -1110,11 +1182,38 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .file-detail-button,
       .detail-close,
       .detail-doc-link {
-        min-height: 32px; /* Minimum touch target size */
-        min-width: 32px;
+        min-height: 24px;
+        min-width: 24px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+      }
+      
+      /* Animation keyframes */
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      .file-group {
+        animation: slideIn 0.2s ease-out;
+      }
+      
+      /* Smooth state transitions */
+      .file-group.selected .file-header {
+        background: var(--vscode-editor-selectionBackground, rgba(128, 128, 128, 0.15));
+        border-left: 3px solid var(--vscode-focusBorder);
+      }
+      
+      details[open] .file-header {
+        border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+        background: var(--vscode-list-activeSelectionBackground, rgba(128, 128, 128, 0.1));
       }
       
       /* Skip link for keyboard users */
@@ -1135,55 +1234,66 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         top: 6px;
       }
       .issue-icon {
-        width: 1.1rem;
-        height: 1.1rem;
+        width: 1rem;
+        height: 1rem;
       }
       .issue-main {
         display: flex;
         flex-direction: column;
-        gap: 0.15rem;
+        gap: 0.125rem;
+        min-width: 0;
       }
       .issue-title {
-        font-weight: 600;
+        font-weight: 500;
+        font-size: 0.8rem;
+        line-height: 1.3;
+        color: var(--vscode-foreground);
       }
       .issue-snippet {
         font-family: var(--vscode-editor-font-family, monospace);
-        font-size: 0.85rem;
+        font-size: 0.75rem;
         white-space: normal;
         word-break: break-word;
         color: var(--vscode-foreground);
-        opacity: 0.8;
+        opacity: 0.75;
         background: var(--vscode-editor-background, transparent);
-        border-radius: 3px;
-        padding: 0.2rem 0.35rem;
+        border-radius: 2px;
+        padding: 0.125rem 0.25rem;
+        line-height: 1.3;
       }
       .issue-actions {
         display: flex;
         flex-direction: column;
         align-items: flex-end;
         justify-content: flex-start;
-        gap: 0.3rem;
+        gap: 0.2rem;
       }
       .issue-actions button {
         border: 1px solid transparent;
-        border-radius: 4px;
+        border-radius: 3px;
         background: transparent;
         color: var(--vscode-button-secondaryForeground);
         cursor: pointer;
-        padding: 0.2rem 0.4rem;
-        font-size: 0.75rem;
+        padding: 0.125rem 0.3rem;
+        font-size: 0.7rem;
+        font-weight: 500;
+        transition: all 0.15s ease;
+        height: 22px;
       }
       .issue-actions button:hover {
         color: var(--vscode-button-foreground);
+        background: var(--vscode-button-secondaryHoverBackground);
+        border-color: var(--vscode-button-border);
       }
       .detail {
         flex: 1 1 45%;
         border-left: 1px solid var(--vscode-sideBarSectionHeader-border);
-        padding: 0.25rem 0 0.25rem 0.5rem;
+        padding: 0.25rem 0 0.25rem 0.375rem;
         box-sizing: border-box;
         overflow: auto;
         display: flex;
         min-height: 0;
+        background: var(--vscode-editor-background, rgba(0, 0, 0, 0.02));
         /* Improved scrolling */
         scroll-behavior: smooth;
         scrollbar-width: thin;
@@ -1371,11 +1481,40 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       @media (max-width: 880px) {
         .content {
           flex-direction: column;
+          gap: 0.125rem;
         }
         .detail {
           border-left: none;
           border-top: 1px solid var(--vscode-sideBarSectionHeader-border);
-          padding: 0.5rem 0 0;
+          padding: 0.375rem 0 0;
+        }
+        .filters {
+          grid-template-columns: 1fr;
+        }
+        .severity-filter {
+          justify-content: center;
+        }
+        .sort-select {
+          justify-content: center;
+        }
+      }
+      
+      /* Compact mode for smaller screens */
+      @media (max-width: 600px) {
+        .controls {
+          padding: 0.375rem 0.5rem;
+        }
+        .file-header {
+          padding: 0.25rem 0.375rem;
+          gap: 0.25rem;
+        }
+        .issue {
+          padding: 0.2rem 0.3rem;
+          gap: 0.25rem;
+        }
+        .file-icon, .issue-icon {
+          width: 0.9rem;
+          height: 0.9rem;
         }
       }
       .hidden {
