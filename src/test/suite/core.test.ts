@@ -5,24 +5,26 @@ import { detectSymbolAtPosition } from "../../core/detectors/detectJs";
 import { detectCssTokenAtPosition } from "../../core/detectors/detectCss";
 import { getFeatureById } from "../../core/baselineData";
 
+const v = (version: number) => ({ raw: version.toString(), version });
+
 suite("core scoring", () => {
   test("returns safe when support meets the target", () => {
-    const verdict = scoreFeature({ chrome: 130, edge: 130, firefox: 130, safari: 18 }, "modern");
+    const verdict = scoreFeature({ chrome: v(130), edge: v(130), firefox: v(130), safari: v(18) }, "modern");
     assert.strictEqual(verdict, "safe");
   });
 
   test("handles enterprise thresholds at boundary", () => {
-    const verdict = scoreFeature({ chrome: 114, edge: 114, firefox: 115, safari: 16.4 }, "enterprise");
+    const verdict = scoreFeature({ chrome: v(114), edge: v(114), firefox: v(115), safari: v(16.4) }, "enterprise");
     assert.strictEqual(verdict, "safe");
   });
 
   test("returns warning when browser data is missing", () => {
-    const verdict = scoreFeature({ chrome: 130, firefox: 130 }, "modern");
+    const verdict = scoreFeature({ chrome: v(130), firefox: v(130) }, "modern");
     assert.strictEqual(verdict, "warning");
   });
 
   test("returns blocked when a browser is below the target", () => {
-    const verdict = scoreFeature({ chrome: 110, edge: 110, firefox: 119, safari: 17 }, "modern");
+    const verdict = scoreFeature({ chrome: v(110), edge: v(110), firefox: v(119), safari: v(17) }, "modern");
     assert.strictEqual(verdict, "blocked");
   });
 });

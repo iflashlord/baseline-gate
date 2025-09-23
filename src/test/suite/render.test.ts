@@ -3,15 +3,36 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { buildFeatureHover } from "../../hover/render";
 import { scoreFeature } from "../../core/scoring";
-import type { BaselineFeature } from "../../core/baselineData";
+import type { BaselineFeature, BrowserKey, SupportMatrix } from "../../core/baselineData";
+
+const supportMatrix = (versions: Partial<Record<BrowserKey, number>>): SupportMatrix => {
+  const matrix: SupportMatrix = {};
+  for (const [key, version] of Object.entries(versions)) {
+    if (version === undefined) {
+      continue;
+    }
+    matrix[key as BrowserKey] = { raw: version.toString(), version };
+  }
+  return matrix;
+};
 
 function buildFeature(partial: Partial<BaselineFeature>): BaselineFeature {
   return {
-    id: "feature-id",
-    name: "Feature Name",
-    baseline: null,
-    support: {},
-    ...partial
+    id: partial.id ?? "feature-id",
+    name: partial.name ?? "Feature Name",
+    baseline: partial.baseline ?? null,
+    support: partial.support ?? {},
+    specUrls: partial.specUrls ?? [],
+    caniuseIds: partial.caniuseIds ?? [],
+    compatFeatures: partial.compatFeatures ?? [],
+    groups: partial.groups ?? [],
+    snapshots: partial.snapshots ?? [],
+    discouraged: partial.discouraged,
+    description: partial.description,
+    descriptionHtml: partial.descriptionHtml,
+    baselineLowDate: partial.baselineLowDate,
+    baselineHighDate: partial.baselineHighDate,
+    docsUrl: partial.docsUrl
   };
 }
 
@@ -28,9 +49,14 @@ suite("rendering hover content", () => {
       baseline: "high",
       baselineLowDate: "2024-01",
       baselineHighDate: "2024-05",
-      support: { chrome: 130, edge: 130, firefox: 130, safari: 18 },
+      support: supportMatrix({ chrome: 130, edge: 130, firefox: 130, safari: 18 }),
       description: "Rich feature description.",
-      docsUrl: "https://example.com/docs"
+      docsUrl: "https://example.com/docs",
+      specUrls: ["https://drafts.csswg.org/fancy/"],
+      caniuseIds: ["fancy"],
+      compatFeatures: ["api.Fancy"],
+      groups: [{ id: "animation", name: "Animation" }],
+      snapshots: [{ id: "spec-2024", name: "Spec 2024" }]
     });
 
     const verdict = scoreFeature(feature.support, "modern");
@@ -41,6 +67,9 @@ suite("rendering hover content", () => {
     assert.match(value, /\$\(check\) Safe/);
     assert.match(value, /<img src=".*baseline-widely-icon\.svg".*>\s*&nbsp;Baseline: \*\*High\*\* \(2024-01 → 2024-05\)/);
     assert.match(value, /Feature meets the Modern baseline\./);
+    assert.match(value, /\*\*Desktop support\*\*/);
+    assert.match(value, /Groups: Animation/);
+    assert.ok(value.includes("drafts.csswg.org"));
     assert.ok(
       value.includes("command:baseline-gate.openDocs?%7B%22id%22%3A%22feature-id%22%7D"),
       "encoded docs command should be present"
@@ -50,7 +79,7 @@ suite("rendering hover content", () => {
   test("missing support data yields warnings and fallback guidance", () => {
     const feature = buildFeature({
       baseline: "low",
-      support: { chrome: 118, edge: 118, firefox: 116 },
+      support: supportMatrix({ chrome: 118, edge: 118, firefox: 116 }),
       description: undefined
     });
 
@@ -68,7 +97,7 @@ suite("rendering hover content", () => {
   test("blocked verdict explains gaps, missing baseline, and docs fallback", () => {
     const feature = buildFeature({
       baseline: null,
-      support: { chrome: 100, edge: 100, firefox: 110, safari: 15 }
+      support: supportMatrix({ chrome: 100, edge: 100, firefox: 110, safari: 15 })
     });
 
     const md = renderHover(feature, "blocked", "enterprise");
@@ -83,7 +112,7 @@ suite("rendering hover content", () => {
   test("features without documentation only link to the baseline guide", () => {
     const feature = buildFeature({
       docsUrl: undefined,
-      support: { chrome: 130, edge: 130, firefox: 130, safari: 18 }
+      support: supportMatrix({ chrome: 130, edge: 130, firefox: 130, safari: 18 })
     });
 
     const md = renderHover(feature, "safe", "modern");
@@ -99,7 +128,7 @@ suite("rendering hover content", () => {
   test("fallback tips collapse duplicate guidance", () => {
     const feature = buildFeature({
       baseline: null,
-      support: { chrome: 100 }
+      support: supportMatrix({ chrome: 100 })
     });
 
     const md = renderHover(feature, "warning", "enterprise");

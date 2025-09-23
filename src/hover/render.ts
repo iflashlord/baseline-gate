@@ -1,15 +1,19 @@
 import * as vscode from "vscode";
-import type { BaselineFeature } from "../core/baselineData";
+import type { BaselineFeature, BrowserKey, SupportStatement } from "../core/baselineData";
 import type { Verdict } from "../core/scoring";
 import { TARGET_MIN, type Target } from "../core/targets";
 
-const isNullish = (value: unknown): value is null | undefined => value === null || value === undefined;
-
-const BROWSERS: Array<{ key: keyof BaselineFeature["support"]; label: string }> = [
+const DESKTOP_BROWSERS: Array<{ key: BrowserKey; label: string }> = [
   { key: "chrome", label: "Chrome" },
   { key: "edge", label: "Edge" },
   { key: "firefox", label: "Firefox" },
   { key: "safari", label: "Safari" }
+];
+
+const MOBILE_BROWSERS: Array<{ key: BrowserKey; label: string }> = [
+  { key: "chrome_android", label: "Chrome Android" },
+  { key: "firefox_android", label: "Firefox Android" },
+  { key: "safari_ios", label: "Safari iOS" }
 ];
 
 export interface HoverRenderOptions {
@@ -34,21 +38,28 @@ export function buildFeatureHover(
   }
   md.appendMarkdown(`\n`);
 
-  md.appendMarkdown(`---\n\n`);
-  md.appendMarkdown(`**Support snapshot**\n\n`);
-  md.appendMarkdown(`| Browser | Support | Target | Status |\n| :-- | :--: | :--: | :-- |\n`);
-  const targetMin = TARGET_MIN[target];
-  for (const browser of BROWSERS) {
-    const supportValue = feature.support[browser.key];
-    const required = targetMin[browser.key];
-    md.appendMarkdown(
-      `| ${browser.label} | ${formatSupport(supportValue)} | ${formatTarget(required)} | ${formatStatus(supportValue, required)} |\n`
-    );
+  const discouragedNotice = formatDiscouraged(feature);
+  if (discouragedNotice) {
+    md.appendMarkdown(`> ${discouragedNotice}\n\n`);
   }
-  md.appendMarkdown(`\n`);
+
+  const supportSection = buildSupportSection(feature, target);
+  if (supportSection) {
+    md.appendMarkdown(`---\n\n`);
+    md.appendMarkdown(`${supportSection}\n`);
+  }
 
   if (feature.description) {
     md.appendMarkdown(`${feature.description.trim()}\n\n`);
+  }
+
+  const contextItems = buildContextItems(feature);
+  if (contextItems.length) {
+    md.appendMarkdown(`**Feature context**\n`);
+    for (const item of contextItems) {
+      md.appendMarkdown(`- ${item}\n`);
+    }
+    md.appendMarkdown(`\n`);
   }
 
   const tips = buildFallbackTips(feature, verdict, target);
@@ -60,14 +71,14 @@ export function buildFeatureHover(
     md.appendMarkdown(`\n`);
   }
 
-  const links: string[] = [];
-  if (feature.docsUrl) {
-    const args = encodeURIComponent(JSON.stringify({ id: feature.id }));
-    links.push(`[More info ↗](command:baseline-gate.openDocs?${args})`);
+  const resources = buildResourceLinks(feature);
+  if (resources.length) {
+    md.appendMarkdown(`---\n\n**Resources**\n`);
+    for (const link of resources) {
+      md.appendMarkdown(`- ${link}\n`);
+    }
+    md.appendMarkdown(`\n`);
   }
-  links.push(`[Baseline guide ↗](https://web.dev/articles/baseline-tools-web-features)`);
-
-  md.appendMarkdown(`---\n\n${links.join(" · ")}\n`);
 
   return md;
 }
@@ -114,25 +125,126 @@ function formatBaselineDates(feature: BaselineFeature): string {
   return dates.length ? ` (${dates.join(" → ")})` : "";
 }
 
-function formatSupport(value: number | undefined): string {
-  return isNullish(value) ? "—" : `\`${value}\``;
+function formatDiscouraged(feature: BaselineFeature): string | undefined {
+  const info = feature.discouraged;
+  if (!info) {
+    return undefined;
+  }
+
+  const sources = info.accordingTo.map((url) => formatExternalLink(url)).filter(Boolean);
+  if (!sources.length) {
+    return undefined;
+  }
+
+  const sourceLabel = sources.join(" · ");
+  const altLabel = info.alternatives?.length
+    ? ` · Alternatives: ${info.alternatives.map((alt) => `\`${alt}\``).join(", ")}`
+    : "";
+  return `$(alert) **Discouraged** — Review guidance from ${sourceLabel}${altLabel}`;
+}
+
+function buildSupportSection(feature: BaselineFeature, target: Target): string | undefined {
+  const targetMin = TARGET_MIN[target];
+  const sections: string[] = [];
+
+  const desktop = renderSupportTable("Desktop support", DESKTOP_BROWSERS, feature.support, targetMin);
+  if (desktop) {
+    sections.push(desktop);
+  }
+
+  const mobile = renderSupportTable("Mobile support", MOBILE_BROWSERS, feature.support, targetMin);
+  if (mobile) {
+    sections.push(mobile);
+  }
+
+  if (!sections.length) {
+    return undefined;
+  }
+
+  return sections.join("\n");
+}
+
+function renderSupportTable(
+  heading: string,
+  browsers: Array<{ key: BrowserKey; label: string }>,
+  support: BaselineFeature["support"],
+  targets: Record<string, number | undefined>
+): string | undefined {
+  const hasAnyData = browsers.some(
+    (browser) => support[browser.key] || targets[browser.key] !== undefined
+  );
+  if (!hasAnyData) {
+    return undefined;
+  }
+
+  let table = `**${heading}**\n\n`;
+  table += `| Browser | Support | Target | Status |\n| :-- | :--: | :--: | :-- |\n`;
+
+  for (const browser of browsers) {
+    const statement = support[browser.key];
+    const required = targets[browser.key];
+    table += `| ${browser.label} | ${formatSupport(statement)} | ${formatTarget(required)} | ${formatStatus(
+      statement,
+      required
+    )} |\n`;
+  }
+
+  table += `\n`;
+  return table;
+}
+
+function formatSupport(statement: SupportStatement | undefined): string {
+  if (!statement?.raw) {
+    return "—";
+  }
+
+  const release = statement.releaseDate ? ` (${formatReleaseDate(statement.releaseDate)})` : "";
+  return `\`${statement.raw}\`${release}`;
 }
 
 function formatTarget(value: number | undefined): string {
-  return isNullish(value) ? "—" : `≥\`${value}\``;
-}
-
-function formatStatus(support: number | undefined, required: number | undefined): string {
-  if (isNullish(required)) {
+  if (value === undefined || value === null) {
     return "—";
   }
-  if (isNullish(support)) {
+  return `≥\`${value}\``;
+}
+
+function formatStatus(statement: SupportStatement | undefined, required: number | undefined): string {
+  if (required === undefined || required === null) {
+    return "—";
+  }
+  if (!statement || typeof statement.version !== "number") {
     return "⚠️ Missing data";
   }
-  if (support >= required) {
+  if (statement.version >= required) {
     return "✅ Meets target";
   }
   return "⛔ Gap";
+}
+
+function buildContextItems(feature: BaselineFeature): string[] {
+  const items: string[] = [];
+
+  if (feature.groups.length) {
+    const groupLabels = feature.groups.map((group) => {
+      if (group.parentName && group.parentName !== group.name) {
+        return `${group.name} (parent: ${group.parentName})`;
+      }
+      return group.name;
+    });
+    items.push(`Groups: ${groupLabels.join(", ")}`);
+  }
+
+  if (feature.snapshots.length) {
+    const snapshotLabels = feature.snapshots.map((snapshot) => snapshot.name);
+    items.push(`Snapshot references: ${snapshotLabels.join(", ")}`);
+  }
+
+  if (feature.compatFeatures.length) {
+    items.push(`MDN compatibility sources: ${feature.compatFeatures.length}`);
+  }
+
+  return items;
 }
 
 function buildFallbackTips(feature: BaselineFeature, verdict: Verdict, target: Target): string[] {
@@ -142,15 +254,15 @@ function buildFallbackTips(feature: BaselineFeature, verdict: Verdict, target: T
   const missing: string[] = [];
   const gaps: string[] = [];
 
-  for (const browser of BROWSERS) {
+  for (const browser of DESKTOP_BROWSERS) {
     const min = required[browser.key];
-    if (isNullish(min)) {
+    if (min === undefined || min === null) {
       continue;
     }
     const support = feature.support[browser.key];
-    if (isNullish(support)) {
+    if (!support || typeof support.version !== "number") {
       missing.push(browser.label);
-    } else if (support < min) {
+    } else if (support.version < min) {
       gaps.push(`${browser.label} (needs ${min})`);
     }
   }
@@ -176,6 +288,42 @@ function buildFallbackTips(feature: BaselineFeature, verdict: Verdict, target: T
   }
 
   return dedupe(tips);
+}
+
+function buildResourceLinks(feature: BaselineFeature): string[] {
+  const links: string[] = [];
+
+  if (feature.docsUrl) {
+    const args = encodeURIComponent(JSON.stringify({ id: feature.id }));
+    links.push(`[Open Baseline details ↗](command:baseline-gate.openDocs?${args})`);
+  }
+
+  if (feature.specUrls.length) {
+    for (const url of feature.specUrls.slice(0, 2)) {
+      const label = `Spec (${formatLinkHostname(url)})`;
+      links.push(makeMarkdownLink(label, url));
+    }
+  }
+
+  if (feature.caniuseIds.length) {
+    for (const id of feature.caniuseIds.slice(0, 2)) {
+      const url = `https://caniuse.com/${id}`;
+      links.push(makeMarkdownLink(`Can I use: ${id}`, url));
+    }
+  }
+
+  if (feature.discouraged?.accordingTo?.length) {
+    for (const source of feature.discouraged.accordingTo.slice(0, 2)) {
+      const formatted = formatExternalLink(source);
+      if (formatted) {
+        links.push(formatted);
+      }
+    }
+  }
+
+  links.push(`[Baseline guide ↗](https://web.dev/articles/baseline-tools-web-features)`);
+
+  return dedupe(links);
 }
 
 function dedupe(items: string[]): string[] {
@@ -221,5 +369,46 @@ function baselineIcon(feature: BaselineFeature, options: HoverRenderOptions): st
   }
 
   const iconUri = vscode.Uri.joinPath(options.assetsRoot, filename);
-  return `<img src="${iconUri.toString(true)}" width="16" height="16" alt="${alt}"/>`;
+  return `<img src="${iconUri.toString(true)}" width="16" height="9" alt="${alt}" />`;
+}
+
+function formatReleaseDate(date: string): string {
+  const timestamp = Date.parse(date);
+  if (!Number.isFinite(timestamp)) {
+    return date;
+  }
+  try {
+    return new Intl.DateTimeFormat("en", {
+      year: "numeric",
+      month: "short",
+      day: "numeric"
+    }).format(new Date(timestamp));
+  } catch {
+    return date;
+  }
+}
+
+function formatLinkHostname(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+function makeMarkdownLink(label: string, url: string): string {
+  return `[${escapeMarkdown(label)} ↗](${url})`;
+}
+
+function formatExternalLink(url: string): string | undefined {
+  if (!url) {
+    return undefined;
+  }
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.replace(/^www\./, "");
+    return `[${hostname}](${url})`;
+  } catch {
+    return undefined;
+  }
 }
