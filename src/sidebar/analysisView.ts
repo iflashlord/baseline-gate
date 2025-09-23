@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { scanWorkspaceForBaseline, type BaselineFinding } from "./workspaceScanner";
 import { TARGET_MIN, type Target } from "../core/targets";
 import { scoreFeature, type Verdict } from "../core/scoring";
-import type { BrowserKey, DiscouragedInfo, SupportStatement } from "../core/baselineData";
+import type { BrowserKey, DiscouragedInfo, SupportStatement, BaselineFeature } from "../core/baselineData";
 
 const DEFAULT_SEVERITIES: Verdict[] = ["blocked", "warning", "safe"];
 const DEFAULT_SORT_ORDER: SortOrder = "severity";
@@ -25,6 +25,11 @@ export type SortOrder = "severity" | "file";
 
 export interface BaselineAnalysisAssets {
   statusIcons: Record<Verdict, vscode.Uri>;
+  baselineIcons: {
+    widely: vscode.Uri;
+    newly: vscode.Uri;
+    limited: vscode.Uri;
+  };
 }
 
 type WebviewState = {
@@ -495,6 +500,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     const relativePath = vscode.workspace.asRelativePath(finding.uri, false);
     const verdictLabel = formatVerdict(finding.verdict);
     const baselineSummary = formatBaselineSummary(feature);
+    const baselineIcon = getBaselineIconHtml(feature, this.assets, this.view!.webview);
     const supportTable = renderSupportTables(feature, this.target);
     const groups = feature.groups.map((group) => escapeHtml(group.name)).join(", ");
     const snapshots = feature.snapshots.map((snapshot) => escapeHtml(snapshot.name)).join(", ");
@@ -550,7 +556,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           <h4>Summary</h4>
           <ul>
             <li>${escapeHtml(verdictLabel)} for ${escapeHtml(capitalize(this.target))} targets</li>
-            <li>${escapeHtml(baselineSummary)}</li>
+            <li>${baselineIcon} ${escapeHtml(baselineSummary)}</li>
           </ul>
         </div>
         ${description}
@@ -1055,9 +1061,38 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .file-icon.ts { background: #3178c6; }
       .file-icon.tsx { background: #2f74c0; }
       .file-icon.jsx { background: #61dafb; color: #0b1f33; }
-      .file-icon.css { background: #264de4; }
-      .file-icon.scss { background: #c6538c; }
+      .file-icon.css { background: #264de4; font-size: 0.3rem; }
+      .file-icon.scss { background: #c6538c; font-size: 0.3rem;}
       .file-icon.default { background: #7f8c8d; }
+      .file-icon.html { background: #e34c26; font-size: 0.45rem; }
+      .file-icon.json { background: #f39c12; font-size: 0.45rem; color: #222; }
+      .file-icon.yaml, .file-icon.yml { background: #cb171e; font-size: 0.45rem; color: #fff; }
+      .file-icon.md { background: #2b7489; font-size: 0.45rem; color: #fff; }
+      .file-icon.py { background: #3572A5; font-size: 0.45rem; color: #fff; }
+      .file-icon.go { background: #00ADD8; font-size: 0.45rem; color: #fff; }
+      .file-icon.rb { background: #701516; font-size: 0.45rem; color: #fff; }
+      .file-icon.php { background: #777bb3; font-size: 0.45rem; color: #fff; }
+      .file-icon.java { background: #b07219; font-size: 0.45rem; color: #fff; }
+      .file-icon.c { background: #555555; font-size: 0.45rem; color: #fff; }
+      .file-icon.cpp { background: #f34b7d; font-size: 0.45rem; color: #fff; }
+      .file-icon.cs { background: #178600; font-size: 0.45rem; color: #fff; }
+      .file-icon.swift { background: #ffac45; font-size: 0.45rem; color: #fff; }
+      .file-icon.kt, .file-icon.kts { background: #0095D5; font-size: 0.45rem; color: #fff; }
+      .file-icon.dart { background: #00B4AB; font-size: 0.45rem; color: #fff; }
+      .file-icon.rs { background: #dea584; font-size: 0.45rem; color: #fff; }
+      .file-icon.sh { background: #89e051; font-size: 0.45rem; color: #222; }
+      .file-icon.bash { background: #89e051; font-size: 0.45rem; color: #222; }
+      .file-icon.zsh { background: #89e051; font-size: 0.45rem; color: #222; }
+      .file-icon.dockerfile { background: #384d54; font-size: 0.45rem; color: #fff; }
+      .file-icon.makefile { background: #427819; font-size: 0.45rem; color: #fff; }
+      .file-icon.cmake { background: #6d8086; font-size: 0.45rem; color: #fff; }
+      .file-icon.gradle { background: #02303a; font-size: 0.45rem; color: #fff; }
+      .file-icon.xml { background: #0060ac; font-size: 0.45rem; color: #fff; }
+      .file-icon.toml { background: #9c4221; font-size: 0.45rem; color: #fff; }
+      .file-icon.ini { background: #6d8086; font-size: 0.45rem; color: #fff; }
+      .file-icon.properties { background: #6d8086; font-size: 0.45rem; color: #fff; }
+      .file-icon.dart { background: #00B4AB; font-size: 0.45rem; color: #fff; }
+      .file-icon.lock { background: #444c56; font-size: 0.45rem; color: #fff; }
       .file-path {
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1115,7 +1150,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       }
       .file-toggle::before {
         content: '▸';
-        font-size: 0.75rem;
+        font-size: 1.25rem;
         line-height: 1;
       }
       .file-group[open] .file-toggle {
@@ -1256,12 +1291,59 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .detail {
         flex: 1 1 45%;
         border-left: 1px solid var(--vscode-sideBarSectionHeader-border);
-        padding: 0.25rem 0 0.25rem 0.375rem;
+        padding: 0;
         box-sizing: border-box;
-        overflow: auto;
+        overflow: hidden;
         display: flex;
+        flex-direction: column;
         min-height: 0;
         background: var(--vscode-editor-background, rgba(0, 0, 0, 0.02));
+        position: relative;
+        resize: vertical;
+        min-height: 200px;
+        max-height: 80vh;
+      }
+      
+      .detail-resize-handle {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: transparent;
+        cursor: ns-resize;
+        z-index: 10;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .detail-resize-handle:hover,
+      .detail-resize-handle.dragging {
+        background: var(--vscode-focusBorder, rgba(90, 133, 204, 0.6));
+      }
+      
+      .detail-resize-handle::before {
+        content: '';
+        width: 24px;
+        height: 2px;
+        background: var(--vscode-sideBarSectionHeader-border);
+        border-radius: 1px;
+        opacity: 0.5;
+        transition: opacity 0.2s ease;
+      }
+      
+      .detail-resize-handle:hover::before,
+      .detail-resize-handle.dragging::before {
+        opacity: 1;
+        background: var(--vscode-focusBorder, #007ACC);
+      }
+      
+      .detail-content {
+        flex: 1;
+        overflow: auto;
+        padding: 0.25rem 0 0.25rem 0.375rem;
         /* Improved scrolling */
         scroll-behavior: smooth;
         scrollbar-width: thin;
@@ -1269,26 +1351,26 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       }
       
       /* Detail panel scrollbar styling */
-      .detail::-webkit-scrollbar {
+      .detail-content::-webkit-scrollbar {
         width: 8px;
       }
       
-      .detail::-webkit-scrollbar-track {
+      .detail-content::-webkit-scrollbar-track {
         background: var(--vscode-scrollbar-shadow);
         border-radius: 4px;
       }
       
-      .detail::-webkit-scrollbar-thumb {
+      .detail-content::-webkit-scrollbar-thumb {
         background: var(--vscode-scrollbarSlider-background);
         border-radius: 4px;
         border: 1px solid var(--vscode-scrollbar-shadow);
       }
       
-      .detail::-webkit-scrollbar-thumb:hover {
+      .detail-content::-webkit-scrollbar-thumb:hover {
         background: var(--vscode-scrollbarSlider-hoverBackground);
       }
       
-      .detail::-webkit-scrollbar-thumb:active {
+      .detail-content::-webkit-scrollbar-thumb:active {
         background: var(--vscode-scrollbarSlider-activeBackground);
       }
       .detail.hidden {
@@ -1297,110 +1379,178 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .detail-pane {
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        gap: 1rem;
         width: 100%;
+        padding: 0.75rem;
+        box-sizing: border-box;
       }
       .detail-top {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        gap: 0.5rem;
+        gap: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
       }
       .detail-close {
         border: 1px solid var(--vscode-button-border, transparent);
-        border-radius: 4px;
-        padding: 0.2rem 0.6rem;
+        border-radius: 6px;
+        padding: 0.4rem 0.8rem;
         background: var(--vscode-button-secondaryBackground);
         color: var(--vscode-button-secondaryForeground);
         cursor: pointer;
         flex-shrink: 0;
+        font-size: 0.8rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       }
       .detail-close:hover {
         background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-secondaryBackground));
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        transform: translateY(-1px);
       }
       .detail-heading {
         font-weight: 600;
-        font-size: 1rem;
+        font-size: 1.1rem;
+        line-height: 1.3;
+        color: var(--vscode-foreground);
       }
       .detail-subheading {
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         color: var(--vscode-descriptionForeground);
+        margin-top: 0.25rem;
+        line-height: 1.4;
       }
       .detail-subheading.hidden {
         display: none;
       }
       .detail-path {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         color: var(--vscode-descriptionForeground);
+        font-family: var(--vscode-editor-font-family, monospace);
+        background: var(--vscode-textCodeBlock-background, rgba(128, 128, 128, 0.1));
+        padding: 0.4rem 0.6rem;
+        border-radius: 4px;
+        border-left: 3px solid var(--vscode-focusBorder, #007ACC);
+        margin: -0.25rem 0 0.25rem 0;
       }
       .detail-body {
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 1.25rem;
       }
       .detail-block {
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        gap: 1rem;
         border: 1px solid var(--vscode-tree-indentGuidesStroke, transparent);
-        border-radius: 6px;
-        padding: 0.75rem;
+        border-radius: 8px;
+        padding: 1rem;
         background: var(--vscode-sideBarSectionHeader-background, rgba(128, 128, 128, 0.06));
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: box-shadow 0.2s ease;
+      }
+      .detail-block:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
       }
       .detail-header-block {
         display: grid;
         grid-template-columns: auto 1fr;
-        gap: 0.6rem;
+        gap: 0.75rem;
         align-items: center;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
       }
       .detail-icon {
-        width: 1.75rem;
-        height: 1.75rem;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .baseline-icon {
+        width: 1.5rem;
+        height: 0.85rem;
+        margin-right: 0.5rem;
+        vertical-align: middle;
       }
       .detail-title {
         font-weight: 600;
+        font-size: 1.05rem;
+        line-height: 1.3;
+        color: var(--vscode-foreground);
       }
       .detail-meta {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         color: var(--vscode-descriptionForeground);
         display: flex;
         align-items: center;
-        gap: 0.4rem;
+        gap: 0.5rem;
         flex-wrap: wrap;
+        margin-top: 0.25rem;
       }
       .detail-badge {
         display: inline-flex;
         align-items: center;
-        padding: 0.1rem 0.5rem;
-        border-radius: 999px;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
         font-size: 0.75rem;
         font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       }
-      .detail-badge.blocked { background: rgba(209, 52, 56, 0.2); color: #d13438; }
-      .detail-badge.warning { background: rgba(249, 209, 129, 0.25); color: #8d6b0b; }
-      .detail-badge.safe { background: rgba(16, 124, 65, 0.2); color: #107c41; }
+      .detail-badge.blocked { 
+        background: rgba(209, 52, 56, 0.15); 
+        color: #d13438; 
+        border: 1px solid rgba(209, 52, 56, 0.3);
+      }
+      .detail-badge.warning { 
+        background: rgba(249, 209, 129, 0.2); 
+        color: #8d6b0b; 
+        border: 1px solid rgba(249, 209, 129, 0.4);
+      }
+      .detail-badge.safe { 
+        background: rgba(16, 124, 65, 0.15); 
+        color: #107c41; 
+        border: 1px solid rgba(16, 124, 65, 0.3);
+      }
       .detail-section h4 {
-        margin: 0 0 0.3rem;
-        font-size: 0.9rem;
+        margin: 0 0 0.5rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--vscode-foreground);
+        border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+        padding-bottom: 0.25rem;
       }
       .detail-section ul {
         margin: 0;
-        padding-left: 1.2rem;
+        padding-left: 1.5rem;
+        line-height: 1.5;
       }
       .detail-section ul li {
-        margin-bottom: 0.15rem;
+        margin-bottom: 0.3rem;
+        color: var(--vscode-foreground);
       }
       .detail-code {
         background: var(--vscode-editor-background);
-        border-radius: 4px;
-        padding: 0.5rem;
+        border: 1px solid var(--vscode-input-border);
+        border-radius: 6px;
+        padding: 0.75rem;
         font-family: var(--vscode-editor-font-family, monospace);
         font-size: 0.9rem;
         white-space: pre-wrap;
         word-break: break-word;
+        line-height: 1.4;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
       }
       .detail-context div {
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.4rem;
+        padding: 0.3rem 0;
+        border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+      }
+      .detail-context div:last-child {
+        border-bottom: none;
       }
       .detail-table {
         margin-top: 0.35rem;
@@ -1454,7 +1604,26 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         .detail {
           border-left: none;
           border-top: 1px solid var(--vscode-sideBarSectionHeader-border);
-          padding: 0.375rem 0 0;
+          padding: 0;
+          min-height: 250px;
+          max-height: 60vh;
+        }
+        .detail-resize-handle {
+          top: 0;
+          height: 6px;
+          background: var(--vscode-sideBarSectionHeader-border);
+          opacity: 0.7;
+        }
+        .detail-resize-handle:hover,
+        .detail-resize-handle.dragging {
+          background: var(--vscode-focusBorder, rgba(90, 133, 204, 0.8));
+          opacity: 1;
+        }
+        .detail-content {
+          padding: 0.375rem;
+        }
+        .detail-pane {
+          padding: 0.5rem;
         }
         .filters {
           grid-template-columns: 1fr;
@@ -1520,16 +1689,19 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       <div class="content">
         <div class="results" data-results id="main-content"></div>
         <aside class="detail hidden" data-detail>
-          <div class="detail-pane">
-            <div class="detail-top">
-              <div>
-                <div class="detail-heading" data-detail-title></div>
-                <div class="detail-subheading hidden" data-detail-subtitle></div>
+          <div class="detail-resize-handle" data-resize-handle></div>
+          <div class="detail-content">
+            <div class="detail-pane">
+              <div class="detail-top">
+                <div>
+                  <div class="detail-heading" data-detail-title></div>
+                  <div class="detail-subheading hidden" data-detail-subtitle></div>
+                </div>
+                <button class="detail-close" data-detail-close>Close</button>
               </div>
-              <button class="detail-close" data-detail-close>Close</button>
+              <div class="detail-path" data-detail-path></div>
+              <div class="detail-body" data-detail-body></div>
             </div>
-            <div class="detail-path" data-detail-path></div>
-            <div class="detail-body" data-detail-body></div>
           </div>
         </aside>
       </div>
@@ -1553,7 +1725,80 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       const detailPathNode = document.querySelector('[data-detail-path]');
       const detailBodyNode = document.querySelector('[data-detail-body]');
       const detailCloseBtn = document.querySelector('[data-detail-close]');
+      const resizeHandle = document.querySelector('[data-resize-handle]');
       const MAX_SNIPPET_PREVIEW = 120;
+
+      // Resize functionality
+      let isResizing = false;
+      let startY = 0;
+      let startHeight = 0;
+
+      resizeHandle.addEventListener('mousedown', (event) => {
+        isResizing = true;
+        startY = event.clientY;
+        startHeight = detailNode.offsetHeight;
+        resizeHandle.classList.add('dragging');
+        
+        // Prevent text selection during resize
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'ns-resize';
+        
+        event.preventDefault();
+      });
+
+      // Touch support for mobile devices
+      resizeHandle.addEventListener('touchstart', (event) => {
+        isResizing = true;
+        startY = event.touches[0].clientY;
+        startHeight = detailNode.offsetHeight;
+        resizeHandle.classList.add('dragging');
+        
+        // Prevent scrolling during resize
+        document.body.style.touchAction = 'none';
+        
+        event.preventDefault();
+      });
+
+      document.addEventListener('mousemove', (event) => {
+        if (!isResizing) return;
+        
+        const deltaY = startY - event.clientY; // Inverted for natural drag feel
+        const newHeight = Math.max(200, Math.min(window.innerHeight * 0.8, startHeight + deltaY));
+        
+        detailNode.style.height = newHeight + 'px';
+        detailNode.style.flex = 'none'; // Override flex sizing
+        
+        event.preventDefault();
+      });
+
+      document.addEventListener('touchmove', (event) => {
+        if (!isResizing) return;
+        
+        const deltaY = startY - event.touches[0].clientY;
+        const newHeight = Math.max(200, Math.min(window.innerHeight * 0.8, startHeight + deltaY));
+        
+        detailNode.style.height = newHeight + 'px';
+        detailNode.style.flex = 'none';
+        
+        event.preventDefault();
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isResizing) {
+          isResizing = false;
+          resizeHandle.classList.remove('dragging');
+          document.body.style.userSelect = '';
+          document.body.style.cursor = '';
+        }
+      });
+
+      document.addEventListener('touchend', () => {
+        if (isResizing) {
+          isResizing = false;
+          resizeHandle.classList.remove('dragging');
+          document.body.style.touchAction = '';
+        }
+      });
 
       controls.addEventListener('click', () => {
         vscode.postMessage({ type: 'scan' });
@@ -2272,6 +2517,28 @@ function renderSupportTables(feature: BaselineFinding["feature"], target: Target
     return "";
   }
   return `<div class="detail-section"><h4>Browser support</h4>${sections.join("")}</div>`;
+}
+
+function getBaselineIconHtml(feature: BaselineFeature, assets: BaselineAnalysisAssets, webview: vscode.Webview): string {
+  let iconUri: vscode.Uri;
+  let alt: string;
+  
+  switch (feature.baseline) {
+    case "high":
+      iconUri = assets.baselineIcons.widely;
+      alt = "Baseline Widely available";
+      break;
+    case "low":
+      iconUri = assets.baselineIcons.newly;
+      alt = "Baseline Newly available";
+      break;
+    default:
+      iconUri = assets.baselineIcons.limited;
+      alt = "Baseline Limited availability";
+      break;
+  }
+ 
+  return `<img class="baseline-icon" src="${webview.asWebviewUri(iconUri).toString()}" width="16" height="9" alt="${escapeHtml(alt)}" />`;
 }
 
 function renderSupportTableHtml(

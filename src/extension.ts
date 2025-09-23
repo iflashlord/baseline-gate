@@ -24,12 +24,18 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(status);
 
   const statusIcon = (filename: string) => vscode.Uri.joinPath(context.extensionUri, 'media', 'status', filename);
+  const baselineIcon = (filename: string) => vscode.Uri.joinPath(context.extensionUri, 'media', 'baseline', filename);
 
   const panelAssets: BaselineAnalysisAssets = {
     statusIcons: {
       blocked: statusIcon('blocked.svg'),
       warning: statusIcon('warning.svg'),
       safe: statusIcon('safe.svg')
+    },
+    baselineIcons: {
+      widely: baselineIcon('baseline-widely-icon.svg'),
+      newly: baselineIcon('baseline-newly-icon.svg'),
+      limited: baselineIcon('baseline-limited-icon.svg')
     }
   };
 
