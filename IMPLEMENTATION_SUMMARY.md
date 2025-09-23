@@ -1,10 +1,11 @@
 # BaselineGate Extension: New Features Implementation Summary
 
 ## Overview
+
 This document summarizes the implementation of new features for the BaselineGate VS Code extension:
 
 1. **Browser Support Filtering Settings** - Allow users to choose between desktop/mobile browser display
-2. **Full Screen Sidebar Toggle** - Enable switching between normal and full screen sidebar views
+2. **Full Screen Sidebar Button** - Enable switching between normal and full screen sidebar views via button
 
 ## Features Implemented
 
@@ -18,16 +19,11 @@ Added three new configuration properties:
   "default": true,
   "description": "Show desktop browser support information (Chrome, Edge, Firefox, Safari)."
 },
-"baselineGate.showMobileBrowsers": {
-  "type": "boolean", 
-  "default": true,
-  "description": "Show mobile browser support information (Chrome Android, Firefox Android, Safari iOS)."
-},
-"baselineGate.fullScreenSidebar": {
-  "type": "boolean",
-  "default": false,
-  "description": "Display the sidebar in full screen mode."
-}
+        "baselineGate.showMobileBrowsers": {
+          "type": "boolean", 
+          "default": true,
+          "description": "Show mobile browser support information (Chrome Android, Firefox Android, Safari iOS)."
+        }
 ```
 
 ### 2. New Commands
@@ -82,11 +78,8 @@ Added CSS class for full screen mode:
 ```typescript
 // Toggle full screen command
 const toggleFullScreen = vscode.commands.registerCommand('baseline-gate.toggleFullScreen', () => {
-  const config = vscode.workspace.getConfiguration('baselineGate');
-  const current = config.get<boolean>('fullScreenSidebar', false);
-  config.update('fullScreenSidebar', !current, vscode.ConfigurationTarget.Global);
-  
-  const status = !current ? 'full screen' : 'normal';
+  const isFullScreen = analysisProvider.toggleFullScreen();
+  const status = isFullScreen ? 'full screen' : 'normal';
   void vscode.window.showInformationMessage(`Sidebar switched to ${status} mode.`);
 });
 
@@ -108,9 +101,9 @@ Users can access extension settings through:
 1. The settings button (gear icon) in the sidebar title
 2. VS Code settings UI under "BaselineGate" section
 
-### Full Screen Toggle
-Users can toggle full screen mode via:
-1. The full screen button (screen-full icon) in the sidebar title
+### Full Screen Button
+Users can toggle full screen mode by:
+1. Clicking the full screen button (screen-full icon) in the sidebar title
 2. Command palette: "Baseline Gate: Toggle Full Screen"
 
 ### Browser Filtering

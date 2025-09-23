@@ -52,11 +52,6 @@
         "title": "Baseline Gate: Toggle Sort Order"
       },
       {
-        "command": "baseline-gate.toggleFullScreen",
-        "title": "Baseline Gate: Toggle Full Screen",
-        "icon": "$(screen-full)"
-      },
-      {
         "command": "baseline-gate.openSettings",
         "title": "Baseline Gate: Open Settings",
         "icon": "$(settings-gear)"
@@ -83,11 +78,6 @@
           "type": "boolean",
           "default": true,
           "description": "Show mobile browser support information (Chrome Android, Firefox Android, Safari iOS)."
-        },
-        "baselineGate.fullScreenSidebar": {
-          "type": "boolean",
-          "default": false,
-          "description": "Display the sidebar in full screen mode."
         }
       }
     },
@@ -116,11 +106,6 @@
           "command": "baseline-gate.openSettings",
           "when": "view == baselineGate.analysisView",
           "group": "navigation@1"
-        },
-        {
-          "command": "baseline-gate.toggleFullScreen",
-          "when": "view == baselineGate.analysisView",
-          "group": "navigation@2"
         }
       ]
     }

@@ -64,7 +64,6 @@ type WebviewState = {
   files: FileGroupPayload[];
   severityIconUris: Record<Verdict, string>;
   detail?: DetailPayload | null;
-  fullScreen: boolean;
 };
 
 type Summary = {
@@ -720,8 +719,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       selectedFileUri: this.selectedFileUri,
       files: filePayloads,
       severityIconUris,
-      detail,
-      fullScreen: settings.fullScreen
+      detail
     };
   }
 
@@ -790,19 +788,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         right: 0;
         bottom: 0;
       }
-      .view.fullscreen {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: 9999;
-        background: var(--vscode-editor-background, var(--vscode-sideBar-background));
-        border-radius: 0;
-        box-shadow: none;
-      }
+      
       .controls {
         display: flex;
         flex-wrap: wrap;
@@ -2011,17 +1997,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         // Save scroll position before rendering changes
         saveScrollPosition();
 
-        const { scanning, searchQuery, severityFilter, sortOrder, progressText, filteredSummary, summary, files, severityIconUris, filtersActive, lastScanAt, detail, fullScreen } = currentState;
-
-        // Apply full screen mode
-        const viewContainer = document.querySelector('.view');
-        if (viewContainer) {
-          if (fullScreen) {
-            viewContainer.classList.add('fullscreen');
-          } else {
-            viewContainer.classList.remove('fullscreen');
-          }
-        }
+        const { scanning, searchQuery, severityFilter, sortOrder, progressText, filteredSummary, summary, files, severityIconUris, filtersActive, lastScanAt, detail } = currentState;
 
         controls.disabled = Boolean(scanning);
         clearBtn.disabled = !filtersActive;
