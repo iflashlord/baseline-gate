@@ -96,6 +96,17 @@ type DetailPayload =
       html: string;
     };
 
+type DetailSelection =
+  | {
+      mode: "issue";
+      id: string;
+    }
+  | {
+      mode: "file";
+      uri: string;
+    }
+  | null;
+
 type MessageFromWebview =
   | { type: "scan" }
   | { type: "setSearch"; value: string }
@@ -106,6 +117,8 @@ type MessageFromWebview =
   | { type: "openDocs"; url?: string }
   | { type: "selectIssue"; id: string }
   | { type: "selectFile"; uri: string }
+  | { type: "openIssueDetail"; id: string }
+  | { type: "openFileDetail"; uri: string }
   | { type: "closeDetail" };
 
 export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider {
@@ -119,6 +132,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
   private lastScanAt: Date | undefined;
   private selectedIssueId: string | null = null;
   private selectedFileUri: string | null = null;
+  private detailSelection: DetailSelection = null;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -154,6 +168,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
     this.selectedIssueId = null;
     this.selectedFileUri = null;
+    this.detailSelection = null;
     this.scanning = true;
     this.progressText = "Preparing scan…";
     this.postState();
@@ -256,42 +271,122 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
   private syncSelection(filtered: BaselineFinding[]): void {
     if (this.selectedIssueId) {
-      const exists = filtered.some((finding) => computeFindingId(finding) === this.selectedIssueId);
+      const selectedIssueId = this.selectedIssueId;
+      const exists = filtered.some((finding) => computeFindingId(finding) === selectedIssueId);
       if (!exists) {
         this.selectedIssueId = null;
+        if (this.detailSelection?.mode === "issue" && this.detailSelection.id === selectedIssueId) {
+          this.detailSelection = null;
+        }
       }
     }
 
     if (this.selectedFileUri) {
-      const exists = filtered.some((finding) => finding.uri.toString() === this.selectedFileUri);
+      const selectedFileUri = this.selectedFileUri;
+      const exists = filtered.some((finding) => finding.uri.toString() === selectedFileUri);
       if (!exists) {
         this.selectedFileUri = null;
+        if (this.detailSelection?.mode === "file" && this.detailSelection.uri === selectedFileUri) {
+          this.detailSelection = null;
+        }
+      }
+    }
+
+    const detailSelection = this.detailSelection;
+    if (detailSelection) {
+      if (detailSelection.mode === "issue") {
+        const exists = filtered.some((finding) => computeFindingId(finding) === detailSelection.id);
+        if (!exists) {
+          this.detailSelection = null;
+        }
+      } else {
+        const exists = filtered.some((finding) => finding.uri.toString() === detailSelection.uri);
+        if (!exists) {
+          this.detailSelection = null;
+        }
       }
     }
   }
 
   private setIssueSelection(issueId: string): void {
-    if (this.selectedIssueId === issueId) {
-      return;
-    }
     const finding = this.findings.find((candidate) => computeFindingId(candidate) === issueId);
     if (!finding) {
+      const hadSelection = this.selectedIssueId !== null || this.selectedFileUri !== null;
+      const hadDetail = this.detailSelection !== null;
       this.selectedIssueId = null;
       this.selectedFileUri = null;
-    } else {
-      this.selectedIssueId = issueId;
-      this.selectedFileUri = finding.uri.toString();
+      if (hadDetail) {
+        this.detailSelection = null;
+      }
+      if (hadSelection || hadDetail) {
+        this.postState();
+      }
+      return;
     }
-    this.postState();
+
+    const issueUri = finding.uri.toString();
+    const selectionChanged = this.selectedIssueId !== issueId || this.selectedFileUri !== issueUri;
+    const hadDetail = this.detailSelection !== null;
+
+    this.selectedIssueId = issueId;
+    this.selectedFileUri = issueUri;
+    if (hadDetail) {
+      this.detailSelection = null;
+    }
+
+    if (selectionChanged || hadDetail) {
+      this.postState();
+    }
   }
 
   private setFileSelection(uriString: string): void {
-    if (this.selectedFileUri === uriString && this.selectedIssueId === null) {
+    const exists = this.findings.some((finding) => finding.uri.toString() === uriString);
+    const nextSelectedFileUri = exists ? uriString : null;
+    const selectionChanged = this.selectedFileUri !== nextSelectedFileUri || this.selectedIssueId !== null;
+    const hadDetail = this.detailSelection !== null;
+
+    this.selectedFileUri = nextSelectedFileUri;
+    this.selectedIssueId = null;
+    if (hadDetail) {
+      this.detailSelection = null;
+    }
+
+    if (selectionChanged || hadDetail) {
+      this.postState();
+    }
+  }
+
+  private openIssueDetail(issueId: string): void {
+    const finding = this.findings.find((candidate) => computeFindingId(candidate) === issueId);
+    if (!finding) {
+      this.detailSelection = null;
+      if (this.selectedIssueId !== null || this.selectedFileUri !== null) {
+        this.selectedIssueId = null;
+        this.selectedFileUri = null;
+      }
+      this.postState();
       return;
     }
+
+    this.selectedIssueId = issueId;
+    this.selectedFileUri = finding.uri.toString();
+    this.detailSelection = { mode: "issue", id: issueId };
+    this.postState();
+  }
+
+  private openFileDetail(uriString: string): void {
     const exists = this.findings.some((finding) => finding.uri.toString() === uriString);
-    this.selectedFileUri = exists ? uriString : null;
+    if (!exists) {
+      if (this.detailSelection !== null) {
+        this.detailSelection = null;
+        this.postState();
+      }
+      return;
+    }
+
+    this.selectedFileUri = uriString;
     this.selectedIssueId = null;
+    this.detailSelection = { mode: "file", uri: uriString };
     this.postState();
   }
 
@@ -299,35 +394,40 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     filtered: BaselineFinding[],
     severityIconUris: Record<Verdict, string>
   ): DetailPayload | null {
-    if (this.selectedIssueId) {
-      const finding = filtered.find((candidate) => computeFindingId(candidate) === this.selectedIssueId);
-      if (finding) {
-        const relativePath = vscode.workspace.asRelativePath(finding.uri, false);
-        const position = `${finding.range.start.line + 1}:${finding.range.start.character + 1}`;
-        return {
-          mode: "issue",
-          title: finding.feature.name,
-          subtitle: `${formatVerdict(finding.verdict)} · ${escapeHtml(relativePath)}:${position}`,
-          filePath: relativePath,
-          html: this.createIssueDetailHtml(finding, severityIconUris)
-        };
-      }
+    const selection = this.detailSelection;
+    if (!selection) {
+      return null;
     }
 
-    if (this.selectedFileUri) {
-      const issues = filtered.filter((finding) => finding.uri.toString() === this.selectedFileUri);
-      if (issues.length) {
-        const relativePath = vscode.workspace.asRelativePath(issues[0].uri, false);
-        return {
-          mode: "file",
-          title: relativePath,
-          filePath: relativePath,
-          html: this.createFileDetailHtml(issues, severityIconUris)
-        };
+    if (selection.mode === "issue") {
+      const finding = filtered.find((candidate) => computeFindingId(candidate) === selection.id);
+      if (!finding) {
+        this.detailSelection = null;
+        return null;
       }
+      const relativePath = vscode.workspace.asRelativePath(finding.uri, false);
+      const position = `${finding.range.start.line + 1}:${finding.range.start.character + 1}`;
+      return {
+        mode: "issue",
+        title: finding.feature.name,
+        subtitle: `${formatVerdict(finding.verdict)} · ${escapeHtml(relativePath)}:${position}`,
+        filePath: relativePath,
+        html: this.createIssueDetailHtml(finding, severityIconUris)
+      };
     }
 
-    return null;
+    const issues = filtered.filter((finding) => finding.uri.toString() === selection.uri);
+    if (!issues.length) {
+      this.detailSelection = null;
+      return null;
+    }
+    const relativePath = vscode.workspace.asRelativePath(issues[0].uri, false);
+    return {
+      mode: "file",
+      title: relativePath,
+      filePath: relativePath,
+      html: this.createFileDetailHtml(issues, severityIconUris)
+    };
   }
 
   private createFileDetailHtml(
@@ -453,10 +553,17 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       case "selectIssue":
         this.setIssueSelection(message.id);
         break;
+      case "openIssueDetail":
+        this.openIssueDetail(message.id);
+        break;
       case "selectFile":
         this.setFileSelection(message.uri);
         break;
+      case "openFileDetail":
+        this.openFileDetail(message.uri);
+        break;
       case "closeDetail":
+        this.detailSelection = null;
         this.selectedIssueId = null;
         this.selectedFileUri = null;
         this.postState();
@@ -596,6 +703,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         flex-direction: column;
         height: 100%;
         box-sizing: border-box;
+        overflow: hidden;
       }
       .controls {
         display: flex;
@@ -700,17 +808,18 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         flex: 1;
         min-height: 0;
         display: flex;
-        gap: 0.5rem;
-        padding: 0 0.75rem 0.75rem;
+        gap: 0.25rem;
+        padding: 0 0.5rem 0.5rem;
         box-sizing: border-box;
       }
       .results {
         flex: 1 1 55%;
-        overflow: auto;
-        padding: 0.25rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 0.25rem 0;
         display: flex;
         flex-direction: column;
-        gap: 0.4rem;
+        gap: 0.15rem;
         box-sizing: border-box;
       }
       .empty-state, .progress-state {
@@ -740,14 +849,14 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
       }
       .file-icon {
-        width: 1.75rem;
-        height: 1.75rem;
-        border-radius: 4px;
+        width: 1.2rem;
+        height: 1.2rem;
+        border-radius: 3px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         font-weight: 600;
-        font-size: 0.85rem;
+        font-size: 0.7rem;
         color: #fff;
       }
       .file-icon.js { background: #f1c40f; color: #222; }
@@ -775,22 +884,41 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         gap: 0.2rem;
       }
       .file-counts img {
-        width: 0.9rem;
-        height: 0.9rem;
+        width: 0.75rem;
+        height: 0.75rem;
+      }
+      .file-meta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.35rem;
+      }
+      .file-detail-button {
+        border: 1px solid transparent;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--vscode-button-secondaryForeground);
+        cursor: pointer;
+        padding: 0.15rem 0.45rem;
+        font-size: 0.75rem;
+        line-height: 1.2;
+      }
+      .file-detail-button:hover {
+        color: var(--vscode-button-foreground);
       }
       .issues {
         display: flex;
         flex-direction: column;
-        gap: 0.25rem;
-        padding: 0.4rem 0.6rem 0.6rem;
+        gap: 0.1rem;
+        padding: 0.3rem 0.5rem 0.45rem;
       }
       .issue {
         border: 1px solid var(--vscode-tree-indentGuidesStroke, transparent);
-        border-radius: 6px;
-        padding: 0.4rem 0.5rem;
+        border-radius: 4px;
+        padding: 0.35rem 0.45rem;
         display: grid;
         grid-template-columns: auto 1fr auto;
-        gap: 0.45rem;
+        gap: 0.35rem;
         background: var(--vscode-editor-inactiveSelection);
         cursor: pointer;
       }
@@ -802,34 +930,34 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         box-shadow: 0 0 0 1px var(--vscode-focusBorder, rgba(90, 133, 204, 0.4));
       }
       .issue-icon {
-        width: 1.5rem;
-        height: 1.5rem;
+        width: 1.1rem;
+        height: 1.1rem;
       }
       .issue-main {
         display: flex;
         flex-direction: column;
-        gap: 0.2rem;
+        gap: 0.15rem;
       }
       .issue-title {
         font-weight: 600;
       }
       .issue-snippet {
         font-family: var(--vscode-editor-font-family, monospace);
-        font-size: 0.9rem;
-        white-space: pre-wrap;
+        font-size: 0.85rem;
+        white-space: normal;
         word-break: break-word;
         color: var(--vscode-foreground);
-        opacity: 0.85;
+        opacity: 0.8;
         background: var(--vscode-editor-background, transparent);
-        border-radius: 4px;
-        padding: 0.25rem 0.35rem;
+        border-radius: 3px;
+        padding: 0.2rem 0.35rem;
       }
       .issue-actions {
         display: flex;
         flex-direction: column;
         align-items: flex-end;
-        justify-content: space-between;
-        gap: 0.4rem;
+        justify-content: flex-start;
+        gap: 0.3rem;
       }
       .issue-actions button {
         border: 1px solid transparent;
@@ -837,7 +965,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         background: transparent;
         color: var(--vscode-button-secondaryForeground);
         cursor: pointer;
-        padding: 0.25rem 0.4rem;
+        padding: 0.2rem 0.4rem;
+        font-size: 0.75rem;
       }
       .issue-actions button:hover {
         color: var(--vscode-button-foreground);
@@ -1082,6 +1211,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       const detailPathNode = document.querySelector('[data-detail-path]');
       const detailBodyNode = document.querySelector('[data-detail-body]');
       const detailCloseBtn = document.querySelector('[data-detail-close]');
+      const MAX_SNIPPET_PREVIEW = 120;
 
       controls.addEventListener('click', () => {
         vscode.postMessage({ type: 'scan' });
@@ -1194,7 +1324,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         }
         summaryNode.textContent = parts.join(' · ');
       }
-
+      
       function renderResults(files, severityIconUris, scanning, progressText, filteredTotal) {
         resultsNode.innerHTML = '';
 
@@ -1238,12 +1368,28 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           path.textContent = file.relativePath;
           summary.appendChild(path);
 
+          const meta = document.createElement('div');
+          meta.className = 'file-meta';
+
           const counts = document.createElement('span');
           counts.className = 'file-counts';
           counts.appendChild(createCountBadge('blocked', file.counts.blocked, severityIconUris.blocked));
           counts.appendChild(createCountBadge('warning', file.counts.warning, severityIconUris.warning));
           counts.appendChild(createCountBadge('safe', file.counts.safe, severityIconUris.safe));
-          summary.appendChild(counts);
+          meta.appendChild(counts);
+
+          const detailBtn = document.createElement('button');
+          detailBtn.className = 'file-detail-button';
+          detailBtn.type = 'button';
+          detailBtn.textContent = 'Details';
+          detailBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            vscode.postMessage({ type: 'openFileDetail', uri: file.uri });
+          });
+          meta.appendChild(detailBtn);
+
+          summary.appendChild(meta);
 
           details.appendChild(summary);
 
@@ -1283,13 +1429,23 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
             const snippet = document.createElement('pre');
             snippet.className = 'issue-snippet';
-            snippet.textContent = issue.snippet;
+            const preview = formatSnippet(issue.snippet);
+            snippet.textContent = preview;
+            snippet.title = issue.snippet;
             main.appendChild(snippet);
 
             issueRow.appendChild(main);
 
             const actions = document.createElement('div');
             actions.className = 'issue-actions';
+
+            const detailBtn = document.createElement('button');
+            detailBtn.textContent = 'Details';
+            detailBtn.addEventListener('click', (event) => {
+              event.stopPropagation();
+              vscode.postMessage({ type: 'openIssueDetail', id: issue.id });
+            });
+            actions.appendChild(detailBtn);
 
             const openBtn = document.createElement('button');
             openBtn.textContent = 'Open file';
@@ -1327,6 +1483,17 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           details.appendChild(issuesList);
           resultsNode.appendChild(details);
         }
+      }
+
+      function formatSnippet(snippet) {
+        if (!snippet) {
+          return '';
+        }
+        const condensed = snippet.replace(/\s+/g, ' ').trim();
+        if (condensed.length <= MAX_SNIPPET_PREVIEW) {
+          return condensed;
+        }
+        return condensed.slice(0, MAX_SNIPPET_PREVIEW - 3).trimEnd() + '...';
       }
 
       function createCountBadge(label, value, iconUri) {
