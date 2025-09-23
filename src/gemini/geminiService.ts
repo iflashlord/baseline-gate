@@ -8,6 +8,7 @@ export interface GeminiSuggestion {
   suggestion: string;
   feature?: string;
   file?: string;
+  findingId?: string; // Link to the original finding
 }
 
 export class GeminiService {

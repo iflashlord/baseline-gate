@@ -7,6 +7,7 @@ import type { BaselineFeature } from "../core/baselineData";
 import type { Target } from "../core/targets";
 
 export interface BaselineFinding {
+  id: string; // Unique identifier for the finding
   uri: vscode.Uri;
   range: vscode.Range;
   feature: BaselineFeature;
@@ -142,6 +143,7 @@ function scanTextDocument(
       seenFingerprints.add(fingerprint);
 
       findings.push({
+        id: `${document.uri.toString()}-${range.start.line}-${range.start.character}-${token.token}`,
         uri: document.uri,
         range,
         feature,

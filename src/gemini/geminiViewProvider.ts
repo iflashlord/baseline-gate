@@ -38,11 +38,14 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
         case 'clearAllSuggestions':
           this.clearAllSuggestions();
           break;
+        case 'goToFinding':
+          vscode.commands.executeCommand('baseline-gate.goToFinding', data.findingId);
+          break;
       }
     });
   }
 
-  public async addSuggestion(issue: string, feature?: string, file?: string): Promise<void> {
+  public async addSuggestion(issue: string, feature?: string, file?: string, findingId?: string): Promise<void> {
     if (!geminiService.isConfigured()) {
       const action = await vscode.window.showErrorMessage(
         'Gemini API key is not configured.',
@@ -74,7 +77,8 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
           issue,
           suggestion,
           feature,
-          file
+          file,
+          findingId
         };
 
         this.suggestions.unshift(newSuggestion); // Add to beginning
@@ -113,6 +117,14 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
     if (this._view) {
       this._view.webview.html = this._getHtmlForWebview(this._view.webview);
     }
+  }
+
+  public hasSuggestionForFinding(findingId: string): boolean {
+    return this.suggestions.some(s => s.findingId === findingId);
+  }
+
+  public getSuggestionsForFinding(findingId: string): GeminiSuggestion[] {
+    return this.suggestions.filter(s => s.findingId === findingId);
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
@@ -234,11 +246,71 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
         .suggestion-text {
             font-size: 12px;
             line-height: 1.4;
-            white-space: pre-wrap;
             background: var(--vscode-textCodeBlock-background);
             padding: 8px;
             border-radius: 4px;
             border-left: 3px solid var(--vscode-symbolIcon-snippetForeground);
+        }
+
+        .suggestion-text h1, .suggestion-text h2, .suggestion-text h3 {
+            margin: 12px 0 8px 0;
+            color: var(--vscode-foreground);
+        }
+
+        .suggestion-text h1 { font-size: 16px; }
+        .suggestion-text h2 { font-size: 14px; }
+        .suggestion-text h3 { font-size: 13px; }
+
+        .suggestion-text p {
+            margin: 8px 0;
+        }
+
+        .suggestion-text ul, .suggestion-text ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .suggestion-text li {
+            margin: 4px 0;
+        }
+
+        .suggestion-text code {
+            background: var(--vscode-textPreformat-background);
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: var(--vscode-editor-font-family);
+        }
+
+        .suggestion-text pre {
+            background: var(--vscode-textPreformat-background);
+            padding: 8px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+
+        .suggestion-text pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .suggestion-text blockquote {
+            border-left: 4px solid var(--vscode-textQuote-border);
+            padding-left: 12px;
+            margin: 8px 0;
+            color: var(--vscode-textQuote-foreground);
+        }
+
+        .link-to-finding {
+            color: var(--vscode-textLink-foreground);
+            text-decoration: none;
+            font-size: 11px;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
+        .link-to-finding:hover {
+            text-decoration: underline;
         }
 
         .no-suggestions {
@@ -303,10 +375,11 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
                 <div class="issue-section">
                     <div class="issue-title">Issue:</div>
                     <div class="issue-text">${escapeHtml(suggestion.issue)}</div>
+                    ${suggestion.findingId ? `<a href="#" class="link-to-finding" onclick="goToFinding('${suggestion.findingId}')" title="Go to original finding">📍 Go to finding</a>` : ''}
                 </div>
                 <div class="suggestion-section">
                     <div class="suggestion-title">Gemini Suggestion:</div>
-                    <div class="suggestion-text">${escapeHtml(suggestion.suggestion)}</div>
+                    <div class="suggestion-text">${renderMarkdown(suggestion.suggestion)}</div>
                 </div>
             </div>
         </div>
@@ -329,6 +402,13 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
                 });
             }
         }
+
+        function goToFinding(findingId) {
+            vscode.postMessage({
+                type: 'goToFinding',
+                findingId: findingId
+            });
+        }
     </script>
 </body>
 </html>`;
@@ -342,6 +422,52 @@ function getNonce() {
     text += possible.charAt(Math.floor(Math.random() * possible.length));
   }
   return text;
+}
+
+function renderMarkdown(text: string): string {
+  // Simple markdown to HTML converter for basic formatting
+  let html = escapeHtml(text);
+  
+  // Headers
+  html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+  
+  // Bold and italic
+  html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  
+  // Code blocks
+  html = html.replace(/```([^`]*?)```/gs, '<pre><code>$1</code></pre>');
+  html = html.replace(/`([^`]+?)`/g, '<code>$1</code>');
+  
+  // Lists
+  html = html.replace(/^[\s]*[-*+] (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+  
+  // Numbered lists
+  html = html.replace(/^[\s]*\d+\. (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/s, function(match) {
+    if (match.includes('<ul>')) {
+      return match;
+    }
+    return '<ol>' + match + '</ol>';
+  });
+  
+  // Blockquotes
+  html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+  
+  // Line breaks
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  
+  // Wrap in paragraphs
+  if (!html.startsWith('<h') && !html.startsWith('<ul') && !html.startsWith('<ol') && !html.startsWith('<pre')) {
+    html = '<p>' + html + '</p>';
+  }
+  
+  return html;
 }
 
 function escapeHtml(text: string): string {

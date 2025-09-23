@@ -40,14 +40,14 @@ export function activate(context: vscode.ExtensionContext) {
     }
   };
 
-  const analysisProvider = new BaselineAnalysisViewProvider(context, target, panelAssets);
-  context.subscriptions.push(analysisProvider.register());
-
-  // Register Gemini view provider
+  // Register Gemini view provider first
   const geminiProvider = new GeminiViewProvider(context);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(GeminiViewProvider.viewType, geminiProvider)
   );
+
+  const analysisProvider = new BaselineAnalysisViewProvider(context, target, panelAssets, geminiProvider);
+  context.subscriptions.push(analysisProvider.register());
 
   const scanWorkspace = vscode.commands.registerCommand('baseline-gate.scanWorkspace', async () => {
     if (!vscode.workspace.workspaceFolders?.length) {
@@ -134,13 +134,13 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(openSettings);
 
   // Register Gemini commands
-  const askGemini = vscode.commands.registerCommand('baseline-gate.askGemini', async (args?: { issue: string; feature?: string; context?: string }) => {
+  const askGemini = vscode.commands.registerCommand('baseline-gate.askGemini', async (args?: { issue: string; feature?: string; context?: string; findingId?: string }) => {
     if (!args || !args.issue) {
       void vscode.window.showErrorMessage('No issue provided for Gemini suggestion.');
       return;
     }
     
-    await geminiProvider.addSuggestion(args.issue, args.feature);
+    await geminiProvider.addSuggestion(args.issue, args.feature, undefined, args.findingId);
   });
   context.subscriptions.push(askGemini);
 
@@ -148,6 +148,13 @@ export function activate(context: vscode.ExtensionContext) {
     // This command is handled by the webview, but we register it for completeness
   });
   context.subscriptions.push(clearGeminiResults);
+
+  const goToFinding = vscode.commands.registerCommand('baseline-gate.goToFinding', async (findingId: string) => {
+    // Switch focus to the analysis view and highlight the finding
+    await vscode.commands.executeCommand('baselineGate.analysisView.focus');
+    analysisProvider.highlightFinding(findingId);
+  });
+  context.subscriptions.push(goToFinding);
 
   const openDocs = vscode.commands.registerCommand('baseline-gate.openDocs', async (payload?: { id?: string } | string) => {
     const id = typeof payload === 'string' ? payload : payload?.id;

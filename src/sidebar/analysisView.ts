@@ -137,7 +137,7 @@ type MessageFromWebview =
   | { type: "clearFilters" }
   | { type: "openFile"; uri: string; start: { line: number; character: number }; end: { line: number; character: number } }
   | { type: "openDocs"; url?: string }
-  | { type: "askGemini"; issue: string; feature: string; filePath: string }
+  | { type: "askGemini"; issue: string; feature: string; filePath: string; findingId: string }
   | { type: "selectIssue"; id: string }
   | { type: "selectFile"; uri: string }
   | { type: "openIssueDetail"; id: string }
@@ -162,7 +162,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
   constructor(
     private readonly context: vscode.ExtensionContext,
     private target: Target,
-    private readonly assets: BaselineAnalysisAssets
+    private readonly assets: BaselineAnalysisAssets,
+    private readonly geminiProvider?: import('../gemini/geminiViewProvider').GeminiViewProvider
   ) {}
 
   register(): vscode.Disposable {
@@ -292,6 +293,14 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
   refreshView(): void {
     this.postState();
+  }
+
+  highlightFinding(findingId: string): void {
+    const finding = this.findings.find(f => f.id === findingId);
+    if (finding) {
+      this.setIssueSelection(findingId);
+      this.openIssueDetail(findingId);
+    }
   }
 
   getSummary(options: { filtered?: boolean } = {}): Summary {
@@ -560,8 +569,12 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
     // Create Gemini issue content for the sidebar
     const geminiIssueContent = this.buildGeminiIssueContent(finding);
-    const geminiButton = `<button class="detail-gemini-button" data-gemini-issue="${escapeAttribute(geminiIssueContent)}" data-feature-name="${escapeAttribute(feature.name)}" data-file-path="${escapeAttribute(relativePath)}">
-      <span class="gemini-icon">✨</span> Ask Gemini to Fix
+    const hasExistingSuggestion = this.geminiProvider?.hasSuggestionForFinding(finding.id) || false;
+    const existingSuggestions = this.geminiProvider?.getSuggestionsForFinding(finding.id) || [];
+    
+    const geminiButtonText = hasExistingSuggestion ? 'Ask Gemini Again' : 'Ask Gemini to Fix';
+    const geminiButton = `<button class="detail-gemini-button" data-gemini-issue="${escapeAttribute(geminiIssueContent)}" data-feature-name="${escapeAttribute(feature.name)}" data-file-path="${escapeAttribute(relativePath)}" data-finding-id="${escapeAttribute(finding.id)}">
+      <span class="gemini-icon">✨</span> ${geminiButtonText}
     </button>`;
 
     const docButton = feature.docsUrl
@@ -596,10 +609,52 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           <h4>Code snippet</h4>
           ${snippet}
         </div>
+        ${existingSuggestions.length > 0 ? this.renderExistingSuggestions(existingSuggestions) : ''}
         ${actionButtons}
       </div>
     `;
   }
+  private renderExistingSuggestions(suggestions: import('../gemini/geminiService').GeminiSuggestion[]): string {
+    if (suggestions.length === 0) {
+      return '';
+    }
+
+    const suggestionsHtml = suggestions.map(suggestion => `
+      <div class="existing-suggestion">
+        <div class="existing-suggestion-header">
+          <span class="gemini-icon">✨</span>
+          <span class="suggestion-timestamp">${suggestion.timestamp.toLocaleString()}</span>
+        </div>
+        <div class="existing-suggestion-content">${this.renderSimpleMarkdown(suggestion.suggestion)}</div>
+      </div>
+    `).join('');
+
+    return `
+      <div class="detail-section existing-suggestions-section">
+        <h4>Previous Gemini Suggestions (${suggestions.length})</h4>
+        ${suggestionsHtml}
+      </div>
+    `;
+  }
+
+  private renderSimpleMarkdown(text: string): string {
+    // Simple markdown to HTML converter for inline display
+    let html = escapeAttribute(text);
+    
+    // Bold and italic
+    html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    
+    // Inline code
+    html = html.replace(/`([^`]+?)`/g, '<code>$1</code>');
+    
+    // Line breaks
+    html = html.replace(/\n/g, '<br>');
+    
+    return html;
+  }
+
   private buildGeminiIssueContent(finding: BaselineFinding): string {
     const feature = finding.feature;
     const relativePath = vscode.workspace.asRelativePath(finding.uri, false);
@@ -707,6 +762,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         void vscode.commands.executeCommand('baseline-gate.askGemini', {
           issue: message.issue,
           feature: message.feature,
+          findingId: message.findingId,
           context: 'sidebar'
         });
         break;
@@ -1693,6 +1749,37 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .gemini-icon {
         font-size: 1em;
       }
+      .existing-suggestions-section {
+        background: var(--vscode-editor-inactiveSelectionBackground);
+        border-radius: 4px;
+        padding: 8px;
+        border-left: 3px solid #667eea;
+      }
+      .existing-suggestion {
+        background: var(--vscode-editor-background);
+        border-radius: 4px;
+        padding: 8px;
+        margin: 6px 0;
+        border: 1px solid var(--vscode-widget-border);
+      }
+      .existing-suggestion-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 6px;
+        font-size: 11px;
+        color: var(--vscode-descriptionForeground);
+      }
+      .existing-suggestion-content {
+        font-size: 12px;
+        line-height: 1.4;
+      }
+      .existing-suggestion-content code {
+        background: var(--vscode-textPreformat-background);
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-family: var(--vscode-editor-font-family);
+      }
       .detail-entry {
         display: flex;
         flex-direction: column;
@@ -1958,7 +2045,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           const issue = geminiButton.getAttribute('data-gemini-issue');
           const feature = geminiButton.getAttribute('data-feature-name');
           const filePath = geminiButton.getAttribute('data-file-path');
-          vscode.postMessage({ type: 'askGemini', issue, feature, filePath });
+          const findingId = geminiButton.getAttribute('data-finding-id');
+          vscode.postMessage({ type: 'askGemini', issue, feature, filePath, findingId });
           return;
         }
       });
