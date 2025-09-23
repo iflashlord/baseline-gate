@@ -7,11 +7,14 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
   private _context: vscode.ExtensionContext;
   private suggestions: GeminiSuggestion[] = [];
+  private filteredSuggestions: GeminiSuggestion[] = [];
+  private searchQuery: string = '';
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this._context = context;
     // Load saved suggestions from workspace state
     this.suggestions = context.workspaceState.get<GeminiSuggestion[]>('geminiSuggestions', []);
+    this.filteredSuggestions = [...this.suggestions];
   }
 
   public resolveWebviewView(
@@ -31,15 +34,25 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
     webviewView.webview.onDidReceiveMessage(data => {
+      console.log('Gemini webview received message:', data);
       switch (data.type) {
         case 'removeSuggestion':
+          console.log('Removing suggestion:', data.id);
           this.removeSuggestion(data.id);
           break;
         case 'clearAllSuggestions':
+          console.log('Clearing all suggestions');
           this.clearAllSuggestions();
           break;
         case 'goToFinding':
           vscode.commands.executeCommand('baseline-gate.goToFinding', data.findingId);
+          break;
+        case 'openFileAtLocation':
+          this.openFileAtLocation(data.filePath, data.line, data.character);
+          break;
+        case 'searchSuggestions':
+          console.log('Searching suggestions with query:', data.query);
+          this.filterSuggestions(data.query);
           break;
       }
     });
@@ -83,7 +96,7 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
 
         this.suggestions.unshift(newSuggestion); // Add to beginning
         await this.saveSuggestions();
-        this.refresh();
+        this.filterSuggestions(this.searchQuery); // Refresh filtered suggestions
         
         progress.report({ increment: 100 });
         
@@ -100,13 +113,23 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
   private async removeSuggestion(id: string): Promise<void> {
     this.suggestions = this.suggestions.filter(s => s.id !== id);
     await this.saveSuggestions();
-    this.refresh();
+    this.filterSuggestions(this.searchQuery); // This calls refresh() internally
   }
 
   private async clearAllSuggestions(): Promise<void> {
-    this.suggestions = [];
-    await this.saveSuggestions();
-    this.refresh();
+    const confirmed = await vscode.window.showWarningMessage(
+      'Are you sure you want to clear all Gemini suggestions? This action cannot be undone.',
+      { modal: true },
+      'Clear All',
+      'Cancel'
+    );
+    
+    if (confirmed === 'Clear All') {
+      this.suggestions = [];
+      this.searchQuery = '';
+      await this.saveSuggestions();
+      this.filterSuggestions(''); // Reset search and refresh
+    }
   }
 
   private async saveSuggestions(): Promise<void> {
@@ -115,6 +138,7 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
 
   public refresh(): void {
     if (this._view) {
+      console.log('Refreshing Gemini webview. Suggestions:', this.suggestions.length, 'Filtered:', this.filteredSuggestions.length, 'Search query:', this.searchQuery);
       this._view.webview.html = this._getHtmlForWebview(this._view.webview);
     }
   }
@@ -125,6 +149,37 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
 
   public getSuggestionsForFinding(findingId: string): GeminiSuggestion[] {
     return this.suggestions.filter(s => s.findingId === findingId);
+  }
+
+  private async openFileAtLocation(filePath: string, line?: number, character?: number): Promise<void> {
+    try {
+      const uri = vscode.Uri.file(filePath);
+      const document = await vscode.workspace.openTextDocument(uri);
+      const editor = await vscode.window.showTextDocument(document, { preview: false });
+      
+      if (line !== undefined && character !== undefined) {
+        const position = new vscode.Position(line, character);
+        editor.selection = new vscode.Selection(position, position);
+        editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+      }
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to open file: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private filterSuggestions(query: string): void {
+    this.searchQuery = query.toLowerCase();
+    if (!query.trim()) {
+      this.filteredSuggestions = [...this.suggestions];
+    } else {
+      this.filteredSuggestions = this.suggestions.filter(suggestion => 
+        suggestion.feature?.toLowerCase().includes(this.searchQuery) ||
+        suggestion.file?.toLowerCase().includes(this.searchQuery) ||
+        suggestion.issue.toLowerCase().includes(this.searchQuery) ||
+        suggestion.suggestion.toLowerCase().includes(this.searchQuery)
+      );
+    }
+    this.refresh();
   }
 
   private _getHtmlForWebview(webview: vscode.Webview): string {
@@ -338,13 +393,78 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
             font-size: 12px;
             line-height: 1.4;
         }
+
+        .search-section {
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            background: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            font-size: 13px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--vscode-focusBorder);
+        }
+
+        .search-input::placeholder {
+            color: var(--vscode-input-placeholderForeground);
+        }
+
+        .feature-name {
+            color: var(--vscode-symbolIcon-keywordForeground);
+            font-weight: 500;
+            margin-right: 8px;
+        }
+
+        .file-link {
+            color: var(--vscode-textLink-foreground);
+            text-decoration: none;
+            margin: 0 8px;
+            font-size: 11px;
+        }
+
+        .file-link:hover {
+            text-decoration: underline;
+        }
+
+        .timestamp {
+            color: var(--vscode-descriptionForeground);
+            font-size: 10px;
+        }
+
+        .clear-search-btn {
+            background: none;
+            border: none;
+            color: var(--vscode-textLink-foreground);
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+            font-size: inherit;
+        }
+
+        .clear-search-btn:hover {
+            color: var(--vscode-textLink-activeForeground);
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h3>Gemini AI Suggestions</h3>
+        <h3>Gemini AI Suggestions (${this.filteredSuggestions.length}/${this.suggestions.length})</h3>
         ${this.suggestions.length > 0 ? '<button class="clear-all-btn" onclick="clearAll()">Clear All</button>' : ''}
     </div>
+
+    ${this.suggestions.length > 0 ? `
+        <div class="search-section">
+            <input type="text" class="search-input" placeholder="Search suggestions..." value="${this.searchQuery}" oninput="searchSuggestions(event.target.value)">
+        </div>
+    ` : ''}
 
     ${!geminiService.isConfigured() ? `
         <div class="setup-info">
@@ -353,29 +473,33 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
         </div>
     ` : ''}
 
-    ${this.suggestions.length === 0 ? `
+    ${this.filteredSuggestions.length === 0 && this.suggestions.length === 0 ? `
         <div class="no-suggestions">
             ${geminiService.isConfigured() 
               ? 'No suggestions yet. Use "Ask Gemini to Fix" on hover tooltips or in the analysis view.' 
               : 'Configure your Gemini API key to start getting suggestions.'}
         </div>
+    ` : this.filteredSuggestions.length === 0 && this.searchQuery ? `
+        <div class="no-suggestions">
+            No suggestions match "${this.searchQuery}". <button onclick="clearSearch()" class="clear-search-btn">Clear search</button>
+        </div>
     ` : ''}
 
-    ${this.suggestions.map(suggestion => `
+    ${this.filteredSuggestions.map(suggestion => `
         <div class="suggestion-item">
             <div class="suggestion-header">
                 <div class="suggestion-meta">
-                    ${suggestion.feature ? `${suggestion.feature} • ` : ''}
-                    ${suggestion.file ? `${suggestion.file.split('/').pop()} • ` : ''}
-                    ${suggestion.timestamp.toLocaleString()}
+                    ${suggestion.feature ? `<span class="feature-name">${suggestion.feature}</span>` : ''}
+                    ${suggestion.file ? `<a href="#" class="file-link" data-file-path="${escapeHtml(suggestion.file)}" title="Open ${escapeHtml(suggestion.file)}">📄 ${escapeHtml(suggestion.file.split('/').pop() || '')}</a>` : ''}
+                    <span class="timestamp">${suggestion.timestamp.toLocaleString()}</span>
                 </div>
-                <button class="remove-btn" onclick="removeSuggestion('${suggestion.id}')" title="Remove suggestion">✕</button>
+                <button class="remove-btn" data-suggestion-id="${escapeHtml(suggestion.id)}" title="Remove suggestion">✕</button>
             </div>
             <div class="suggestion-content">
                 <div class="issue-section">
                     <div class="issue-title">Issue:</div>
                     <div class="issue-text">${escapeHtml(suggestion.issue)}</div>
-                    ${suggestion.findingId ? `<a href="#" class="link-to-finding" onclick="goToFinding('${suggestion.findingId}')" title="Go to original finding">📍 Go to finding</a>` : ''}
+                    ${suggestion.findingId ? `<a href="#" class="link-to-finding" data-finding-id="${escapeHtml(suggestion.findingId)}" title="Go to original finding">📍 Go to finding</a>` : ''}
                 </div>
                 <div class="suggestion-section">
                     <div class="suggestion-title">Gemini Suggestion:</div>
@@ -388,26 +512,80 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
     <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
 
-        function removeSuggestion(id) {
-            vscode.postMessage({
-                type: 'removeSuggestion',
-                id: id
-            });
-        }
+        // Event listeners for better handling of dynamic content
+        document.addEventListener('click', function(event) {
+            const target = event.target;
+            
+            // Handle remove suggestion button clicks
+            if (target.classList.contains('remove-btn')) {
+                const suggestionId = target.getAttribute('data-suggestion-id');
+                if (suggestionId) {
+                    console.log('Webview: Remove suggestion clicked for id:', suggestionId);
+                    vscode.postMessage({
+                        type: 'removeSuggestion',
+                        id: suggestionId
+                    });
+                }
+                event.preventDefault();
+            }
+            
+            // Handle file link clicks
+            if (target.classList.contains('file-link')) {
+                const filePath = target.getAttribute('data-file-path');
+                if (filePath) {
+                    console.log('Webview: Open file clicked for path:', filePath);
+                    vscode.postMessage({
+                        type: 'openFileAtLocation',
+                        filePath: filePath
+                    });
+                }
+                event.preventDefault();
+            }
+            
+            // Handle finding link clicks
+            if (target.classList.contains('link-to-finding')) {
+                const findingId = target.getAttribute('data-finding-id');
+                if (findingId) {
+                    console.log('Webview: Go to finding clicked for id:', findingId);
+                    vscode.postMessage({
+                        type: 'goToFinding',
+                        findingId: findingId
+                    });
+                }
+                event.preventDefault();
+            }
+            
+            // Handle clear search button clicks
+            if (target.classList.contains('clear-search-btn')) {
+                clearSearch();
+                event.preventDefault();
+            }
+        });
 
         function clearAll() {
-            if (confirm('Are you sure you want to clear all suggestions?')) {
-                vscode.postMessage({
-                    type: 'clearAllSuggestions'
-                });
-            }
+            console.log('Webview: Clear all clicked');
+            vscode.postMessage({
+                type: 'clearAllSuggestions'
+            });
         }
 
-        function goToFinding(findingId) {
+        function searchSuggestions(query) {
+            console.log('Webview: Search suggestions with query:', query);
             vscode.postMessage({
-                type: 'goToFinding',
-                findingId: findingId
+                type: 'searchSuggestions',
+                query: query
             });
+        }
+
+        function clearSearch() {
+            console.log('Webview: Clear search clicked');
+            const searchInput = document.querySelector('.search-input');
+            if (searchInput) {
+                searchInput.value = '';
+                searchSuggestions('');
+            } else {
+                console.error('Search input not found');
+            }
         }
     </script>
 </body>

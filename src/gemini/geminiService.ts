@@ -37,10 +37,30 @@ export class GeminiService {
       throw new Error('Gemini API key is not configured. Please set your API key in VS Code settings.');
     }
 
-    const prompt = `Act as a senior engineer. Provide a concise, enterprise-grade solution for the following technical issue: ${issue}`;
+    // Get custom prompt from settings
+    const config = vscode.workspace.getConfiguration('baselineGate');
+    const customPrompt = config.get<string>('geminiCustomPrompt', '');
+    
+    // Build the full prompt
+    let fullPrompt = '';
+    if (customPrompt.trim()) {
+      fullPrompt = `${customPrompt}\n\n`;
+    }
+    fullPrompt += `Act as a senior engineer. Provide a concise, enterprise-grade solution for the following technical issue: ${issue}`;
+    
+    // Add contextual information if available  
+    if (feature || file) {
+      fullPrompt += `\n\nContext:`;
+      if (feature) {
+        fullPrompt += `\n- Feature: ${feature}`;
+      }
+      if (file) {
+        fullPrompt += `\n- File: ${file}`;
+      }
+    }
 
     try {
-      const result = await this.model.generateContent(prompt);
+      const result = await this.model.generateContent(fullPrompt);
       const response = await result.response;
       return response.text();
     } catch (error) {

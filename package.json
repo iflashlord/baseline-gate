@@ -93,6 +93,11 @@
           "type": "string",
           "default": "",
           "description": "Google Gemini API key for AI-powered suggestions. Get your API key from https://makersuite.google.com/app/apikey"
+        },
+        "baselineGate.geminiCustomPrompt": {
+          "type": "string",
+          "default": "",
+          "description": "Custom prompt to prepend to Gemini suggestions. This will be added before the default prompt asking for fix suggestions."
         }
       }
     },

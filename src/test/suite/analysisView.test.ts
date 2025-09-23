@@ -83,6 +83,7 @@ function makeFinding(options: {
   });
 
   return {
+    id: `${feature.id}-${line}-${column}`, // Unique identifier for the finding
     uri,
     range: new vscode.Range(new vscode.Position(line, column), new vscode.Position(line, column + (options.token?.length ?? 4))),
     feature,

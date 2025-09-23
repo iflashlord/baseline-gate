@@ -1,0 +1,39 @@
+/* Test CSS for BaselineGate Gemini functionality */
+
+.container {
+  /* This should trigger a baseline warning */
+  container-type: inline-size;
+  container-name: main;
+}
+
+@container main (width > 300px) {
+  .content {
+    display: grid;
+    /* This might also trigger issues */
+    grid-template-columns: subgrid;
+  }
+}
+
+.modal {
+  /* This should trigger baseline issues */
+  display: block;
+}
+
+.modal[open] {
+  display: block;
+}
+
+/* Using newer CSS features */
+.card {
+  /* Newer color functions */
+  background: color-mix(in srgb, blue 50%, white);
+  
+  /* Container queries */
+  container-type: inline-size;
+}
+
+@container (width > 400px) {
+  .card {
+    padding: 2rem;
+  }
+}
