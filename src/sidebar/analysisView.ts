@@ -60,6 +60,7 @@ type FileGroupPayload = {
   iconVariant: string;
   counts: Summary;
   selected: boolean;
+  expanded: boolean;
   issues: IssuePayload[];
 };
 
@@ -119,6 +120,7 @@ type MessageFromWebview =
   | { type: "selectFile"; uri: string }
   | { type: "openIssueDetail"; id: string }
   | { type: "openFileDetail"; uri: string }
+  | { type: "setFileExpansion"; uri: string; expanded: boolean }
   | { type: "closeDetail" };
 
 export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider {
@@ -133,6 +135,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
   private selectedIssueId: string | null = null;
   private selectedFileUri: string | null = null;
   private detailSelection: DetailSelection = null;
+  private collapsedFileUris = new Set<string>();
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -169,6 +172,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     this.selectedIssueId = null;
     this.selectedFileUri = null;
     this.detailSelection = null;
+    this.collapsedFileUris.clear();
     this.scanning = true;
     this.progressText = "Preparing scan…";
     this.postState();
@@ -270,6 +274,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
   }
 
   private syncSelection(filtered: BaselineFinding[]): void {
+    const visibleFileUris = new Set(filtered.map((finding) => finding.uri.toString()));
+
     if (this.selectedIssueId) {
       const selectedIssueId = this.selectedIssueId;
       const exists = filtered.some((finding) => computeFindingId(finding) === selectedIssueId);
@@ -283,12 +289,18 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
     if (this.selectedFileUri) {
       const selectedFileUri = this.selectedFileUri;
-      const exists = filtered.some((finding) => finding.uri.toString() === selectedFileUri);
+      const exists = visibleFileUris.has(selectedFileUri);
       if (!exists) {
         this.selectedFileUri = null;
         if (this.detailSelection?.mode === "file" && this.detailSelection.uri === selectedFileUri) {
           this.detailSelection = null;
         }
+      }
+    }
+
+    for (const uri of Array.from(this.collapsedFileUris)) {
+      if (!visibleFileUris.has(uri)) {
+        this.collapsedFileUris.delete(uri);
       }
     }
 
@@ -356,6 +368,30 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     }
   }
 
+  private setFileExpansion(uriString: string, expanded: boolean): void {
+    const exists = this.findings.some((finding) => finding.uri.toString() === uriString);
+    if (!exists) {
+      if (!expanded && this.collapsedFileUris.delete(uriString)) {
+        this.postState();
+      }
+      return;
+    }
+
+    const wasCollapsed = this.collapsedFileUris.has(uriString);
+    if (expanded) {
+      if (!wasCollapsed) {
+        return;
+      }
+      this.collapsedFileUris.delete(uriString);
+    } else {
+      if (wasCollapsed) {
+        return;
+      }
+      this.collapsedFileUris.add(uriString);
+    }
+    this.postState();
+  }
+
   private openIssueDetail(issueId: string): void {
     const finding = this.findings.find((candidate) => computeFindingId(candidate) === issueId);
     if (!finding) {
@@ -371,6 +407,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     this.selectedIssueId = issueId;
     this.selectedFileUri = finding.uri.toString();
     this.detailSelection = { mode: "issue", id: issueId };
+    this.collapsedFileUris.delete(this.selectedFileUri);
     this.postState();
   }
 
@@ -387,6 +424,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     this.selectedFileUri = uriString;
     this.selectedIssueId = null;
     this.detailSelection = { mode: "file", uri: uriString };
+    this.collapsedFileUris.delete(uriString);
     this.postState();
   }
 
@@ -559,6 +597,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       case "selectFile":
         this.setFileSelection(message.uri);
         break;
+      case "setFileExpansion":
+        this.setFileExpansion(message.uri, message.expanded);
+        break;
       case "openFileDetail":
         this.openFileDetail(message.uri);
         break;
@@ -625,7 +666,13 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
     const grouped = groupByFile(filtered, this.sortOrder);
     const filePayloads = grouped.map((group) =>
-      toFilePayload(group, this.sortOrder, this.selectedIssueId, this.selectedFileUri)
+      toFilePayload(
+        group,
+        this.sortOrder,
+        this.selectedIssueId,
+        this.selectedFileUri,
+        this.collapsedFileUris
+      )
     );
 
     const detail = this.buildDetailPayload(filtered, severityIconUris);
@@ -835,8 +882,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       }
       .file-header {
         display: grid;
-        grid-template-columns: auto 1fr auto;
-        gap: 0.5rem;
+        grid-template-columns: auto auto 1fr auto;
+        gap: 0.4rem;
         align-items: center;
         padding: 0.5rem 0.75rem;
         background: var(--vscode-tree-tableColumnsBorder, transparent);
@@ -905,6 +952,23 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       }
       .file-detail-button:hover {
         color: var(--vscode-button-foreground);
+      }
+      .file-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 0.9rem;
+        height: 0.9rem;
+        color: var(--vscode-descriptionForeground);
+        transition: transform 0.15s ease;
+      }
+      .file-toggle::before {
+        content: '▸';
+        font-size: 0.8rem;
+        line-height: 1;
+      }
+      .file-group[open] .file-toggle {
+        transform: rotate(90deg);
       }
       .issues {
         display: flex;
@@ -1324,7 +1388,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         }
         summaryNode.textContent = parts.join(' · ');
       }
-      
       function renderResults(files, severityIconUris, scanning, progressText, filteredTotal) {
         resultsNode.innerHTML = '';
 
@@ -1347,7 +1410,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         for (const file of files) {
           const details = document.createElement('details');
           details.className = 'file-group';
-          details.open = true;
+          if (file.expanded) {
+            details.setAttribute('open', '');
+          }
           if (file.selected) {
             details.classList.add('selected');
           }
@@ -1357,6 +1422,11 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           summary.addEventListener('click', () => {
             vscode.postMessage({ type: 'selectFile', uri: file.uri });
           });
+
+          const toggle = document.createElement('span');
+          toggle.className = 'file-toggle';
+          toggle.setAttribute('aria-hidden', 'true');
+          summary.appendChild(toggle);
 
           const icon = document.createElement('span');
           icon.className = 'file-icon ' + file.iconVariant;
@@ -1392,6 +1462,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           summary.appendChild(meta);
 
           details.appendChild(summary);
+          details.addEventListener('toggle', () => {
+            vscode.postMessage({ type: 'setFileExpansion', uri: file.uri, expanded: details.open });
+          });
 
           const issuesList = document.createElement('div');
           issuesList.className = 'issues';
@@ -1573,7 +1646,8 @@ function toFilePayload(
   group: { uri: vscode.Uri; findings: BaselineFinding[] },
   order: SortOrder,
   selectedIssueId: string | null,
-  selectedFileUri: string | null
+  selectedFileUri: string | null,
+  collapsedFileUris: Set<string>
 ): FileGroupPayload {
   const summary = summarize(group.findings);
   const sorted = sortFindings(group.findings, order);
@@ -1583,6 +1657,7 @@ function toFilePayload(
   const iconLabel = extension ? extension.toUpperCase() : "FILE";
   const groupId = group.uri.toString();
   const selected = selectedFileUri === groupId;
+  const expanded = !collapsedFileUris.has(groupId);
 
   return {
     uri: group.uri.toString(),
@@ -1592,6 +1667,7 @@ function toFilePayload(
     iconVariant,
     counts: summary,
     selected,
+    expanded,
     issues: sorted.map((finding) => toIssuePayload(finding, selectedIssueId === computeFindingId(finding)))
   };
 }
