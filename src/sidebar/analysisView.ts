@@ -735,6 +735,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       }
       html, body {
         height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
       }
       body {
         margin: 0;
@@ -748,9 +751,15 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .view {
         display: flex;
         flex-direction: column;
-        height: 100%;
+        height: 100vh;
+        width: 100%;
         box-sizing: border-box;
         overflow: hidden;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
       }
       .controls {
         display: flex;
@@ -853,21 +862,73 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       }
       .content {
         flex: 1;
-        min-height: 0;
         display: flex;
         gap: 0.25rem;
         padding: 0 0.5rem 0.5rem;
         box-sizing: border-box;
+        overflow: hidden;
+        min-height: 0;
       }
+      
+      /* Scroll shadows to indicate scrollable content */
+      .content::before,
+      .content::after {
+        content: '';
+        position: absolute;
+        left: 0.5rem;
+        right: 0.5rem;
+        height: 8px;
+        pointer-events: none;
+        z-index: 1;
+        transition: opacity 0.2s ease;
+      }
+      
+      .content::before {
+        top: 0;
+        background: linear-gradient(to bottom, var(--vscode-sideBar-background), transparent);
+      }
+      
+      .content::after {
+        bottom: 0.5rem;
+        background: linear-gradient(to top, var(--vscode-sideBar-background), transparent);
+      }
+      /* Fixed scrolling implementation */
       .results {
         flex: 1 1 55%;
         overflow-y: auto;
         overflow-x: hidden;
         padding: 0.25rem 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.15rem;
+        display: block;
         box-sizing: border-box;
+        min-height: 0;
+        /* Improved scrolling */
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: var(--vscode-scrollbarSlider-background) var(--vscode-scrollbar-shadow);
+      }
+      
+      /* Webkit scrollbar styling for Chromium-based browsers */
+      .results::-webkit-scrollbar {
+        width: 8px;
+      }
+      
+      .results::-webkit-scrollbar-track {
+        background: var(--vscode-scrollbar-shadow);
+        border-radius: 4px;
+      }
+      
+      .results::-webkit-scrollbar-thumb {
+        background: var(--vscode-scrollbarSlider-background);
+        border-radius: 4px;
+        border: 1px solid var(--vscode-scrollbar-shadow);
+      }
+      
+      .results::-webkit-scrollbar-thumb:hover {
+        background: var(--vscode-scrollbarSlider-hoverBackground);
+      }
+      
+      .results::-webkit-scrollbar-thumb:active {
+        background: var(--vscode-scrollbarSlider-activeBackground);
       }
       .empty-state, .progress-state {
         margin: 1.5rem 1rem;
@@ -879,6 +940,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         border-radius: 6px;
         background: var(--vscode-sideBarSectionHeader-background, transparent);
         overflow: hidden;
+        margin-bottom: 0.15rem;
+        display: block;
       }
       .file-header {
         display: grid;
@@ -888,6 +951,37 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         padding: 0.5rem 0.75rem;
         background: var(--vscode-tree-tableColumnsBorder, transparent);
         cursor: pointer;
+        min-height: 44px; /* Minimum touch target size */
+        position: relative;
+      }
+      
+      /* Enhanced focus indicators */
+      .file-header:focus,
+      .issue:focus,
+      button:focus {
+        outline: 2px solid var(--vscode-focusBorder);
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
+      
+      /* High contrast focus for better accessibility */
+      @media (prefers-contrast: high) {
+        .file-header:focus,
+        .issue:focus,
+        button:focus {
+          outline: 3px solid var(--vscode-contrastBorder, #ffffff);
+          background: var(--vscode-editor-selectionHighlightBackground);
+        }
+      }
+      
+      /* Improved hover states */
+      .file-header:hover {
+        background: var(--vscode-list-hoverBackground);
+      }
+      
+      .issue:hover {
+        background: var(--vscode-list-hoverBackground);
+        border-color: var(--vscode-list-hoverForeground);
       }
       .file-group.selected .file-header {
         background: var(--vscode-editor-selectionBackground, rgba(128, 128, 128, 0.15));
@@ -985,13 +1079,60 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         gap: 0.35rem;
         background: var(--vscode-editor-inactiveSelection);
         cursor: pointer;
+        min-height: 44px; /* Minimum touch target size */
+        align-items: center;
+        transition: all 0.15s ease;
       }
-      .issue.safe { background: var(--vscode-editor-inactiveSelection, rgba(16,124,65,0.1)); }
-      .issue.warning { background: rgba(249, 209, 129, 0.15); }
-      .issue.blocked { background: rgba(209, 52, 56, 0.18); }
+      
+      /* Improved color contrast for better readability */
+      .issue.safe { 
+        background: var(--vscode-editor-inactiveSelection, rgba(16,124,65,0.1)); 
+        border-color: rgba(16,124,65,0.3);
+      }
+      .issue.warning { 
+        background: rgba(249, 209, 129, 0.15); 
+        border-color: rgba(249, 209, 129, 0.4);
+      }
+      .issue.blocked { 
+        background: rgba(209, 52, 56, 0.18); 
+        border-color: rgba(209, 52, 56, 0.4);
+      }
       .issue.selected {
-        outline: 1px solid var(--vscode-focusBorder, rgba(90, 133, 204, 0.6));
+        outline: 2px solid var(--vscode-focusBorder, rgba(90, 133, 204, 0.8));
+        outline-offset: 1px;
         box-shadow: 0 0 0 1px var(--vscode-focusBorder, rgba(90, 133, 204, 0.4));
+        background: var(--vscode-list-activeSelectionBackground);
+        color: var(--vscode-list-activeSelectionForeground);
+      }
+      
+      /* Better button accessibility */
+      .issue-actions button,
+      .file-detail-button,
+      .detail-close,
+      .detail-doc-link {
+        min-height: 32px; /* Minimum touch target size */
+        min-width: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      /* Skip link for keyboard users */
+      .skip-to-content {
+        position: absolute;
+        top: -40px;
+        left: 6px;
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        padding: 8px;
+        text-decoration: none;
+        border-radius: 4px;
+        z-index: 1000;
+        transition: top 0.3s;
+      }
+      
+      .skip-to-content:focus {
+        top: 6px;
       }
       .issue-icon {
         width: 1.1rem;
@@ -1042,6 +1183,35 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         box-sizing: border-box;
         overflow: auto;
         display: flex;
+        min-height: 0;
+        /* Improved scrolling */
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: var(--vscode-scrollbarSlider-background) var(--vscode-scrollbar-shadow);
+      }
+      
+      /* Detail panel scrollbar styling */
+      .detail::-webkit-scrollbar {
+        width: 8px;
+      }
+      
+      .detail::-webkit-scrollbar-track {
+        background: var(--vscode-scrollbar-shadow);
+        border-radius: 4px;
+      }
+      
+      .detail::-webkit-scrollbar-thumb {
+        background: var(--vscode-scrollbarSlider-background);
+        border-radius: 4px;
+        border: 1px solid var(--vscode-scrollbar-shadow);
+      }
+      
+      .detail::-webkit-scrollbar-thumb:hover {
+        background: var(--vscode-scrollbarSlider-hoverBackground);
+      }
+      
+      .detail::-webkit-scrollbar-thumb:active {
+        background: var(--vscode-scrollbarSlider-activeBackground);
       }
       .detail.hidden {
         display: none;
@@ -1214,6 +1384,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     </style>
   </head>
   <body>
+    <a href="#main-content" class="skip-to-content">Skip to main content</a>
     <div class="view">
       <div class="controls">
         <button class="primary" data-action="scan">Scan workspace</button>
@@ -1240,7 +1411,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       </div>
       <div class="summary" data-summary></div>
       <div class="content">
-        <div class="results" data-results></div>
+        <div class="results" data-results id="main-content"></div>
         <aside class="detail hidden" data-detail>
           <div class="detail-pane">
             <div class="detail-top">
@@ -1332,10 +1503,125 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         }
       });
 
+      // Keyboard navigation for accessibility
+      let currentFocusIndex = -1;
+      let focusableElements = [];
+      let scrollPositions = new Map(); // Store scroll positions for different states
+      let currentScrollState = 'default';
+      
+      function saveScrollPosition(state = currentScrollState) {
+        scrollPositions.set(state, resultsNode.scrollTop);
+      }
+      
+      function restoreScrollPosition(state = currentScrollState) {
+        const savedPosition = scrollPositions.get(state);
+        if (savedPosition !== undefined) {
+          resultsNode.scrollTop = savedPosition;
+        }
+      }
+      
+      function scrollToElement(element) {
+        if (element && element.scrollIntoView) {
+          element.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'nearest',
+            inline: 'nearest'
+          });
+        }
+      }
+      
+      function updateFocusableElements() {
+        focusableElements = Array.from(resultsNode.querySelectorAll('.file-header, .issue, button, [tabindex="0"]'));
+      }
+      
+      function setFocus(index) {
+        if (index >= 0 && index < focusableElements.length) {
+          focusableElements[currentFocusIndex]?.setAttribute('tabindex', '-1');
+          currentFocusIndex = index;
+          const element = focusableElements[currentFocusIndex];
+          element.setAttribute('tabindex', '0');
+          element.focus();
+          scrollToElement(element);
+        }
+      }
+      
+      resultsNode.addEventListener('keydown', (event) => {
+        updateFocusableElements();
+        
+        switch (event.key) {
+          case 'ArrowDown':
+            event.preventDefault();
+            if (currentFocusIndex < focusableElements.length - 1) {
+              setFocus(currentFocusIndex + 1);
+            }
+            break;
+            
+          case 'ArrowUp':
+            event.preventDefault();
+            if (currentFocusIndex > 0) {
+              setFocus(currentFocusIndex - 1);
+            }
+            break;
+            
+          case 'Enter':
+          case ' ':
+            event.preventDefault();
+            const focused = focusableElements[currentFocusIndex];
+            if (focused) {
+              if (focused.classList.contains('file-header')) {
+                focused.click();
+                const details = focused.closest('details');
+                if (details) {
+                  const toggle = details.hasAttribute('open') ? 'close' : 'open';
+                  // Trigger the toggle event
+                  details.dispatchEvent(new Event('toggle'));
+                }
+              } else if (focused.classList.contains('issue')) {
+                focused.click();
+              } else if (focused.tagName === 'BUTTON') {
+                focused.click();
+              }
+            }
+            break;
+            
+          case 'Home':
+            event.preventDefault();
+            setFocus(0);
+            break;
+            
+          case 'End':
+            event.preventDefault();
+            setFocus(focusableElements.length - 1);
+            break;
+        }
+      });
+      
+      // Handle focus management
+      resultsNode.addEventListener('click', (event) => {
+        updateFocusableElements();
+        const clickedElement = event.target.closest('.file-header, .issue, button');
+        if (clickedElement) {
+          currentFocusIndex = focusableElements.indexOf(clickedElement);
+          setFocus(currentFocusIndex);
+        }
+      });
+      
+      // Save scroll position periodically during manual scrolling
+      let scrollTimeout;
+      resultsNode.addEventListener('scroll', () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          saveScrollPosition();
+        }, 200);
+      });
+
       function applyState() {
         if (!currentState) {
           return;
         }
+
+        // Save scroll position before rendering changes
+        saveScrollPosition();
 
         const { scanning, searchQuery, severityFilter, sortOrder, progressText, filteredSummary, summary, files, severityIconUris, filtersActive, lastScanAt, detail } = currentState;
 
@@ -1351,6 +1637,21 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         updateSummary(summary, filteredSummary, scanning, progressText, lastScanAt);
         renderResults(files, severityIconUris, scanning, progressText, filteredSummary.total);
         renderDetail(detail);
+        
+        // Restore scroll position after rendering
+        requestAnimationFrame(() => {
+          restoreScrollPosition();
+          
+          // If there's a selected item, scroll to it
+          const selectedFile = resultsNode.querySelector('.file-group.selected');
+          const selectedIssue = resultsNode.querySelector('.issue.selected');
+          
+          if (selectedIssue) {
+            scrollToElement(selectedIssue);
+          } else if (selectedFile) {
+            scrollToElement(selectedFile);
+          }
+        });
       }
 
       function updateSeverityControls(activeVerdicts) {
@@ -1390,11 +1691,16 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       }
       function renderResults(files, severityIconUris, scanning, progressText, filteredTotal) {
         resultsNode.innerHTML = '';
+        
+        // Add ARIA attributes to results container
+        resultsNode.setAttribute('role', 'tree');
+        resultsNode.setAttribute('aria-label', 'Baseline analysis results');
 
         if (scanning) {
           const info = document.createElement('div');
           info.className = 'progress-state';
           info.textContent = progressText || 'Scanning workspace…';
+          info.setAttribute('aria-live', 'polite');
           resultsNode.appendChild(info);
           return;
         }
@@ -1403,6 +1709,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           const empty = document.createElement('div');
           empty.className = 'empty-state';
           empty.textContent = 'No baseline findings match the current filters. Run a scan or adjust filters to see results.';
+          empty.setAttribute('aria-live', 'polite');
           resultsNode.appendChild(empty);
           return;
         }
@@ -1410,15 +1717,25 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         for (const file of files) {
           const details = document.createElement('details');
           details.className = 'file-group';
+          details.setAttribute('role', 'treeitem');
+          details.setAttribute('aria-expanded', file.expanded.toString());
+          details.setAttribute('aria-label', 'File ' + file.relativePath + ' with ' + file.counts.total + ' findings');
+          
           if (file.expanded) {
             details.setAttribute('open', '');
           }
           if (file.selected) {
             details.classList.add('selected');
+            details.setAttribute('aria-selected', 'true');
+          } else {
+            details.setAttribute('aria-selected', 'false');
           }
 
           const summary = document.createElement('summary');
           summary.className = 'file-header';
+          summary.setAttribute('tabindex', '0');
+          summary.setAttribute('role', 'button');
+          summary.setAttribute('aria-controls', 'file-issues-' + file.uri.replace(/[^a-zA-Z0-9]/g, '_'));
           summary.addEventListener('click', () => {
             vscode.postMessage({ type: 'selectFile', uri: file.uri });
           });
@@ -1431,6 +1748,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           const icon = document.createElement('span');
           icon.className = 'file-icon ' + file.iconVariant;
           icon.textContent = file.iconLabel;
+          icon.setAttribute('aria-hidden', 'true');
           summary.appendChild(icon);
 
           const path = document.createElement('span');
@@ -1463,17 +1781,34 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
           details.appendChild(summary);
           details.addEventListener('toggle', () => {
+            // Save scroll position before expansion change
+            saveScrollPosition();
             vscode.postMessage({ type: 'setFileExpansion', uri: file.uri, expanded: details.open });
+            
+            // Restore scroll position after a brief delay to allow for DOM updates
+            setTimeout(() => {
+              restoreScrollPosition();
+            }, 100);
           });
 
           const issuesList = document.createElement('div');
           issuesList.className = 'issues';
+          issuesList.setAttribute('role', 'group');
+          issuesList.setAttribute('aria-label', 'Issues in ' + file.relativePath);
+          issuesList.id = 'file-issues-' + file.uri.replace(/[^a-zA-Z0-9]/g, '_');
 
           for (const issue of file.issues) {
             const issueRow = document.createElement('div');
             issueRow.className = 'issue ' + issue.verdict;
+            issueRow.setAttribute('role', 'treeitem');
+            issueRow.setAttribute('tabindex', '0');
+            issueRow.setAttribute('aria-label', issue.featureName + ' issue at line ' + issue.line + ', ' + issue.verdictLabel);
+            
             if (issue.selected) {
               issueRow.classList.add('selected');
+              issueRow.setAttribute('aria-selected', 'true');
+            } else {
+              issueRow.setAttribute('aria-selected', 'false');
             }
 
             const iconImg = document.createElement('img');
