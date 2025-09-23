@@ -3,6 +3,7 @@
   "displayName": "baseline-gate",
   "description": "BaselineGate tool",
   "version": "0.0.1",
+  "publisher": "BehrouzPooladrak",
   "engines": {
     "vscode": "^1.104.0"
   },
