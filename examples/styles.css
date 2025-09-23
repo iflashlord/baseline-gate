@@ -1,0 +1,20 @@
+/* BaselineGate CSS sampler */
+
+.card-list:has(.card--featured) {
+  border: 2px solid var(--accent-color);
+  padding: 1rem;
+}
+
+@container layout (min-width: 42rem) {
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+.article-body {
+  text-wrap: pretty;
+  max-width: 65ch;
+  margin: 0 auto;
+}
