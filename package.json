@@ -16,7 +16,13 @@
     "onLanguage:javascriptreact",
     "onLanguage:typescriptreact",
     "onLanguage:css",
-    "onLanguage:scss"
+    "onLanguage:scss",
+    "onView:baselineGate.analysisView",
+    "onCommand:baseline-gate.scanWorkspace",
+    "onCommand:baseline-gate.searchFindings",
+    "onCommand:baseline-gate.configureSeverityFilter",
+    "onCommand:baseline-gate.clearFilters",
+    "onCommand:baseline-gate.toggleSortOrder"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -24,6 +30,26 @@
       {
         "command": "baseline-gate.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "baseline-gate.scanWorkspace",
+        "title": "Baseline Gate: Scan Workspace"
+      },
+      {
+        "command": "baseline-gate.searchFindings",
+        "title": "Baseline Gate: Search Findings"
+      },
+      {
+        "command": "baseline-gate.configureSeverityFilter",
+        "title": "Baseline Gate: Filter by Severity"
+      },
+      {
+        "command": "baseline-gate.clearFilters",
+        "title": "Baseline Gate: Clear Filters"
+      },
+      {
+        "command": "baseline-gate.toggleSortOrder",
+        "title": "Baseline Gate: Toggle Sort Order"
       }
     ],
     "configuration": {
@@ -39,7 +65,27 @@
           "description": "Target audience baseline for support scoring."
         }
       }
-    }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "baselineGate",
+          "title": "Baseline Gate",
+          "icon": "media/icon.png"
+        }
+      ]
+    },
+    "views": {
+      "baselineGate": [
+        {
+          "id": "baselineGate.analysisView",
+          "type": "webview",
+          "name": "Baseline Analysis",
+          "contextualTitle": "Baseline Analysis"
+        }
+      ]
+    },
+    "menus": {}
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
