@@ -784,12 +784,10 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         font-weight: 500;
         height: 28px;
         min-width: 28px;
-        transition: all 0.15s ease;
       }
       .controls button:hover {
         background: var(--vscode-button-secondaryHoverBackground);
         border-color: var(--vscode-button-border);
-        transform: translateY(-1px);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
       .controls button.primary {
@@ -804,7 +802,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .controls button:disabled {
         opacity: 0.5;
         cursor: default;
-        transform: none;
         box-shadow: none;
       }
       .filters {
@@ -836,7 +833,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         font-size: 0.8rem;
         height: 28px;
         box-sizing: border-box;
-        transition: border-color 0.15s ease;
       }
       .search-box input:focus {
         border-color: var(--vscode-focusBorder);
@@ -863,7 +859,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         cursor: pointer;
         font-size: 0.75rem;
         font-weight: 500;
-        transition: all 0.15s ease;
         height: 26px;
       }
       .severity-filter label.inactive {
@@ -874,7 +869,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       }
       .severity-filter label:hover:not(.inactive) {
         background: var(--vscode-inputOption-hoverBackground, var(--vscode-inputOption-activeBackground));
-        transform: translateY(-1px);
       }
       .severity-filter input {
         display: none;
@@ -928,7 +922,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         height: 8px;
         pointer-events: none;
         z-index: 1;
-        transition: opacity 0.2s ease;
       }
       
       .content::before {
@@ -991,7 +984,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         margin-bottom: 0.125rem;
         display: block;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        transition: all 0.2s ease;
       }
       
       .file-group:hover {
@@ -1008,7 +1000,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         cursor: pointer;
         min-height: 36px;
         position: relative;
-        transition: all 0.15s ease;
       }
       
       /* Enhanced focus indicators */
@@ -1038,7 +1029,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .issue:hover {
         background: var(--vscode-list-hoverBackground);
         border-color: var(--vscode-list-hoverForeground);
-        transform: translateY(-1px);
       }
       .file-group.selected .file-header {
         background: var(--vscode-editor-selectionBackground, rgba(128, 128, 128, 0.15));
@@ -1108,7 +1098,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         font-size: 0.7rem;
         line-height: 1.2;
         font-weight: 500;
-        transition: all 0.15s ease;
         height: 24px;
       }
       .file-detail-button:hover {
@@ -1123,7 +1112,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         width: 0.8rem;
         height: 0.8rem;
         color: var(--vscode-descriptionForeground);
-        transition: transform 0.2s ease;
       }
       .file-toggle::before {
         content: '▸';
@@ -1151,7 +1139,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         cursor: pointer;
         min-height: 36px;
         align-items: center;
-        transition: all 0.2s ease;
         position: relative;
       }
       
@@ -1171,10 +1158,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .issue.selected {
         outline: 2px solid var(--vscode-focusBorder, rgba(90, 133, 204, 0.8));
         outline-offset: 1px;
-        box-shadow: 0 0 0 1px var(--vscode-focusBorder, rgba(90, 133, 204, 0.4)), 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 0 0 1px var(--vscode-focusBorder, rgba(90, 133, 204, 0.4));
         background: var(--vscode-list-activeSelectionBackground);
         color: var(--vscode-list-activeSelectionForeground);
-        transform: translateY(-1px);
       }
       
       /* Better button accessibility */
@@ -1189,23 +1175,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         justify-content: center;
       }
       
-      /* Animation keyframes */
-      @keyframes slideIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-      
-      .file-group {
-        animation: slideIn 0.2s ease-out;
-      }
-      
-      /* Smooth state transitions */
+      /* Smooth state transitions - optimized to prevent blinking */
       .file-group.selected .file-header {
         background: var(--vscode-editor-selectionBackground, rgba(128, 128, 128, 0.15));
         border-left: 3px solid var(--vscode-focusBorder);
@@ -1227,7 +1197,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         text-decoration: none;
         border-radius: 4px;
         z-index: 1000;
-        transition: top 0.3s;
       }
       
       .skip-to-content:focus {
@@ -1277,7 +1246,6 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         padding: 0.125rem 0.3rem;
         font-size: 0.7rem;
         font-weight: 500;
-        transition: all 0.15s ease;
         height: 22px;
       }
       .issue-actions button:hover {
