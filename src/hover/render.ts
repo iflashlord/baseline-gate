@@ -81,6 +81,16 @@ export function buildFeatureHover(
     md.appendMarkdown(`\n`);
   }
 
+  // Add Gemini AI suggestion button
+  md.appendMarkdown(`---\n\n`);
+  const hoverContent = buildHoverContentForGemini(feature, verdict, target);
+  const geminiCommand = `command:baseline-gate.askGemini?${encodeURIComponent(JSON.stringify({
+    issue: hoverContent,
+    feature: feature.name,
+    context: 'hover'
+  }))}`;
+  md.appendMarkdown(`[$(sparkle) Ask Gemini to Fix](${geminiCommand})\n\n`);
+
   return md;
 }
 
@@ -417,4 +427,56 @@ function formatExternalLink(url: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function buildHoverContentForGemini(feature: BaselineFeature, verdict: Verdict, target: Target): string {
+  const parts: string[] = [];
+  
+  parts.push(`Feature: ${feature.name}`);
+  parts.push(`Status: ${verdict} for ${target} targets`);
+  parts.push(`Baseline: ${feature.baseline}`);
+  
+  if (feature.description) {
+    parts.push(`Description: ${feature.description}`);
+  }
+
+  // Add support information
+  const browsers = getFilteredBrowsers();
+  const supportInfo: string[] = [];
+  
+  for (const browser of browsers) {
+    const support = feature.support[browser.key];
+    if (support) {
+      const version = support.version;
+      const raw = support.raw;
+      if (raw) {
+        supportInfo.push(`${browser.label}: ${raw}`);
+      } else if (version) {
+        supportInfo.push(`${browser.label}: Since version ${version}`);
+      } else {
+        supportInfo.push(`${browser.label}: Supported`);
+      }
+    }
+  }
+  
+  if (supportInfo.length > 0) {
+    parts.push(`Browser Support: ${supportInfo.join(', ')}`);
+  }
+
+  return parts.join('\n');
+}
+
+function getFilteredBrowsers(): Array<{ key: BrowserKey; label: string }> {
+  const settings = readBrowserDisplaySettings();
+  const browsers: Array<{ key: BrowserKey; label: string }> = [];
+  
+  if (settings.showDesktop) {
+    browsers.push(...DESKTOP_BROWSERS);
+  }
+  
+  if (settings.showMobile) {
+    browsers.push(...MOBILE_BROWSERS);
+  }
+  
+  return browsers;
 }

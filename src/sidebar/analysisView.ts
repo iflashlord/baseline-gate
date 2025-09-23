@@ -137,6 +137,7 @@ type MessageFromWebview =
   | { type: "clearFilters" }
   | { type: "openFile"; uri: string; start: { line: number; character: number }; end: { line: number; character: number } }
   | { type: "openDocs"; url?: string }
+  | { type: "askGemini"; issue: string; feature: string; filePath: string }
   | { type: "selectIssue"; id: string }
   | { type: "selectFile"; uri: string }
   | { type: "openIssueDetail"; id: string }
@@ -557,10 +558,18 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       finding.range.start.character + 1
     }`;
 
+    // Create Gemini issue content for the sidebar
+    const geminiIssueContent = this.buildGeminiIssueContent(finding);
+    const geminiButton = `<button class="detail-gemini-button" data-gemini-issue="${escapeAttribute(geminiIssueContent)}" data-feature-name="${escapeAttribute(feature.name)}" data-file-path="${escapeAttribute(relativePath)}">
+      <span class="gemini-icon">✨</span> Ask Gemini to Fix
+    </button>`;
+
     const docButton = feature.docsUrl
-      ? `<div class="detail-section detail-actions"><button class="detail-doc-link" data-doc-url="${escapeAttribute(
-          feature.docsUrl
-        )}">Open documentation</button></div>`
+      ? `<button class="detail-doc-link" data-doc-url="${escapeAttribute(feature.docsUrl)}">Open documentation</button>`
+      : "";
+
+    const actionButtons = docButton || geminiButton 
+      ? `<div class="detail-section detail-actions">${docButton}${geminiButton}</div>`
       : "";
 
     return `
@@ -587,10 +596,59 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           <h4>Code snippet</h4>
           ${snippet}
         </div>
-        ${docButton}
+        ${actionButtons}
       </div>
     `;
   }
+  private buildGeminiIssueContent(finding: BaselineFinding): string {
+    const feature = finding.feature;
+    const relativePath = vscode.workspace.asRelativePath(finding.uri, false);
+    const verdictLabel = formatVerdict(finding.verdict);
+    const baselineSummary = formatBaselineSummary(feature);
+    
+    const parts: string[] = [];
+    
+    parts.push(`Feature: ${feature.name}`);
+    parts.push(`File: ${relativePath} (line ${finding.range.start.line + 1})`);
+    parts.push(`Status: ${verdictLabel} for ${this.target} targets`);
+    parts.push(`Baseline: ${baselineSummary}`);
+    
+    if (feature.description) {
+      parts.push(`Description: ${feature.description}`);
+    }
+
+    // Add support information
+    const supportInfo: string[] = [];
+    const browsers = getFilteredBrowsers();
+    
+    for (const browser of browsers) {
+      const support = feature.support[browser.key];
+      if (support) {
+        const version = support.version;
+        const raw = support.raw;
+        if (raw) {
+          supportInfo.push(`${browser.label}: ${raw}`);
+        } else if (version) {
+          supportInfo.push(`${browser.label}: Since version ${version}`);
+        } else {
+          supportInfo.push(`${browser.label}: Supported`);
+        }
+      }
+    }
+    
+    if (supportInfo.length > 0) {
+      parts.push(`Browser Support: ${supportInfo.join(', ')}`);
+    }
+
+    parts.push(`Code: ${finding.lineText.trim()}`);
+    
+    if (feature.discouraged) {
+      parts.push(`Note: This feature is discouraged - ${formatDiscouraged(feature.discouraged)}`);
+    }
+
+    return parts.join('\n');
+  }
+
   private recalculateVerdicts() {
     for (const finding of this.findings) {
       finding.verdict = scoreFeature(finding.feature.support, this.target);
@@ -644,6 +702,13 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           return;
         }
         void vscode.env.openExternal(vscode.Uri.parse(message.url));
+        break;
+      case "askGemini":
+        void vscode.commands.executeCommand('baseline-gate.askGemini', {
+          issue: message.issue,
+          feature: message.feature,
+          context: 'sidebar'
+        });
         break;
       default:
         break;
@@ -1224,7 +1289,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .issue-actions button,
       .file-detail-button,
       .detail-close,
-      .detail-doc-link {
+      .detail-doc-link,
+      .detail-gemini-button {
         min-height: 24px;
         min-width: 24px;
         display: inline-flex;
@@ -1609,6 +1675,24 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .detail-doc-link:hover {
         background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-secondaryBackground));
       }
+      .detail-gemini-button {
+        border: 1px solid var(--vscode-button-border, transparent);
+        border-radius: 4px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.3rem 0.7rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        transition: opacity 0.2s ease;
+      }
+      .detail-gemini-button:hover {
+        opacity: 0.9;
+      }
+      .gemini-icon {
+        font-size: 1em;
+      }
       .detail-entry {
         display: flex;
         flex-direction: column;
@@ -1862,10 +1946,20 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       });
 
       detailBodyNode.addEventListener('click', (event) => {
-        const button = event.target.closest('[data-doc-url]');
-        if (button) {
-          const url = button.getAttribute('data-doc-url');
+        const docButton = event.target.closest('[data-doc-url]');
+        if (docButton) {
+          const url = docButton.getAttribute('data-doc-url');
           vscode.postMessage({ type: 'openDocs', url });
+          return;
+        }
+
+        const geminiButton = event.target.closest('[data-gemini-issue]');
+        if (geminiButton) {
+          const issue = geminiButton.getAttribute('data-gemini-issue');
+          const feature = geminiButton.getAttribute('data-feature-name');
+          const filePath = geminiButton.getAttribute('data-file-path');
+          vscode.postMessage({ type: 'askGemini', issue, feature, filePath });
+          return;
         }
       });
 

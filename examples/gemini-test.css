@@ -1,0 +1,70 @@
+/* CSS file to test Gemini integration with baseline issues */
+
+/* CSS Grid - might be blocked for enterprise baseline */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+/* CSS Subgrid - limited availability */
+.subgrid-item {
+  display: subgrid;
+  grid-template-rows: subgrid;
+}
+
+/* Container queries - newly available */
+@container (min-width: 400px) {
+  .responsive-element {
+    font-size: 1.2rem;
+  }
+}
+
+/* :has() pseudo-class - limited support */
+.card:has(img) {
+  padding: 0;
+}
+
+/* Logical properties - might be newly available */
+.logical-margins {
+  margin-inline-start: 1rem;
+  margin-block-end: 2rem;
+  padding-inline: 0.5rem;
+}
+
+/* CSS nesting - very new feature */
+.nested-example {
+  color: blue;
+  
+  & .nested-child {
+    color: red;
+    
+    &:hover {
+      color: green;
+    }
+  }
+}
+
+/* CSS cascade layers - newly available */
+@layer base, components, utilities;
+
+@layer components {
+  .button {
+    background: var(--primary-color);
+    border-radius: 4px;
+  }
+}
+
+/* Modern color functions - limited support */
+.modern-colors {
+  background: oklch(70% 0.1 180);
+  color: color(display-p3 1 0 0);
+}
+
+/* CSS anchor positioning - experimental */
+.anchor-positioned {
+  position: absolute;
+  anchor-default: --anchor-element;
+  top: anchor(bottom);
+  left: anchor(center);
+}

@@ -55,6 +55,16 @@
         "command": "baseline-gate.openSettings",
         "title": "Baseline Gate: Open Settings",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "baseline-gate.askGemini",
+        "title": "Ask Gemini to Fix",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "baseline-gate.clearGeminiResults",
+        "title": "Clear Result",
+        "icon": "$(trash)"
       }
     ],
     "configuration": {
@@ -78,6 +88,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show mobile browser support information (Chrome Android, Firefox Android, Safari iOS)."
+        },
+        "baselineGate.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Google Gemini API key for AI-powered suggestions. Get your API key from https://makersuite.google.com/app/apikey"
         }
       }
     },
@@ -97,6 +112,12 @@
           "type": "webview",
           "name": "Baseline Analysis",
           "contextualTitle": "Baseline Analysis"
+        },
+        {
+          "id": "baselineGate.geminiView",
+          "type": "webview",
+          "name": "Gemini Suggestions",
+          "contextualTitle": "Gemini AI Suggestions"
         }
       ]
     },
@@ -137,6 +158,7 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "web-features": "^3.0.0"
+    "web-features": "^3.0.0",
+    "@google/generative-ai": "^0.21.0"
   }
 }

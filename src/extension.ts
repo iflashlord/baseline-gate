@@ -5,6 +5,7 @@ import { registerJsHover } from './hover/jsHover';
 import { registerCssHover } from './hover/cssHover';
 import { getFeatureById } from './core/baselineData';
 import { BaselineAnalysisViewProvider, type BaselineAnalysisAssets } from './sidebar/analysisView';
+import { GeminiViewProvider } from './gemini/geminiViewProvider';
 import type { Target } from './core/targets';
 import type { Verdict } from './core/scoring';
 
@@ -41,6 +42,12 @@ export function activate(context: vscode.ExtensionContext) {
 
   const analysisProvider = new BaselineAnalysisViewProvider(context, target, panelAssets);
   context.subscriptions.push(analysisProvider.register());
+
+  // Register Gemini view provider
+  const geminiProvider = new GeminiViewProvider(context);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(GeminiViewProvider.viewType, geminiProvider)
+  );
 
   const scanWorkspace = vscode.commands.registerCommand('baseline-gate.scanWorkspace', async () => {
     if (!vscode.workspace.workspaceFolders?.length) {
@@ -125,6 +132,22 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.executeCommand('workbench.action.openSettings', 'baselineGate');
   });
   context.subscriptions.push(openSettings);
+
+  // Register Gemini commands
+  const askGemini = vscode.commands.registerCommand('baseline-gate.askGemini', async (args?: { issue: string; feature?: string; context?: string }) => {
+    if (!args || !args.issue) {
+      void vscode.window.showErrorMessage('No issue provided for Gemini suggestion.');
+      return;
+    }
+    
+    await geminiProvider.addSuggestion(args.issue, args.feature);
+  });
+  context.subscriptions.push(askGemini);
+
+  const clearGeminiResults = vscode.commands.registerCommand('baseline-gate.clearGeminiResults', async (id?: string) => {
+    // This command is handled by the webview, but we register it for completeness
+  });
+  context.subscriptions.push(clearGeminiResults);
 
   const openDocs = vscode.commands.registerCommand('baseline-gate.openDocs', async (payload?: { id?: string } | string) => {
     const id = typeof payload === 'string' ? payload : payload?.id;
