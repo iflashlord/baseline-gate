@@ -121,6 +121,21 @@ export function activate(context: vscode.ExtensionContext) {
   });
   context.subscriptions.push(toggleSortOrder);
 
+  const toggleFullScreen = vscode.commands.registerCommand('baseline-gate.toggleFullScreen', () => {
+    const config = vscode.workspace.getConfiguration('baselineGate');
+    const current = config.get<boolean>('fullScreenSidebar', false);
+    config.update('fullScreenSidebar', !current, vscode.ConfigurationTarget.Global);
+    
+    const status = !current ? 'full screen' : 'normal';
+    void vscode.window.showInformationMessage(`Sidebar switched to ${status} mode.`);
+  });
+  context.subscriptions.push(toggleFullScreen);
+
+  const openSettings = vscode.commands.registerCommand('baseline-gate.openSettings', () => {
+    vscode.commands.executeCommand('workbench.action.openSettings', 'baselineGate');
+  });
+  context.subscriptions.push(openSettings);
+
   const openDocs = vscode.commands.registerCommand('baseline-gate.openDocs', async (payload?: { id?: string } | string) => {
     const id = typeof payload === 'string' ? payload : payload?.id;
     if (!id) {
@@ -139,12 +154,17 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(openDocs);
 
   const configWatcher = vscode.workspace.onDidChangeConfiguration((event) => {
-    if (!event.affectsConfiguration('baselineGate.target')) {
-      return;
+    if (event.affectsConfiguration('baselineGate.target')) {
+      target = readConfiguredTarget();
+      updateStatus();
+      analysisProvider.setTarget(target);
     }
-    target = readConfiguredTarget();
-    updateStatus();
-    analysisProvider.setTarget(target);
+    
+    if (event.affectsConfiguration('baselineGate.showDesktopBrowsers') || 
+        event.affectsConfiguration('baselineGate.showMobileBrowsers') ||
+        event.affectsConfiguration('baselineGate.fullScreenSidebar')) {
+      analysisProvider.refreshView();
+    }
   });
   context.subscriptions.push(configWatcher);
 }
@@ -157,4 +177,13 @@ function readConfiguredTarget(): Target {
 
 function formatTarget(target: Target): string {
   return target.charAt(0).toUpperCase() + target.slice(1);
+}
+
+export function readBrowserDisplaySettings() {
+  const config = vscode.workspace.getConfiguration('baselineGate');
+  return {
+    showDesktop: config.get<boolean>('showDesktopBrowsers', true),
+    showMobile: config.get<boolean>('showMobileBrowsers', true),
+    fullScreen: config.get<boolean>('fullScreenSidebar', false)
+  };
 }

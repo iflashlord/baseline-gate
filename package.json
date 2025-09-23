@@ -50,6 +50,16 @@
       {
         "command": "baseline-gate.toggleSortOrder",
         "title": "Baseline Gate: Toggle Sort Order"
+      },
+      {
+        "command": "baseline-gate.toggleFullScreen",
+        "title": "Baseline Gate: Toggle Full Screen",
+        "icon": "$(screen-full)"
+      },
+      {
+        "command": "baseline-gate.openSettings",
+        "title": "Baseline Gate: Open Settings",
+        "icon": "$(settings-gear)"
       }
     ],
     "configuration": {
@@ -63,6 +73,21 @@
           ],
           "default": "enterprise",
           "description": "Target audience baseline for support scoring."
+        },
+        "baselineGate.showDesktopBrowsers": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show desktop browser support information (Chrome, Edge, Firefox, Safari)."
+        },
+        "baselineGate.showMobileBrowsers": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show mobile browser support information (Chrome Android, Firefox Android, Safari iOS)."
+        },
+        "baselineGate.fullScreenSidebar": {
+          "type": "boolean",
+          "default": false,
+          "description": "Display the sidebar in full screen mode."
         }
       }
     },
@@ -85,7 +110,20 @@
         }
       ]
     },
-    "menus": {}
+    "menus": {
+      "view/title": [
+        {
+          "command": "baseline-gate.openSettings",
+          "when": "view == baselineGate.analysisView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "baseline-gate.toggleFullScreen",
+          "when": "view == baselineGate.analysisView",
+          "group": "navigation@2"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",

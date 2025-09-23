@@ -4,6 +4,7 @@ import { scanWorkspaceForBaseline, type BaselineFinding } from "./workspaceScann
 import { TARGET_MIN, type Target } from "../core/targets";
 import { scoreFeature, type Verdict } from "../core/scoring";
 import type { BrowserKey, DiscouragedInfo, SupportStatement, BaselineFeature } from "../core/baselineData";
+import { readBrowserDisplaySettings } from "../extension";
 
 const DEFAULT_SEVERITIES: Verdict[] = ["blocked", "warning", "safe"];
 const DEFAULT_SORT_ORDER: SortOrder = "severity";
@@ -20,6 +21,21 @@ const MOBILE_BROWSERS: Array<{ key: BrowserKey; label: string }> = [
   { key: "firefox_android", label: "Firefox Android" },
   { key: "safari_ios", label: "Safari iOS" }
 ];
+
+function getFilteredBrowsers(): Array<{ key: BrowserKey; label: string }> {
+  const settings = readBrowserDisplaySettings();
+  const browsers: Array<{ key: BrowserKey; label: string }> = [];
+  
+  if (settings.showDesktop) {
+    browsers.push(...DESKTOP_BROWSERS);
+  }
+  
+  if (settings.showMobile) {
+    browsers.push(...MOBILE_BROWSERS);
+  }
+  
+  return browsers;
+}
 
 export type SortOrder = "severity" | "file";
 
@@ -48,6 +64,7 @@ type WebviewState = {
   files: FileGroupPayload[];
   severityIconUris: Record<Verdict, string>;
   detail?: DetailPayload | null;
+  fullScreen: boolean;
 };
 
 type Summary = {
@@ -270,6 +287,10 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     }
     this.target = target;
     this.recalculateVerdicts();
+    this.postState();
+  }
+
+  refreshView(): void {
     this.postState();
   }
 
@@ -682,6 +703,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     );
 
     const detail = this.buildDetailPayload(filtered, severityIconUris);
+    const settings = readBrowserDisplaySettings();
 
     return {
       target: this.target,
@@ -698,7 +720,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       selectedFileUri: this.selectedFileUri,
       files: filePayloads,
       severityIconUris,
-      detail
+      detail,
+      fullScreen: settings.fullScreen
     };
   }
 
@@ -766,6 +789,19 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         left: 0;
         right: 0;
         bottom: 0;
+      }
+      .view.fullscreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 9999;
+        background: var(--vscode-editor-background, var(--vscode-sideBar-background));
+        border-radius: 0;
+        box-shadow: none;
       }
       .controls {
         display: flex;
@@ -1975,7 +2011,17 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         // Save scroll position before rendering changes
         saveScrollPosition();
 
-        const { scanning, searchQuery, severityFilter, sortOrder, progressText, filteredSummary, summary, files, severityIconUris, filtersActive, lastScanAt, detail } = currentState;
+        const { scanning, searchQuery, severityFilter, sortOrder, progressText, filteredSummary, summary, files, severityIconUris, filtersActive, lastScanAt, detail, fullScreen } = currentState;
+
+        // Apply full screen mode
+        const viewContainer = document.querySelector('.view');
+        if (viewContainer) {
+          if (fullScreen) {
+            viewContainer.classList.add('fullscreen');
+          } else {
+            viewContainer.classList.remove('fullscreen');
+          }
+        }
 
         controls.disabled = Boolean(scanning);
         clearBtn.disabled = !filtersActive;
@@ -2504,15 +2550,23 @@ function extensionToVariant(extension: string): string {
 
 function renderSupportTables(feature: BaselineFinding["feature"], target: Target): string {
   const targetMin = TARGET_MIN[target];
+  const settings = readBrowserDisplaySettings();
   const sections: string[] = [];
-  const desktop = renderSupportTableHtml("Desktop support", DESKTOP_BROWSERS, feature.support, targetMin);
-  if (desktop) {
-    sections.push(desktop);
+  
+  if (settings.showDesktop) {
+    const desktop = renderSupportTableHtml("Desktop support", DESKTOP_BROWSERS, feature.support, targetMin);
+    if (desktop) {
+      sections.push(desktop);
+    }
   }
-  const mobile = renderSupportTableHtml("Mobile support", MOBILE_BROWSERS, feature.support, targetMin);
-  if (mobile) {
-    sections.push(mobile);
+  
+  if (settings.showMobile) {
+    const mobile = renderSupportTableHtml("Mobile support", MOBILE_BROWSERS, feature.support, targetMin);
+    if (mobile) {
+      sections.push(mobile);
+    }
   }
+  
   if (!sections.length) {
     return "";
   }

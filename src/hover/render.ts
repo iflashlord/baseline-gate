@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import type { BaselineFeature, BrowserKey, SupportStatement } from "../core/baselineData";
 import type { Verdict } from "../core/scoring";
 import { TARGET_MIN, type Target } from "../core/targets";
+import { readBrowserDisplaySettings } from "../extension";
 
 const DESKTOP_BROWSERS: Array<{ key: BrowserKey; label: string }> = [
   { key: "chrome", label: "Chrome" },
@@ -145,16 +146,21 @@ function formatDiscouraged(feature: BaselineFeature): string | undefined {
 
 function buildSupportSection(feature: BaselineFeature, target: Target): string | undefined {
   const targetMin = TARGET_MIN[target];
+  const settings = readBrowserDisplaySettings();
   const sections: string[] = [];
 
-  const desktop = renderSupportTable("Desktop support", DESKTOP_BROWSERS, feature.support, targetMin);
-  if (desktop) {
-    sections.push(desktop);
+  if (settings.showDesktop) {
+    const desktop = renderSupportTable("Desktop support", DESKTOP_BROWSERS, feature.support, targetMin);
+    if (desktop) {
+      sections.push(desktop);
+    }
   }
 
-  const mobile = renderSupportTable("Mobile support", MOBILE_BROWSERS, feature.support, targetMin);
-  if (mobile) {
-    sections.push(mobile);
+  if (settings.showMobile) {
+    const mobile = renderSupportTable("Mobile support", MOBILE_BROWSERS, feature.support, targetMin);
+    if (mobile) {
+      sections.push(mobile);
+    }
   }
 
   if (!sections.length) {
