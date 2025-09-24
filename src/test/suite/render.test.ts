@@ -109,7 +109,7 @@ suite("rendering hover content", () => {
     assert.match(value, /Guard usage with runtime feature detection/);
   });
 
-  test("features without documentation only link to the baseline guide", () => {
+  test("features without documentation include the baseline guide and Gemini quick action", () => {
     const feature = buildFeature({
       docsUrl: undefined,
       support: supportMatrix({ chrome: 130, edge: 130, firefox: 130, safari: 18 })
@@ -118,10 +118,24 @@ suite("rendering hover content", () => {
     const md = renderHover(feature, "safe", "modern");
     const value = md.value;
 
-    const trimmedLinks = value.trimEnd();
+    const resourcesSectionMatch = /\*\*Resources\*\*\n([\s\S]*?)\n\n---/.exec(value);
+    assert.ok(resourcesSectionMatch, "resources section should precede Gemini actions");
+
+    const resourceLinks = resourcesSectionMatch[1]
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("- "));
+
+    assert.deepStrictEqual(
+      resourceLinks,
+      ["- [Baseline guide ↗](https://web.dev/articles/baseline-tools-web-features)"],
+      "baseline guide should remain the only resource link"
+    );
+
+    assert.ok(value.includes("$(sparkle) Ask Gemini to Fix"), "Gemini quick action should be present");
     assert.ok(
-      trimmedLinks.endsWith("Baseline guide ↗](https://web.dev/articles/baseline-tools-web-features)"),
-      "baseline guide should be the only link"
+      value.includes("command:baseline-gate.askGemini?"),
+      "Gemini command should be encoded in the hover"
     );
   });
 
