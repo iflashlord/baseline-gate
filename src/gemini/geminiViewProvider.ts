@@ -14,7 +14,11 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
   constructor(private readonly context: vscode.ExtensionContext) {
     this._context = context;
     // Load saved suggestions from workspace state
-    this.suggestions = context.workspaceState.get<GeminiSuggestion[]>('geminiSuggestions', []);
+    const storedSuggestions = context.workspaceState.get<GeminiSuggestion[]>('geminiSuggestions', []);
+    this.suggestions = storedSuggestions.map((suggestion) => ({
+      ...suggestion,
+      timestamp: normalizeToDate(suggestion.timestamp),
+    }));
     this.filteredSuggestions = [...this.suggestions];
   }
 
@@ -54,6 +58,10 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
         case 'searchSuggestions':
           console.log('Searching suggestions with query:', data.query);
           this.filterSuggestions(data.query);
+          break;
+        case 'copySuggestion':
+          console.log('Copying suggestion to clipboard:', data.id);
+          void this.copySuggestionToClipboard(data.id);
           break;
       }
     });
@@ -169,24 +177,115 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  private async copySuggestionToClipboard(id: string): Promise<void> {
+    const suggestion = this.suggestions.find((item) => item.id === id);
+
+    if (!suggestion) {
+      void vscode.window.showWarningMessage('Unable to copy Gemini suggestion: item was not found.');
+      return;
+    }
+
+    try {
+      await vscode.env.clipboard.writeText(suggestion.suggestion);
+      vscode.window.setStatusBarMessage('Gemini suggestion copied to clipboard.', 3000);
+    } catch (error) {
+      void vscode.window.showErrorMessage(`Failed to copy Gemini suggestion: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   private filterSuggestions(query: string): void {
     this.originalSearchQuery = query;
-    this.searchQuery = query.toLowerCase();
-    if (!query.trim()) {
+    const normalizedQuery = query.trim().toLowerCase();
+    this.searchQuery = normalizedQuery;
+
+    if (!normalizedQuery) {
       this.filteredSuggestions = [...this.suggestions];
     } else {
-      this.filteredSuggestions = this.suggestions.filter(suggestion => 
-        suggestion.feature?.toLowerCase().includes(this.searchQuery) ||
-        suggestion.file?.toLowerCase().includes(this.searchQuery) ||
-        suggestion.issue.toLowerCase().includes(this.searchQuery) ||
-        suggestion.suggestion.toLowerCase().includes(this.searchQuery)
-      );
+      const terms = normalizedQuery.split(/\s+/).filter(Boolean);
+      this.filteredSuggestions = this.suggestions.filter((suggestion) => {
+        const haystacks = [
+          suggestion.feature ?? '',
+          suggestion.file ?? '',
+          suggestion.issue,
+          suggestion.suggestion,
+        ].map((value) => value.toLowerCase());
+
+        return terms.every((term) => haystacks.some((value) => value.includes(term)));
+      });
     }
     this.refresh();
   }
 
+
+  private renderSuggestionCard(suggestion: GeminiSuggestion, searchTerm: string): string {
+    const suggestionId = escapeHtml(suggestion.id);
+    const { display, iso } = formatTimestamp(suggestion.timestamp);
+    const safeDisplay = escapeHtml(display);
+    const timestampHtml = iso
+      ? `<time class="timestamp" datetime="${escapeHtml(iso)}" title="${safeDisplay}">${safeDisplay}</time>`
+      : `<span class="timestamp" title="${safeDisplay}">${safeDisplay}</span>`;
+
+    const featureChip = suggestion.feature
+      ? `<span class="chip chip-feature">${highlightText(suggestion.feature, searchTerm)}</span>`
+      : '';
+    const filePath = suggestion.file ?? '';
+    const fileName = filePath ? getFileName(filePath) : '';
+    const fileChip = filePath
+      ? `<button type="button" class="chip chip-link" data-action="open-file" data-file-path="${escapeHtml(filePath)}" title="Open ${escapeHtml(filePath)}">📄 ${highlightText(fileName, searchTerm)}</button>`
+      : '';
+    const metadataChips = [featureChip, fileChip].filter(Boolean).join('');
+    const metadataMarkup = metadataChips || '<span class="chip">Gemini</span>';
+
+    const findingButton = suggestion.findingId
+      ? `<button type="button" class="link-button" data-action="go-to-finding" data-finding-id="${escapeHtml(suggestion.findingId)}">📍 Go to finding</button>`
+      : '';
+
+    return `
+        <article class="suggestion-item" data-suggestion-id="${suggestionId}">
+            <header class="suggestion-header">
+                <div class="metadata">
+                    ${metadataMarkup}
+                </div>
+                <div class="header-buttons">
+                    ${timestampHtml}
+                    <button type="button" class="icon-btn" data-action="copy" data-suggestion-id="${suggestionId}" title="Copy suggestion to clipboard">📋</button>
+                    <button type="button" class="icon-btn remove-btn" data-action="remove" data-suggestion-id="${suggestionId}" title="Remove suggestion">✕</button>
+                </div>
+            </header>
+            <div class="suggestion-content">
+                <div class="issue-section">
+                    <h4>Issue</h4>
+                    <div class="issue-text">${highlightText(suggestion.issue, searchTerm)}</div>
+                    ${findingButton}
+                </div>
+                <div class="suggestion-section">
+                    <h4>Gemini Suggestion</h4>
+                    <div class="suggestion-text">${renderMarkdown(suggestion.suggestion, searchTerm)}</div>
+                </div>
+            </div>
+        </article>
+    `;
+  }
+
   private _getHtmlForWebview(webview: vscode.Webview): string {
     const nonce = getNonce();
+    const searchDisplayValue = this.originalSearchQuery;
+    const searchTerm = searchDisplayValue.trim();
+    const totalCount = this.suggestions.length;
+    const filteredCount = this.filteredSuggestions.length;
+    const hasSearch = searchTerm.length > 0;
+    const hasSuggestions = filteredCount > 0;
+    const suggestionsMarkup = this.filteredSuggestions
+      .map((suggestion) => this.renderSuggestionCard(suggestion, searchTerm))
+      .join('');
+    const emptyStateMarkup = hasSuggestions
+      ? ''
+      : totalCount === 0
+        ? `<div class="empty-state">${geminiService.isConfigured()
+          ? 'No suggestions yet. Use "Ask Gemini to Fix" on hover tooltips or in the analysis view.'
+          : 'Configure your Gemini API key to start getting suggestions.'}</div>`
+        : `<div class="empty-state">No suggestions match <span class="empty-state__query">"${escapeHtml(searchDisplayValue)}"</span>. <button type="button" class="link-button" data-action="clear-search">Clear search</button></div>`;
+    const initialState = JSON.stringify({ searchQuery: this.originalSearchQuery });
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -200,426 +299,443 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
             font-family: var(--vscode-font-family);
             color: var(--vscode-foreground);
             background-color: var(--vscode-editor-background);
-            padding: 10px;
+            padding: 12px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+            gap: 12px;
+            padding-bottom: 12px;
             border-bottom: 1px solid var(--vscode-widget-border);
         }
 
-        .header h3 {
+        .header-title {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .header-title h3 {
             margin: 0;
-            color: var(--vscode-foreground);
+            font-size: 15px;
+        }
+
+        .count-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            font-size: 11px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .clear-all-btn {
             background: var(--vscode-button-secondaryBackground);
             color: var(--vscode-button-secondaryForeground);
             border: none;
-            padding: 4px 8px;
-            border-radius: 3px;
+            padding: 5px 12px;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 11px;
+            font-size: 12px;
         }
 
         .clear-all-btn:hover {
             background: var(--vscode-button-secondaryHoverBackground);
         }
 
-        .suggestion-item {
-            border: 1px solid var(--vscode-widget-border);
-            border-radius: 6px;
-            margin-bottom: 15px;
-            background: var(--vscode-editor-background);
-        }
-
-        .suggestion-header {
-            background: var(--vscode-editor-inactiveSelectionBackground);
-            padding: 8px 12px;
-            border-bottom: 1px solid var(--vscode-widget-border);
+        .search-bar {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            border-radius: 5px 5px 0 0;
+            gap: 8px;
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 6px;
+            background: var(--vscode-input-background);
+            padding: 6px 10px;
         }
 
-        .suggestion-meta {
-            font-size: 11px;
-            color: var(--vscode-descriptionForeground);
+        .search-bar:focus-within {
+            border-color: var(--vscode-focusBorder);
         }
 
-        .remove-btn {
-            background: none;
-            border: none;
-            color: var(--vscode-descriptionForeground);
-            cursor: pointer;
-            padding: 2px;
-            border-radius: 3px;
-        }
-
-        .remove-btn:hover {
-            background: var(--vscode-toolbar-hoverBackground);
-            color: var(--vscode-foreground);
-        }
-
-        .suggestion-content {
-            padding: 12px;
-        }
-
-        .issue-section {
-            margin-bottom: 12px;
-        }
-
-        .issue-title {
-            font-weight: bold;
-            color: var(--vscode-symbolIcon-colorForeground);
-            font-size: 12px;
-            margin-bottom: 4px;
-        }
-
-        .issue-text {
-            background: var(--vscode-editor-inactiveSelectionBackground);
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            border-left: 3px solid var(--vscode-editorWarning-foreground);
-        }
-
-        .suggestion-section {
-            margin-bottom: 8px;
-        }
-
-        .suggestion-title {
-            font-weight: bold;
-            color: var(--vscode-symbolIcon-snippetForeground);
-            font-size: 12px;
-            margin-bottom: 4px;
-        }
-
-        .suggestion-text {
-            font-size: 12px;
-            line-height: 1.4;
-            background: var(--vscode-textCodeBlock-background);
-            padding: 8px;
-            border-radius: 4px;
-            border-left: 3px solid var(--vscode-symbolIcon-snippetForeground);
-        }
-
-        .suggestion-text h1, .suggestion-text h2, .suggestion-text h3 {
-            margin: 12px 0 8px 0;
-            color: var(--vscode-foreground);
-        }
-
-        .suggestion-text h1 { font-size: 16px; }
-        .suggestion-text h2 { font-size: 14px; }
-        .suggestion-text h3 { font-size: 13px; }
-
-        .suggestion-text p {
-            margin: 8px 0;
-        }
-
-        .suggestion-text ul, .suggestion-text ol {
-            margin: 8px 0;
-            padding-left: 20px;
-        }
-
-        .suggestion-text li {
-            margin: 4px 0;
-        }
-
-        .suggestion-text code {
-            background: var(--vscode-textPreformat-background);
-            padding: 2px 4px;
-            border-radius: 3px;
-            font-family: var(--vscode-editor-font-family);
-        }
-
-        .suggestion-text pre {
-            background: var(--vscode-textPreformat-background);
-            padding: 8px;
-            border-radius: 4px;
-            overflow-x: auto;
-            margin: 8px 0;
-        }
-
-        .suggestion-text pre code {
-            background: none;
-            padding: 0;
-        }
-
-        .suggestion-text blockquote {
-            border-left: 4px solid var(--vscode-textQuote-border);
-            padding-left: 12px;
-            margin: 8px 0;
-            color: var(--vscode-textQuote-foreground);
-        }
-
-        .link-to-finding {
-            color: var(--vscode-textLink-foreground);
-            text-decoration: none;
-            font-size: 11px;
-            margin-top: 4px;
-            display: inline-block;
-        }
-
-        .link-to-finding:hover {
-            text-decoration: underline;
-        }
-
-        .no-suggestions {
-            text-align: center;
-            color: var(--vscode-descriptionForeground);
-            padding: 40px 20px;
-            font-style: italic;
-        }
-
-        .setup-info {
-            background: var(--vscode-editorInfo-background);
-            border: 1px solid var(--vscode-editorInfo-border);
-            border-radius: 4px;
-            padding: 12px;
-            margin-bottom: 15px;
-        }
-
-        .setup-info h4 {
-            margin: 0 0 8px 0;
-            color: var(--vscode-editorInfo-foreground);
-        }
-
-        .setup-info p {
-            margin: 0;
-            font-size: 12px;
-            line-height: 1.4;
-        }
-
-        .search-section {
-            margin-bottom: 15px;
+        .search-icon {
+            font-size: 13px;
+            opacity: 0.7;
         }
 
         .search-input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid var(--vscode-input-border);
-            border-radius: 4px;
-            background: var(--vscode-input-background);
+            flex: 1;
+            background: transparent;
+            border: none;
             color: var(--vscode-input-foreground);
             font-size: 13px;
         }
 
         .search-input:focus {
             outline: none;
-            border-color: var(--vscode-focusBorder);
         }
 
-        .search-input::placeholder {
-            color: var(--vscode-input-placeholderForeground);
-        }
-
-        .feature-name {
-            color: var(--vscode-symbolIcon-keywordForeground);
-            font-weight: 500;
-            margin-right: 8px;
-        }
-
-        .file-link {
+        .search-clear {
+            border: none;
+            background: none;
             color: var(--vscode-textLink-foreground);
-            text-decoration: none;
-            margin: 0 8px;
-            font-size: 11px;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 2px 4px;
+            border-radius: 4px;
         }
 
-        .file-link:hover {
+        .search-clear:hover {
+            background: var(--vscode-toolbar-hoverBackground);
+            color: var(--vscode-textLink-activeForeground);
+        }
+
+        .search-hint {
+            font-size: 11px;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .search-hint span {
+            color: var(--vscode-textLink-foreground);
+        }
+
+        .suggestions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .suggestion-item {
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 8px;
+            background: var(--vscode-editor-background);
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 10px 12px;
+            background: var(--vscode-editorWidget-background);
+            border-bottom: 1px solid var(--vscode-widget-border);
+        }
+
+        .metadata {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: var(--vscode-editorInlayHint-background);
+            color: var(--vscode-editorInlayHint-foreground);
+            font-size: 11px;
+            border: 1px solid transparent;
+        }
+
+        .chip-feature {
+            background: var(--vscode-symbolIcon-classForeground, var(--vscode-editorInlayHint-background));
+            color: var(--vscode-editor-foreground);
+        }
+
+        .chip-link {
+            background: none;
+            border: 1px solid var(--vscode-widget-border);
+            color: var(--vscode-textLink-foreground);
+            cursor: pointer;
+        }
+
+        .chip-link:hover {
+            background: var(--vscode-toolbar-hoverBackground);
+        }
+
+        .header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .icon-btn {
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: var(--vscode-descriptionForeground);
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .icon-btn:hover {
+            background: var(--vscode-toolbar-hoverBackground);
+            color: var(--vscode-foreground);
+        }
+
+        .icon-btn.remove-btn {
+            color: var(--vscode-errorForeground);
+        }
+
+        .suggestion-content {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        .suggestion-content h4 {
+            margin: 0 0 6px 0;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .issue-text {
+            background: var(--vscode-editor-inactiveSelectionBackground);
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 3px solid var(--vscode-editorWarning-foreground);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .suggestion-text {
+            font-size: 12px;
+            line-height: 1.5;
+            background: var(--vscode-textCodeBlock-background);
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 3px solid var(--vscode-symbolIcon-snippetForeground);
+            overflow-x: auto;
+        }
+
+        .suggestion-text pre {
+            margin: 8px 0;
+            padding: 10px;
+            background: var(--vscode-textPreformat-background);
+            border-radius: 4px;
+        }
+
+        .suggestion-text code {
+            background: var(--vscode-textPreformat-background);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .link-button {
+            border: none;
+            background: none;
+            color: var(--vscode-textLink-foreground);
+            cursor: pointer;
+            font-size: 11px;
+            padding: 0;
             text-decoration: underline;
+            margin-top: 6px;
+        }
+
+        .link-button:hover {
+            color: var(--vscode-textLink-activeForeground);
         }
 
         .timestamp {
             color: var(--vscode-descriptionForeground);
-            font-size: 10px;
+            font-size: 11px;
         }
 
-        .clear-search-btn {
-            background: none;
-            border: none;
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 32px 16px;
+            color: var(--vscode-descriptionForeground);
+            border: 1px dashed var(--vscode-widget-border);
+            border-radius: 8px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .empty-state__query {
             color: var(--vscode-textLink-foreground);
-            cursor: pointer;
-            text-decoration: underline;
-            padding: 0;
-            font-size: inherit;
         }
 
-        .clear-search-btn:hover {
-            color: var(--vscode-textLink-activeForeground);
+        .setup-info {
+            background: var(--vscode-editorInfo-background);
+            border: 1px solid var(--vscode-editorInfo-border);
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .setup-info h4 {
+            margin: 0 0 6px 0;
+            color: var(--vscode-editorInfo-foreground);
+            font-size: 13px;
+        }
+
+        mark {
+            background: var(--vscode-editorFindMatchHighlightBackground, rgba(255, 224, 0, 0.35));
+            color: inherit;
+            border-radius: 2px;
+            padding: 0 2px;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h3>Gemini AI Suggestions (${this.filteredSuggestions.length}/${this.suggestions.length})</h3>
-        ${this.suggestions.length > 0 ? '<button class="clear-all-btn" data-action="clear-all">Clear All</button>' : ''}
-    </div>
-
-    ${this.suggestions.length > 0 ? `
-        <div class="search-section">
-            <input type="text" class="search-input" placeholder="Search suggestions..." value="${this.originalSearchQuery}">
+    <div class="container">
+        <header class="header">
+            <div class="header-title">
+                <h3>Gemini AI Suggestions</h3>
+                <span class="count-chip">${filteredCount}/${totalCount}</span>
+            </div>
+            <div class="header-actions">
+                ${totalCount > 0 ? '<button type="button" class="clear-all-btn" data-action="clear-all">Clear All</button>' : ''}
+            </div>
+        </header>
+        ${totalCount > 0 ? `
+        <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" placeholder="Search by issue, feature, file, or suggestion" value="${escapeHtml(searchDisplayValue)}" aria-label="Search Gemini suggestions">
+            ${hasSearch ? '<button type="button" class="search-clear" data-action="clear-search" title="Clear search">Clear</button>' : ''}
         </div>
-    ` : ''}
-
-    ${!geminiService.isConfigured() ? `
+        ` : ''}
+        ${hasSearch ? `
+        <div class="search-hint">
+            Showing ${filteredCount} result${filteredCount === 1 ? '' : 's'} for <span>"${escapeHtml(searchDisplayValue)}"</span>
+        </div>
+        ` : ''}
+        ${!geminiService.isConfigured() ? `
         <div class="setup-info">
             <h4>Setup Required</h4>
             <p>Configure your Gemini API key in settings to start getting AI-powered suggestions for your baseline issues.</p>
         </div>
-    ` : ''}
-
-    ${this.filteredSuggestions.length === 0 && this.suggestions.length === 0 ? `
-        <div class="no-suggestions">
-            ${geminiService.isConfigured() 
-              ? 'No suggestions yet. Use "Ask Gemini to Fix" on hover tooltips or in the analysis view.' 
-              : 'Configure your Gemini API key to start getting suggestions.'}
-        </div>
-    ` : this.filteredSuggestions.length === 0 && this.searchQuery ? `
-        <div class="no-suggestions">
-            No suggestions match "${this.originalSearchQuery}". <button class="clear-search-btn">Clear search</button>
-        </div>
-    ` : ''}
-
-    ${this.filteredSuggestions.map(suggestion => `
-        <div class="suggestion-item">
-            <div class="suggestion-header">
-                <div class="suggestion-meta">
-                    ${suggestion.feature ? `<span class="feature-name">${suggestion.feature}</span>` : ''}
-                    ${suggestion.file ? `<a href="#" class="file-link" data-file-path="${escapeHtml(suggestion.file)}" title="Open ${escapeHtml(suggestion.file)}">📄 ${escapeHtml(suggestion.file.split('/').pop() || '')}</a>` : ''}
-                    <span class="timestamp">${suggestion.timestamp.toLocaleString()}</span>
-                </div>
-                <button class="remove-btn" data-suggestion-id="${escapeHtml(suggestion.id)}" title="Remove suggestion">✕</button>
-            </div>
-            <div class="suggestion-content">
-                <div class="issue-section">
-                    <div class="issue-title">Issue:</div>
-                    <div class="issue-text">${escapeHtml(suggestion.issue)}</div>
-                    ${suggestion.findingId ? `<a href="#" class="link-to-finding" data-finding-id="${escapeHtml(suggestion.findingId)}" title="Go to original finding">📍 Go to finding</a>` : ''}
-                </div>
-                <div class="suggestion-section">
-                    <div class="suggestion-title">Gemini Suggestion:</div>
-                    <div class="suggestion-text">${renderMarkdown(suggestion.suggestion)}</div>
-                </div>
-            </div>
-        </div>
-    `).join('')}
-
+        ` : ''}
+        ${hasSuggestions ? `
+        <div class="suggestions-list">${suggestionsMarkup}</div>
+        ` : emptyStateMarkup}
+    </div>
     <script nonce="${nonce}">
-        const vscode = acquireVsCodeApi();
+        const vscodeApi = acquireVsCodeApi();
+        const initialState = ${initialState};
+        const state = vscodeApi.getState() || {};
 
-        // Event listeners for better handling of dynamic content
-        document.addEventListener('click', function(event) {
-            const target = event.target;
-            
-            // Handle remove suggestion button clicks
-            if (target.classList.contains('remove-btn')) {
-                const suggestionId = target.getAttribute('data-suggestion-id');
-                if (suggestionId) {
-                    console.log('Webview: Remove suggestion clicked for id:', suggestionId);
-                    vscode.postMessage({
-                        type: 'removeSuggestion',
-                        id: suggestionId
-                    });
-                }
-                event.preventDefault();
-            }
-            
-            // Handle file link clicks
-            if (target.classList.contains('file-link')) {
-                const filePath = target.getAttribute('data-file-path');
-                if (filePath) {
-                    console.log('Webview: Open file clicked for path:', filePath);
-                    vscode.postMessage({
-                        type: 'openFileAtLocation',
-                        filePath: filePath
-                    });
-                }
-                event.preventDefault();
-            }
-            
-            // Handle finding link clicks
-            if (target.classList.contains('link-to-finding')) {
-                const findingId = target.getAttribute('data-finding-id');
-                if (findingId) {
-                    console.log('Webview: Go to finding clicked for id:', findingId);
-                    vscode.postMessage({
-                        type: 'goToFinding',
-                        findingId: findingId
-                    });
-                }
-                event.preventDefault();
-            }
-            
-            // Handle clear search button clicks
-            if (target.classList.contains('clear-search-btn')) {
-                clearSearch();
-                event.preventDefault();
-            }
-            
-            // Handle clear all button clicks
-            if (target.classList.contains('clear-all-btn')) {
-                console.log('Webview: Clear all clicked');
-                vscode.postMessage({
-                    type: 'clearAllSuggestions'
-                });
-                event.preventDefault();
-            }
-        });
-
-
-
-        });
-
-        // Handle search input changes
-        document.addEventListener('input', function(event) {
-            if (event.target.classList.contains('search-input')) {
-                const query = event.target.value;
-                console.log('Webview: Search input changed to:', query);
-                vscode.postMessage({
-                    type: 'searchSuggestions',
-                    query: query
-                });
-            }
-        });
-
-        // Restore focus to search input if it had focus before refresh
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInput = document.querySelector('.search-input');
-            if (searchInput && searchInput.value) {
-                // If there's a search query, focus the input for better UX
-                setTimeout(() => {
-                    searchInput.focus();
-                    searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
-                }, 100);
-            }
-        });
-
-        function searchSuggestions(query) {
-            console.log('Webview: Search suggestions with query:', query);
-            vscode.postMessage({
-                type: 'searchSuggestions',
-                query: query
-            });
+        if (state.searchQuery !== initialState.searchQuery) {
+            state.searchQuery = initialState.searchQuery;
+            vscodeApi.setState(state);
         }
 
-        function clearSearch() {
-            console.log('Webview: Clear search clicked');
-            const searchInput = document.querySelector('.search-input');
+        const searchInput = document.querySelector('.search-input');
+        if (searchInput && typeof state.searchQuery === 'string' && searchInput.value !== state.searchQuery) {
+            searchInput.value = state.searchQuery;
+        }
+
+        function updateSearch(query) {
+            vscodeApi.postMessage({
+                type: 'searchSuggestions',
+                query
+            });
+            state.searchQuery = query;
+            vscodeApi.setState(state);
+        }
+
+        function clearSearchField() {
             if (searchInput) {
                 searchInput.value = '';
-                searchSuggestions('');
-            } else {
-                console.error('Search input not found');
+                searchInput.focus();
             }
+            updateSearch('');
         }
+
+        document.addEventListener('input', function(event) {
+            if (searchInput && event.target === searchInput) {
+                updateSearch(searchInput.value);
+            }
+        });
+
+        document.addEventListener('click', function(event) {
+            if (!(event.target instanceof Element)) {
+                return;
+            }
+
+            const actionable = event.target.closest('[data-action]');
+            if (!actionable) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const action = actionable.getAttribute('data-action');
+            switch (action) {
+                case 'remove': {
+                    const suggestionId = actionable.getAttribute('data-suggestion-id');
+                    if (suggestionId) {
+                        vscodeApi.postMessage({ type: 'removeSuggestion', id: suggestionId });
+                    }
+                    break;
+                }
+                case 'clear-all': {
+                    vscodeApi.postMessage({ type: 'clearAllSuggestions' });
+                    break;
+                }
+                case 'open-file': {
+                    const filePath = actionable.getAttribute('data-file-path');
+                    if (filePath) {
+                        vscodeApi.postMessage({ type: 'openFileAtLocation', filePath });
+                    }
+                    break;
+                }
+                case 'go-to-finding': {
+                    const findingId = actionable.getAttribute('data-finding-id');
+                    if (findingId) {
+                        vscodeApi.postMessage({ type: 'goToFinding', findingId });
+                    }
+                    break;
+                }
+                case 'copy': {
+                    const suggestionId = actionable.getAttribute('data-suggestion-id');
+                    if (suggestionId) {
+                        vscodeApi.postMessage({ type: 'copySuggestion', id: suggestionId });
+                    }
+                    break;
+                }
+                case 'clear-search': {
+                    clearSearchField();
+                    break;
+                }
+                default:
+                    break;
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && searchInput && document.activeElement === searchInput && searchInput.value) {
+                clearSearchField();
+            }
+        });
     </script>
 </body>
 </html>`;
@@ -635,7 +751,7 @@ function getNonce() {
   return text;
 }
 
-function renderMarkdown(text: string): string {
+function renderMarkdown(text: string, query?: string): string {
   // Simple markdown to HTML converter for basic formatting
   let html = escapeHtml(text);
   
@@ -678,7 +794,7 @@ function renderMarkdown(text: string): string {
     html = '<p>' + html + '</p>';
   }
   
-  return html;
+  return highlightHtml(html, query);
 }
 
 function escapeHtml(text: string): string {
@@ -688,4 +804,79 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[-\^$*+?.()|[\]{}]/g, '\$&');
+}
+
+function buildSearchPatterns(query?: string): RegExp[] {
+  if (!query) {
+    return [];
+  }
+
+  const terms = query.trim().split(/\s+/).filter(Boolean);
+  if (terms.length === 0) {
+    return [];
+  }
+
+  const uniqueTerms = Array.from(new Set(terms.map(term => term.toLowerCase())));
+  return uniqueTerms.map(term => new RegExp(escapeRegExp(term), 'gi'));
+}
+
+function highlightText(text: string, query: string): string {
+  const safeText = escapeHtml(text);
+  const patterns = buildSearchPatterns(query);
+
+  if (patterns.length === 0) {
+    return safeText;
+  }
+
+  return patterns.reduce((result, pattern) => result.replace(pattern, '<mark>$&</mark>'), safeText);
+}
+
+function highlightHtml(html: string, query?: string): string {
+  const patterns = buildSearchPatterns(query);
+
+  if (patterns.length === 0) {
+    return html;
+  }
+
+  return html.replace(/>([^<]+)</g, (match, text) => {
+    let updated = text;
+    for (const pattern of patterns) {
+      updated = updated.replace(pattern, '<mark>$&</mark>');
+    }
+    return '>' + updated + '<';
+  });
+}
+
+function normalizeToDate(value: Date | string): Date {
+  if (value instanceof Date) {
+    return value;
+  }
+  return new Date(value);
+}
+
+function formatTimestamp(value: Date | string): { display: string; iso: string } {
+  const date = normalizeToDate(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return { display: 'Unknown date', iso: '' };
+  }
+
+  return {
+    display: date.toLocaleString(),
+    iso: date.toISOString(),
+  };
+}
+
+function getFileName(filePath: string): string {
+  if (!filePath) {
+    return '';
+  }
+
+  const normalized = filePath.replace(/\\/g, '/');
+  const segments = normalized.split('/');
+  return segments.pop() || filePath;
 }
