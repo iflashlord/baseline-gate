@@ -457,7 +457,7 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
         }
 
         .chip-feature {
-            background: var(--vscode-symbolIcon-classForeground, var(--vscode-editorInlayHint-background));
+            background: var(var(--vscode-editorInlayHint-background), --vscode-symbolIcon-classForeground);
             color: var(--vscode-editor-foreground);
         }
 
@@ -641,25 +641,64 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
     <script nonce="${nonce}">
         const vscodeApi = acquireVsCodeApi();
         const initialState = ${initialState};
-        const state = vscodeApi.getState() || {};
+        const persistedState = vscodeApi.getState() || {};
+        const state = {
+            searchQuery: initialState.searchQuery,
+            searchFocused: typeof persistedState.searchFocused === 'boolean' ? persistedState.searchFocused : false
+        };
+        let currentQuery = state.searchQuery;
 
-        if (state.searchQuery !== initialState.searchQuery) {
-            state.searchQuery = initialState.searchQuery;
-            vscodeApi.setState(state);
+        function commitState() {
+            vscodeApi.setState({ ...state });
         }
 
+        commitState();
+
         const searchInput = document.querySelector('.search-input');
-        if (searchInput && typeof state.searchQuery === 'string' && searchInput.value !== state.searchQuery) {
-            searchInput.value = state.searchQuery;
+        if (searchInput) {
+            if (typeof state.searchQuery === 'string' && searchInput.value !== state.searchQuery) {
+                searchInput.value = state.searchQuery;
+            }
+
+            if (state.searchFocused) {
+                setTimeout(() => {
+                    searchInput.focus();
+                    if (typeof searchInput.setSelectionRange === 'function') {
+                        const caret = searchInput.value.length;
+                        searchInput.setSelectionRange(caret, caret);
+                    }
+                }, 0);
+            }
+
+            searchInput.addEventListener('focus', () => {
+                if (!state.searchFocused) {
+                    state.searchFocused = true;
+                    commitState();
+                }
+            });
+
+            searchInput.addEventListener('blur', () => {
+                if (state.searchFocused) {
+                    state.searchFocused = false;
+                    commitState();
+                }
+            });
         }
 
         function updateSearch(query) {
+            if (query === currentQuery) {
+                return;
+            }
+
+            currentQuery = query;
+            state.searchQuery = query;
+            state.searchFocused = searchInput ? document.activeElement === searchInput : false;
+            commitState();
+
             vscodeApi.postMessage({
                 type: 'searchSuggestions',
                 query
             });
-            state.searchQuery = query;
-            vscodeApi.setState(state);
         }
 
         function clearSearchField() {
