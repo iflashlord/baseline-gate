@@ -9,6 +9,7 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
   private suggestions: GeminiSuggestion[] = [];
   private filteredSuggestions: GeminiSuggestion[] = [];
   private searchQuery: string = '';
+  private originalSearchQuery: string = '';
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this._context = context;
@@ -127,6 +128,7 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
     if (confirmed === 'Clear All') {
       this.suggestions = [];
       this.searchQuery = '';
+      this.originalSearchQuery = '';
       await this.saveSuggestions();
       this.filterSuggestions(''); // Reset search and refresh
     }
@@ -168,6 +170,7 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
   }
 
   private filterSuggestions(query: string): void {
+    this.originalSearchQuery = query;
     this.searchQuery = query.toLowerCase();
     if (!query.trim()) {
       this.filteredSuggestions = [...this.suggestions];
@@ -457,12 +460,12 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
 <body>
     <div class="header">
         <h3>Gemini AI Suggestions (${this.filteredSuggestions.length}/${this.suggestions.length})</h3>
-        ${this.suggestions.length > 0 ? '<button class="clear-all-btn" onclick="clearAll()">Clear All</button>' : ''}
+        ${this.suggestions.length > 0 ? '<button class="clear-all-btn" data-action="clear-all">Clear All</button>' : ''}
     </div>
 
     ${this.suggestions.length > 0 ? `
         <div class="search-section">
-            <input type="text" class="search-input" placeholder="Search suggestions..." value="${this.searchQuery}" oninput="searchSuggestions(event.target.value)">
+            <input type="text" class="search-input" placeholder="Search suggestions..." value="${this.originalSearchQuery}">
         </div>
     ` : ''}
 
@@ -481,7 +484,7 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
         </div>
     ` : this.filteredSuggestions.length === 0 && this.searchQuery ? `
         <div class="no-suggestions">
-            No suggestions match "${this.searchQuery}". <button onclick="clearSearch()" class="clear-search-btn">Clear search</button>
+            No suggestions match "${this.originalSearchQuery}". <button class="clear-search-btn">Clear search</button>
         </div>
     ` : ''}
 
@@ -560,14 +563,44 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
                 clearSearch();
                 event.preventDefault();
             }
+            
+            // Handle clear all button clicks
+            if (target.classList.contains('clear-all-btn')) {
+                console.log('Webview: Clear all clicked');
+                vscode.postMessage({
+                    type: 'clearAllSuggestions'
+                });
+                event.preventDefault();
+            }
         });
 
-        function clearAll() {
-            console.log('Webview: Clear all clicked');
-            vscode.postMessage({
-                type: 'clearAllSuggestions'
-            });
-        }
+
+
+        });
+
+        // Handle search input changes
+        document.addEventListener('input', function(event) {
+            if (event.target.classList.contains('search-input')) {
+                const query = event.target.value;
+                console.log('Webview: Search input changed to:', query);
+                vscode.postMessage({
+                    type: 'searchSuggestions',
+                    query: query
+                });
+            }
+        });
+
+        // Restore focus to search input if it had focus before refresh
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.querySelector('.search-input');
+            if (searchInput && searchInput.value) {
+                // If there's a search query, focus the input for better UX
+                setTimeout(() => {
+                    searchInput.focus();
+                    searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+                }, 100);
+            }
+        });
 
         function searchSuggestions(query) {
             console.log('Webview: Search suggestions with query:', query);
