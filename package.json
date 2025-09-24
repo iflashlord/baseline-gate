@@ -2,7 +2,7 @@
   "name": "baseline-gate",
   "displayName": "baseline-gate",
   "description": "BaselineGate tool",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "BehrouzPooladrak",
   "engines": {
     "vscode": "^1.104.0"
