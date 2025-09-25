@@ -14,17 +14,23 @@ export interface GeminiSuggestion {
 export class GeminiService {
   private genAI: GoogleGenerativeAI | null = null;
   private model: any = null;
+  private modelId = 'gemini-2.0-flash';
 
   private initializeAPI(): boolean {
-    const apiKey = vscode.workspace.getConfiguration('baselineGate').get<string>('geminiApiKey');
-    
+    const config = vscode.workspace.getConfiguration('baselineGate');
+    const apiKey = config.get<string>('geminiApiKey');
+    const configuredModel = config.get<string>('geminiModel');
+
     if (!apiKey || apiKey.trim() === '') {
       return false;
     }
 
     try {
+      this.modelId = configuredModel && configuredModel.trim() !== ''
+        ? configuredModel.trim()
+        : 'gemini-2.0-flash';
       this.genAI = new GoogleGenerativeAI(apiKey);
-      this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      this.model = this.genAI.getGenerativeModel({ model: this.modelId });
       return true;
     } catch (error) {
       console.error('Failed to initialize Gemini API:', error);
@@ -64,9 +70,69 @@ export class GeminiService {
       const response = await result.response;
       return response.text();
     } catch (error) {
+      if (this.genAI && this.shouldAttemptLegacyFallback(error)) {
+        try {
+          const fallbackModelId = 'gemini-2.0-flash';
+          const fallbackModel = this.genAI.getGenerativeModel({ model: fallbackModelId });
+          const fallbackResult = await fallbackModel.generateContent(fullPrompt);
+          const fallbackResponse = await fallbackResult.response;
+          this.model = fallbackModel;
+          this.modelId = fallbackModelId;
+          return fallbackResponse.text();
+        } catch (fallbackError) {
+          console.error('Gemini fallback model failed:', fallbackError);
+        }
+      }
+
       console.error('Gemini API error:', error);
-      throw new Error(`Failed to get suggestion from Gemini: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = this.buildHelpfulErrorMessage(error);
+      throw new Error(`Failed to get suggestion from Gemini: ${errorMessage}`);
     }
+  }
+
+  private shouldAttemptLegacyFallback(error: unknown): boolean {
+    if (this.modelId === 'gemini-2.0-flash') {
+      return false;
+    }
+
+    const message = this.extractErrorMessage(error);
+    if (!message) {
+      return false;
+    }
+
+    return message.includes('gemini-2.0-flash') || message.includes('was not found');
+  }
+
+  private buildHelpfulErrorMessage(error: unknown): string {
+    const message = this.extractErrorMessage(error) || 'Unknown error';
+
+    if (message.includes('was not found') || message.includes('404')) {
+      return `${message}. Your API key might not have access to ${this.modelId}. ` +
+        'Try setting "baselineGate.geminiModel" to a model you can access (for example gemini-2.0-flash) ' +
+        'or upgrade your Google AI access as described at https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions.';
+    }
+
+    return message;
+  }
+
+  private extractErrorMessage(error: unknown): string | undefined {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
+    if (typeof error === 'object' && error !== null) {
+      const maybeMessage = (error as { message?: string }).message;
+      if (typeof maybeMessage === 'string') {
+        return maybeMessage;
+      }
+
+      const maybeCode = (error as { code?: string }).code;
+      if (typeof maybeCode === 'string') {
+        return maybeCode;
+      }
+    }
+
+    return undefined;
   }
 
   isConfigured(): boolean {

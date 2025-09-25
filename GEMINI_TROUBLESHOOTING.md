@@ -128,3 +128,16 @@ The extension should now work correctly with all search, remove, and clear all f
 1. Test the extension with the new fixes
 2. Remove debug logging once functionality is confirmed working
 3. Consider adding unit tests for the webview functionality
+
+## Issue: 404 Model Not Found When Calling Gemini
+
+### Symptoms
+- Error message includes `Publisher Model ... gemini-2.0-flash was not found`
+- VS Code notification shows "Failed to get suggestion from Gemini"
+
+### Quick Fix
+1. Open VS Code Settings → Extensions → BaselineGate
+2. Set **Gemini Model** (`baselineGate.geminiModel`) to a version your API key can access, for example `gemini-2.0-flash`
+3. Re-run "Ask Gemini to Fix"
+
+If the error persists, verify that your Google AI key has access to the requested model version or upgrade your access as described in the Google documentation.

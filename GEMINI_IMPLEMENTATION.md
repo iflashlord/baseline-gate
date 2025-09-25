@@ -8,6 +8,7 @@ I have successfully integrated Google's Gemini API into your BaselineGate VS Cod
 
 ### 1. Configuration
 - Added `baselineGate.geminiApiKey` setting in package.json
+- Added optional `baselineGate.geminiModel` setting to select the Gemini model version
 - Users can configure their API key in VS Code settings
 - Secure storage of API key in VS Code settings
 

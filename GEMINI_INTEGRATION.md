@@ -47,6 +47,9 @@ This document describes the complete integration of Google's Gemini AI into the 
    - Set in VS Code Settings: Extensions → BaselineGate → Gemini Api Key
 
 ### Optional Settings
+1. **Gemini Model**: `baselineGate.geminiModel`
+   - Override the model ID used for requests (for example `gemini-2.0-flash`)
+   - Helpful if your API key has access to a specific version only
 2. **Custom Prompt**: `baselineGate.geminiCustomPrompt`
    - Add custom instructions to prepend to AI requests
    - Useful for specific coding standards or project requirements

@@ -94,6 +94,11 @@
           "default": "",
           "description": "Google Gemini API key for AI-powered suggestions. Get your API key from https://makersuite.google.com/app/apikey"
         },
+        "baselineGate.geminiModel": {
+          "type": "string",
+          "default": "gemini-2.0-flash",
+          "description": "Gemini model ID to use when requesting suggestions. Change this if your API key only has access to specific versions (for example gemini-2.0-flash)."
+        },
         "baselineGate.geminiCustomPrompt": {
           "type": "string",
           "default": "",
