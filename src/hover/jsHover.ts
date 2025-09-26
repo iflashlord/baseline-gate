@@ -6,7 +6,11 @@ import { scoreFeature } from "../core/scoring";
 import { type Target } from "../core/targets";
 import { buildFeatureHover } from "./render";
 
-export function registerJsHover(context: vscode.ExtensionContext, target: Target) {
+export function registerJsHover(
+  context: vscode.ExtensionContext, 
+  target: Target, 
+  geminiProvider?: import('../gemini/geminiViewProvider').GeminiViewProvider
+) {
   const assetsRoot = vscode.Uri.joinPath(context.extensionUri, "media", "baseline");
   const provider: vscode.HoverProvider = {
     provideHover(doc, position) {
@@ -27,7 +31,15 @@ export function registerJsHover(context: vscode.ExtensionContext, target: Target
       }
 
       const verdict = scoreFeature(feature.support, target);
-      const md = buildFeatureHover(feature, verdict, target, { assetsRoot });
+      
+      // Create a potential finding ID based on file and symbol position
+      const findingId = geminiProvider ? `${doc.uri.toString()}::${id}::${position.line}::${position.character}` : undefined;
+      
+      const md = buildFeatureHover(feature, verdict, target, { 
+        assetsRoot,
+        geminiProvider,
+        findingId
+      });
       return new vscode.Hover(md);
     }
   };

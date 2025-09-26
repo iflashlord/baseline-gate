@@ -13,9 +13,6 @@ import type { Verdict } from './core/scoring';
 export function activate(context: vscode.ExtensionContext) {
   let target = readConfiguredTarget();
 
-  registerJsHover(context, target);
-  registerCssHover(context, target);
-
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   const updateStatus = () => {
     status.text = `Baseline: ${formatTarget(target)}`;
@@ -46,6 +43,10 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(GeminiViewProvider.viewType, geminiProvider)
   );
+
+  // Register hover providers with gemini integration
+  registerJsHover(context, target, geminiProvider);
+  registerCssHover(context, target, geminiProvider);
 
   const analysisProvider = new BaselineAnalysisViewProvider(context, target, panelAssets, geminiProvider);
   context.subscriptions.push(analysisProvider.register());
@@ -157,6 +158,18 @@ export function activate(context: vscode.ExtensionContext) {
   });
   context.subscriptions.push(goToFinding);
 
+  const showGeminiSuggestions = vscode.commands.registerCommand('baseline-gate.showGeminiSuggestions', async (args?: { findingId: string; feature?: string }) => {
+    if (!args || !args.findingId) {
+      void vscode.window.showErrorMessage('No finding ID provided for Gemini suggestions.');
+      return;
+    }
+    
+    // Focus on the Gemini view and filter by the finding ID
+    await vscode.commands.executeCommand('baselineGate.geminiView.focus');
+    geminiProvider.focusOnFinding(args.findingId);
+  });
+  context.subscriptions.push(showGeminiSuggestions);
+
   const openDocs = vscode.commands.registerCommand('baseline-gate.openDocs', async (payload?: { id?: string } | string) => {
     const id = typeof payload === 'string' ? payload : payload?.id;
     if (!id) {
@@ -179,6 +192,9 @@ export function activate(context: vscode.ExtensionContext) {
       target = readConfiguredTarget();
       updateStatus();
       analysisProvider.setTarget(target);
+      // Re-register hover providers with new target (note: this will duplicate registrations, but VS Code handles it)
+      registerJsHover(context, target, geminiProvider);
+      registerCssHover(context, target, geminiProvider);
     }
     
     if (event.affectsConfiguration('baselineGate.showDesktopBrowsers') || 

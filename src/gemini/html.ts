@@ -23,7 +23,7 @@ export function buildGeminiWebviewHtml({ webview, state, isGeminiConfigured }: B
     ? ''
     : totalCount === 0
       ? `<div class="empty-state">${isGeminiConfigured
-        ? 'No suggestions yet. Use "Ask Gemini to Fix" on hover tooltips or in the analysis view.'
+        ? 'No suggestions yet. Use "Fix with Gemini" on hover tooltips or in the analysis view.'
         : 'Configure your Gemini API key to start getting suggestions.'}</div>`
       : `<div class="empty-state">No suggestions match <span class="empty-state__query">"${escapeHtml(searchDisplayValue)}"</span>. <button type="button" class="link-button" data-action="clear-search">Clear search</button></div>`;
   const initialState = JSON.stringify({ searchQuery: state.originalSearchQuery });

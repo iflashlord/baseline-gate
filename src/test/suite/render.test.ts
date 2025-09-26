@@ -132,7 +132,7 @@ suite("rendering hover content", () => {
       "baseline guide should remain the only resource link"
     );
 
-    assert.ok(value.includes("$(sparkle) Ask Gemini to Fix"), "Gemini quick action should be present");
+    assert.ok(value.includes("$(sparkle) Fix with Gemini"), "Gemini quick action should be present");
     assert.ok(
       value.includes("command:baseline-gate.askGemini?"),
       "Gemini command should be encoded in the hover"

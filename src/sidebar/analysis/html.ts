@@ -1842,7 +1842,7 @@ export function buildIssueDetailHtml(options: {
 
   const geminiIssueContent = buildGeminiIssueContent(finding, target);
   const hasExistingSuggestion = gemini?.hasExistingSuggestion ?? false;
-  const geminiButtonText = hasExistingSuggestion ? "Ask Gemini Again" : "Ask Gemini to Fix";
+  const geminiButtonText = hasExistingSuggestion ? "Ask Gemini Again" : "Fix with Gemini";
   const geminiButton = `<button class="detail-gemini-button" data-gemini-issue="${escapeAttribute(geminiIssueContent)}" data-feature-name="${escapeAttribute(feature.name)}" data-file-path="${escapeAttribute(relativePath)}" data-finding-id="${escapeAttribute(finding.id)}">
       <span class="gemini-icon">✨</span> ${geminiButtonText}
     </button>`;

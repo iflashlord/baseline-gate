@@ -26,12 +26,12 @@ I have successfully integrated Google's Gemini API into your BaselineGate VS Cod
 - Professional UI with proper styling
 
 ### 4. Hover Integration (`src/hover/render.ts`)
-- Added "✨ Ask Gemini to Fix" button to all hover tooltips
+- Added "✨ Fix with Gemini" button to all hover tooltips
 - Automatically extracts relevant issue context
 - Includes feature details, browser support, and code context
 
 ### 5. Sidebar Integration (`src/sidebar/analysisView.ts`)
-- Added "✨ Ask Gemini to Fix" button to detailed issue views
+- Added "✨ Fix with Gemini" button to detailed issue views
 - Rich context including file location, code snippet, and full analysis
 - Handles user interactions through webview messaging
 
@@ -43,14 +43,14 @@ I have successfully integrated Google's Gemini API into your BaselineGate VS Cod
 ## User Experience
 
 ### Setup Flow
-1. User clicks "Ask Gemini to Fix" without API key configured
+1. User clicks "Fix with Gemini" without API key configured
 2. Extension shows error with options: "Configure API Key" or "Learn More"
 3. "Configure API Key" opens VS Code settings to the right field
 4. "Learn More" shows detailed setup instructions
 
 ### Usage Flow
 1. User hovers over a baseline issue or views details in sidebar
-2. Clicks "✨ Ask Gemini to Fix" button
+2. Clicks "✨ Fix with Gemini" button
 3. Extension shows progress indicator "Getting suggestion from Gemini..."
 4. AI suggestion appears in the "Gemini Suggestions" tab
 5. User can manage suggestions (view, remove, or clear all)
@@ -122,7 +122,7 @@ Created example files:
 1. Test the extension in VS Code
 2. Configure a Gemini API key from https://makersuite.google.com/app/apikey
 3. Hover over features in the test files
-4. Try the "Ask Gemini to Fix" functionality
+4. Try the "Fix with Gemini" functionality
 5. Check the new "Gemini Suggestions" tab in the sidebar
 
 The integration is complete and ready for testing!

@@ -20,7 +20,7 @@ I have successfully implemented the three requested improvements to enhance the 
 
 ### 3. Smart Button States & Suggestion History
 - **Dynamic Button Text**: 
-  - Shows "✨ Ask Gemini to Fix" for new issues
+  - Shows "✨ Fix with Gemini" for new issues
   - Changes to "✨ Ask Gemini Again" when suggestions already exist
 - **Previous Suggestions Display**: Shows all previous Gemini suggestions for each finding directly in the detail view
 - **Persistent Suggestions**: Suggestions remain linked to findings until manually removed
@@ -80,7 +80,7 @@ export interface BaselineFinding {
 
 #### First Time User:
 1. Finds baseline issue in code
-2. Clicks "✨ Ask Gemini to Fix"
+2. Clicks "✨ Fix with Gemini"
 3. Views formatted suggestion in Gemini tab
 4. Can navigate back to original issue via link
 

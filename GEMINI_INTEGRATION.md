@@ -29,7 +29,7 @@ This document describes the complete integration of Google's Gemini AI into the 
 
 ### 3. Enhanced User Interface
 - **Hover Integration**: AI suggestions available directly in hover tooltips
-- **Sidebar Integration**: "Ask Gemini to Fix" buttons in detailed analysis view
+- **Sidebar Integration**: "Fix with Gemini" buttons in detailed analysis view
 - **Smart Button States**: Button text changes to "Ask Gemini Again" for repeated queries
 - **Suggestion History**: Persistent storage of AI responses linked to specific findings
 
@@ -57,8 +57,8 @@ This document describes the complete integration of Google's Gemini AI into the 
 ## Usage
 
 ### Getting AI Suggestions
-1. **From Hover Tooltips**: Hover over a baseline issue and click "Ask Gemini to Fix"
-2. **From Analysis View**: Click "Ask Gemini to Fix" in the detailed issue view
+1. **From Hover Tooltips**: Hover over a baseline issue and click "Fix with Gemini"
+2. **From Analysis View**: Click "Fix with Gemini" in the detailed issue view
 3. **Repeated Queries**: Button changes to "Ask Gemini Again" for follow-up suggestions
 
 ### Managing Suggestions
@@ -173,13 +173,13 @@ Enable detailed logging by:
 
 ### From Hover Tooltips
 - Hover over any JavaScript or CSS feature
-- Click the "✨ Ask Gemini to Fix" button at the bottom of the tooltip
+- Click the "✨ Fix with Gemini" button at the bottom of the tooltip
 - Gemini will analyze the issue and provide a solution
 
 ### From Sidebar Analysis
 - Run a workspace scan using "Baseline Gate: Scan Workspace"
 - Click on any finding in the sidebar to view details
-- Click the "✨ Ask Gemini to Fix" button in the details panel
+- Click the "✨ Fix with Gemini" button in the details panel
 - View suggestions in the new "Gemini Suggestions" tab
 
 ## Features

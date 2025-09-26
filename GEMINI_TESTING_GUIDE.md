@@ -15,13 +15,13 @@
 ### Prerequisites
 1. **Restart VS Code** completely after compiling the extension
 2. **Enable Developer Tools**: Help → Toggle Developer Tools → Console tab
-3. **Have some test data**: Create suggestions by using "Ask Gemini to Fix" on baseline issues
+3. **Have some test data**: Create suggestions by using "Fix with Gemini" on baseline issues
 
 ### Testing Clear All Functionality
 
 1. **Create Test Suggestions**:
    - Open any CSS/JS file with baseline issues
-   - Hover over issues and click "Ask Gemini to Fix" 
+   - Hover over issues and click "Fix with Gemini" 
    - Create at least 2-3 suggestions
 
 2. **Test Clear All**:

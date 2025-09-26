@@ -74,15 +74,33 @@ export function buildFeatureHover(
     md.appendMarkdown(`\n`);
   }
 
-  // Add Gemini AI suggestion button
+  // Add Gemini AI suggestion buttons
   md.appendMarkdown(`---\n\n`);
   const hoverContent = buildHoverContentForGemini(feature, verdict, target);
+  
+  // Check if there are existing suggestions for this feature/finding
+  const hasExistingSuggestions = options.geminiProvider && options.findingId 
+    ? options.geminiProvider.hasSuggestionForFinding(options.findingId)
+    : false;
+
+  if (hasExistingSuggestions) {
+    // Show "View Suggestions" button for existing suggestions
+    const viewSuggestionsCommand = `command:baseline-gate.showGeminiSuggestions?${encodeURIComponent(JSON.stringify({
+      findingId: options.findingId,
+      feature: feature.name
+    }))}`;
+    md.appendMarkdown(`[$(eye) View Existing Suggestions](${viewSuggestionsCommand}) | `);
+  }
+
+  // Always show "Fix with Gemini" button
   const geminiCommand = `command:baseline-gate.askGemini?${encodeURIComponent(JSON.stringify({
     issue: hoverContent,
     feature: feature.name,
+    findingId: options.findingId,
     context: 'hover'
   }))}`;
-  md.appendMarkdown(`[$(sparkle) Ask Gemini to Fix](${geminiCommand})\n\n`);
+  const askGeminiText = hasExistingSuggestions ? "Ask Gemini Again" : "Fix with Gemini";
+  md.appendMarkdown(`[$(sparkle) ${askGeminiText}](${geminiCommand})\n\n`);
 
   return md;
 }

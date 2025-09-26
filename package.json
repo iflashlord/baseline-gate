@@ -58,7 +58,7 @@
       },
       {
         "command": "baseline-gate.askGemini",
-        "title": "Ask Gemini to Fix",
+        "title": "Fix with Gemini",
         "icon": "$(sparkle)"
       },
       {

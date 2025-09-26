@@ -147,6 +147,17 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
     return this.state.suggestions.filter((suggestion) => suggestion.findingId === findingId);
   }
 
+  public focusOnFinding(findingId: string): void {
+    // Set search query to filter suggestions by finding ID
+    const suggestions = this.getSuggestionsForFinding(findingId);
+    if (suggestions.length > 0) {
+      // Use the feature name from the first suggestion as search term
+      const searchTerm = suggestions[0].feature || findingId;
+      this.state = applySearchFilter(this.state, searchTerm);
+      this.refresh();
+    }
+  }
+
   private async removeSuggestion(id: string): Promise<void> {
     this.state = removeSuggestionFromState(this.state, id);
     await this.saveSuggestions();

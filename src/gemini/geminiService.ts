@@ -147,7 +147,7 @@ export class GeminiService {
 2. Open VS Code Settings (Cmd/Ctrl + ,)
 3. Search for "baselineGate.geminiApiKey"
 4. Paste your API key in the setting
-5. Try the "Ask Gemini to Fix" button again
+5. Try the "Fix with Gemini" button again
 
 Your API key will be stored securely in your VS Code settings.`;
   }
