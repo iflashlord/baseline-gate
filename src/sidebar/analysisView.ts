@@ -35,6 +35,7 @@ import {
 } from "./analysis/html";
 import { buildWebviewState, filterFindings, syncSelection } from "./analysis/state";
 import { processMessage } from "./analysis/messages";
+import { BaselineDetailViewProvider } from "./detailView";
 
 export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
@@ -137,6 +138,10 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
   getSearchQuery(): string {
     return this.searchQuery;
+  }
+
+  getAllFindings(): BaselineFinding[] {
+    return this.findings;
   }
 
   setSeverityFilter(verdicts: Verdict[]): void {
@@ -289,18 +294,21 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
   private openIssueDetail(issueId: string): void {
     const finding = this.findings.find((candidate) => computeFindingId(candidate) === issueId);
     if (!finding) {
-      this.detailSelection = null;
-      if (this.selectedIssueId !== null || this.selectedFileUri !== null) {
-        this.selectedIssueId = null;
-        this.selectedFileUri = null;
-      }
-      this.postState();
       return;
     }
 
+    // Open the detail view in a new panel
+    BaselineDetailViewProvider.createOrShow(
+      this.context,
+      finding,
+      this.target,
+      this.assets,
+      this.geminiProvider
+    );
+
+    // Update sidebar selection for visual feedback
     this.selectedIssueId = issueId;
     this.selectedFileUri = finding.uri.toString();
-    this.detailSelection = { mode: "issue", id: issueId };
     this.collapsedFileUris.delete(this.selectedFileUri);
     this.postState();
   }

@@ -113,6 +113,9 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
           await vscode.window.showInformationMessage('Gemini suggestion added successfully!');
           await vscode.commands.executeCommand('baselineGate.geminiView.focus');
           this.refresh();
+
+          // Notify detail view to refresh if it's showing this finding
+          await vscode.commands.executeCommand('baseline-gate.refreshDetailView', findingId);
         } catch (error) {
           vscode.window.showErrorMessage(
             `Failed to get Gemini suggestion: ${error instanceof Error ? error.message : 'Unknown error'}`,

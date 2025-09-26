@@ -5,7 +5,9 @@ import { registerJsHover } from './hover/jsHover';
 import { registerCssHover } from './hover/cssHover';
 import { getFeatureById } from './core/baselineData';
 import { BaselineAnalysisViewProvider } from './sidebar/analysisView';
+import { BaselineDetailViewProvider } from './sidebar/detailView';
 import type { BaselineAnalysisAssets } from './sidebar/analysis/types';
+import { computeFindingId } from './sidebar/analysis/dataTransformation';
 import { GeminiViewProvider } from './gemini/geminiViewProvider';
 import type { Target } from './core/targets';
 import type { Verdict } from './core/scoring';
@@ -166,6 +168,23 @@ Context: This is a follow-up question about fixing a baseline compatibility issu
   });
   context.subscriptions.push(clearGeminiResults);
 
+  const closeDetailView = vscode.commands.registerCommand('baseline-gate.closeDetailView', async () => {
+    BaselineDetailViewProvider.dispose();
+  });
+  context.subscriptions.push(closeDetailView);
+
+  const refreshDetailView = vscode.commands.registerCommand('baseline-gate.refreshDetailView', async (findingId?: string) => {
+    if (BaselineDetailViewProvider.getCurrentPanel() && findingId) {
+      // Find the finding and refresh the detail view
+      const findings = await analysisProvider.getAllFindings();
+      const finding = findings.find(f => computeFindingId(f) === findingId);
+      if (finding) {
+        BaselineDetailViewProvider.updateCurrentPanel(finding, target, panelAssets, geminiProvider);
+      }
+    }
+  });
+  context.subscriptions.push(refreshDetailView);
+
   const goToFinding = vscode.commands.registerCommand('baseline-gate.goToFinding', async (findingId: string) => {
     // Switch focus to the analysis view and highlight the finding
     await vscode.commands.executeCommand('baselineGate.analysisView.focus');
@@ -220,7 +239,9 @@ Context: This is a follow-up question about fixing a baseline compatibility issu
   context.subscriptions.push(configWatcher);
 }
 
-export function deactivate() {}
+export function deactivate() {
+  BaselineDetailViewProvider.dispose();
+}
 
 function readConfiguredTarget(): Target {
   return vscode.workspace.getConfiguration('baselineGate').get<Target>('target') ?? 'enterprise';

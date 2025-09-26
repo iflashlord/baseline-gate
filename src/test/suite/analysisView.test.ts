@@ -297,7 +297,7 @@ suite('Baseline analysis view', () => {
     assert.strictEqual(state.files[0].expanded, true);
   });
 
-  test('issue detail payload is emitted when selecting a finding', () => {
+  test('issue detail opens in separate panel', () => {
     const finding = makeFinding({ path: '/workspace/src/app.ts', featureId: 'clipboard', featureName: 'Clipboard API', verdict: 'blocked' });
     setFindings(provider, [finding]);
 
@@ -308,11 +308,11 @@ suite('Baseline analysis view', () => {
     const lastMessage = attached.messages.at(-1);
     assert.ok(lastMessage, 'state message should be posted');
 
-    const detail = lastMessage.payload.detail;
-    assert.ok(detail, 'detail payload should be present');
-    assert.strictEqual(detail.mode, 'issue');
-    assert.ok(detail.title.includes('Clipboard API'));
-    assert.ok(detail.html.includes('Baseline'));
+    // The detail is no longer in the sidebar - it opens in a separate panel
+    // So we check that the selection state is updated
+    const state = lastMessage.payload;
+    assert.strictEqual(state.selectedIssueId, issueId, 'issue should be selected');
+    assert.strictEqual(state.selectedFileUri, finding.uri.toString(), 'file should be selected');
   });
 
   test('clearing detail via close message resets selection', () => {
@@ -363,7 +363,7 @@ suite('Double-click functionality', () => {
     assert.ok(detail.html.includes('Clipboard API'));
   });
 
-  test('double-click on issue row opens issue details', () => {
+  test('double-click on issue row opens issue details in separate panel', () => {
     const finding = makeFinding({ 
       path: '/workspace/src/app.ts', 
       featureId: 'clipboard', 
@@ -381,11 +381,10 @@ suite('Double-click functionality', () => {
     const lastMessage = attached.messages.at(-1);
     assert.ok(lastMessage, 'state message should be posted');
 
-    const detail = lastMessage.payload.detail;
-    assert.ok(detail, 'detail payload should be present');
-    assert.strictEqual(detail.mode, 'issue');
-    assert.ok(detail.title.includes('Clipboard API'));
-    assert.ok(detail.html.includes('Baseline'));
+    // The detail opens in a separate panel, not in the sidebar
+    const state = lastMessage.payload;
+    assert.strictEqual(state.selectedIssueId, issueId, 'issue should be selected');
+    assert.strictEqual(state.selectedFileUri, finding.uri.toString(), 'file should be selected');
   });
 
   test('double-click preserves existing selection behavior', () => {
@@ -405,11 +404,11 @@ suite('Double-click functionality', () => {
     let state = buildState(provider);
     assert.strictEqual(state.selectedIssueId, issueId);
     
-    // Then double-click to open details
+    // Then double-click to open details in separate panel
     attached.emit({ type: 'openIssueDetail', id: issueId });
     
     const lastMessage = attached.messages.at(-1);
-    assert.ok(lastMessage.payload.detail, 'detail should be opened');
+    // Detail opens in separate panel, selection is preserved
     assert.strictEqual(lastMessage.payload.selectedIssueId, issueId, 'selection should be preserved');
   });
 });
@@ -632,12 +631,12 @@ suite('Enhanced UI interactions', () => {
     attached.emit({ type: 'selectIssue', id: issueId });
     let state = buildState(provider);
     assert.strictEqual(state.selectedIssueId, issueId);
-    assert.strictEqual(state.detail, null, 'detail should not be open yet');
+    assert.strictEqual(state.detail, null, 'detail should not be open in sidebar');
     
-    // Then open issue details
+    // Then open issue details in separate panel
     attached.emit({ type: 'openIssueDetail', id: issueId });
     const lastMessage = attached.messages.at(-1);
-    assert.ok(lastMessage.payload.detail, 'detail should now be open');
+    // Detail opens in separate panel, selection is maintained
     assert.strictEqual(lastMessage.payload.selectedIssueId, issueId, 'issue should remain selected');
   });
 
@@ -657,18 +656,16 @@ suite('Enhanced UI interactions', () => {
     attached.emit({ type: 'openIssueDetail', id: issueId });
     const buttonClickMessage = attached.messages.at(-1);
     
-    // Close the detail
+    // Close any detail (not applicable with separate panel)
     attached.emit({ type: 'closeDetail' });
     
     // Now test double-click (which should also trigger openIssueDetail)
     attached.emit({ type: 'openIssueDetail', id: issueId });
     const doubleClickMessage = attached.messages.at(-1);
     
-    // Both should produce the same detail structure
-    assert.strictEqual(buttonClickMessage.payload.detail.mode, doubleClickMessage.payload.detail.mode);
-    assert.strictEqual(buttonClickMessage.payload.detail.title, doubleClickMessage.payload.detail.title);
-    assert.ok(buttonClickMessage.payload.detail.html.length > 0);
-    assert.ok(doubleClickMessage.payload.detail.html.length > 0);
+    // Both should produce the same selection state (detail opens in separate panel)
+    assert.strictEqual(buttonClickMessage.payload.selectedIssueId, doubleClickMessage.payload.selectedIssueId);
+    assert.strictEqual(buttonClickMessage.payload.selectedFileUri, doubleClickMessage.payload.selectedFileUri);
   });
 });
 
