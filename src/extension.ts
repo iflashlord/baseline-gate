@@ -192,11 +192,15 @@ Context: This is a follow-up question about fixing a baseline compatibility issu
         case 'success':
           if (args.response) {
             await BaselineDetailViewProvider.sendSuccessState(currentPanel.webview, args.response);
+            // Automatically refresh the analysis view to show updated chat
+            analysisProvider.refreshView();
           }
           break;
         case 'error':
           if (args.error) {
             await BaselineDetailViewProvider.sendErrorState(currentPanel.webview, args.error);
+            // Also refresh on error to show error state in chat
+            analysisProvider.refreshView();
           }
           break;
         case 'loading':

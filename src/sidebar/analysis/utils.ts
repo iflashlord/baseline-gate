@@ -295,6 +295,9 @@ export function renderSimpleMarkdown(text: string): string {
     return token;
   });
 
+  // Remove markdown task list checkboxes and convert to plain list items
+  html = html.replace(/^(\s*)- \[[x ]\]\s*/gm, '$1- ');
+  
   html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
@@ -308,7 +311,7 @@ export function renderSimpleMarkdown(text: string): string {
       '<pre><code>',
       trimmed,
       '</code></pre>',
-      '<button type="button" class="code-copy-btn" data-action="copy-code" aria-label="Copy code snippet" title="Copy code snippet">📋</button>',
+      '<button type="button" class="code-copy-btn" data-action="copy-code" aria-label="Copy code snippet" title="Copy code snippet">Copy</button>',
       '</div>'
     ].join('');
     html = html.replace(`__GEMINI_DETAIL_CODE_BLOCK_${index}__`, blockHtml);

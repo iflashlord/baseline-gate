@@ -1270,7 +1270,8 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       }
 
       .code-block {
-        margin: 0;
+        position: relative;
+        margin: 8px 0;
         font-family: var(--vscode-editor-font-family, monospace);
         font-size: 13px;
         line-height: 1.4;
@@ -1278,6 +1279,8 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         background: var(--vscode-textCodeBlock-background);
         color: var(--vscode-textPreformat-foreground);
         overflow-x: auto;
+        border-radius: 4px;
+        border: 1px solid var(--vscode-widget-border);
       }
 
       .code-block code {
@@ -1286,6 +1289,24 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         font-family: inherit;
         font-size: inherit;
         color: inherit;
+      }
+
+      .code-copy-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: var(--vscode-button-secondaryBackground);
+        color: var(--vscode-button-secondaryForeground);
+        border: 1px solid var(--vscode-button-border);
+        border-radius: 3px;
+        padding: 4px 8px;
+        font-size: 11px;
+        cursor: pointer;
+        z-index: 1;
+      }
+
+      .code-copy-btn:hover {
+        background: var(--vscode-button-secondaryHoverBackground);
       }
 
       .message-time {
@@ -2517,34 +2538,16 @@ export function renderGeminiChatInterface(finding: BaselineFinding, target: Targ
 }
 
 function renderAllMessages(suggestions: GeminiSuggestion[]): string {
-  const initialSuggestion = suggestions[0];
-  const followUpSuggestions = suggestions.slice(1);
+  // Sort suggestions by timestamp to ensure chronological order (oldest first, newest last)
+  const sortedSuggestions = [...suggestions].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  
+  let allMessages = '';
 
-  let allMessages = `
-    <div class="chat-message user-message">
-      <div class="message-avatar">
-        <div class="avatar-icon">👤</div>
-      </div>
-      <div class="message-content">
-        <div class="message-text">${escapeHtml(initialSuggestion.issue)}</div>
-        <div class="message-time">${initialSuggestion.timestamp.toLocaleString()}</div>
-      </div>
-    </div>
-    
-    <div class="chat-message ai-message">
-      <div class="message-avatar">
-        <div class="avatar-icon">✨</div>
-      </div>
-      <div class="message-content">
-        <div class="message-text">${renderSimpleMarkdown(initialSuggestion.suggestion)}</div>
-        <div class="message-time">${initialSuggestion.timestamp.toLocaleString()}</div>
-      </div>
-    </div>
-  `;
-
-  followUpSuggestions.forEach((suggestion) => {
+  sortedSuggestions.forEach((suggestion) => {
     const isFollowUp = suggestion.issue.includes('Follow-up question about') || suggestion.issue.includes('Context: This is a follow-up');
+    
     if (isFollowUp) {
+      // This is a follow-up question - show the user's question first, then AI response
       const questionMatch = suggestion.issue.match(/Follow-up question about.*?: (.+?)(?:\n\nContext:|$)/s);
       const actualQuestion = questionMatch ? questionMatch[1].trim() : suggestion.issue;
       
@@ -2555,6 +2558,29 @@ function renderAllMessages(suggestions: GeminiSuggestion[]): string {
           </div>
           <div class="message-content">
             <div class="message-text">${escapeHtml(actualQuestion)}</div>
+            <div class="message-time">${suggestion.timestamp.toLocaleString()}</div>
+          </div>
+        </div>
+        
+        <div class="chat-message ai-message">
+          <div class="message-avatar">
+            <div class="avatar-icon">✨</div>
+          </div>
+          <div class="message-content">
+            <div class="message-text">${renderSimpleMarkdown(suggestion.suggestion)}</div>
+            <div class="message-time">${suggestion.timestamp.toLocaleString()}</div>
+          </div>
+        </div>
+      `;
+    } else {
+      // This is an initial question - show the user's original issue first, then AI response
+      allMessages += `
+        <div class="chat-message user-message">
+          <div class="message-avatar">
+            <div class="avatar-icon">👤</div>
+          </div>
+          <div class="message-content">
+            <div class="message-text">${escapeHtml(suggestion.issue)}</div>
             <div class="message-time">${suggestion.timestamp.toLocaleString()}</div>
           </div>
         </div>
