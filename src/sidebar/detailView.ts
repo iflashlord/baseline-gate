@@ -375,149 +375,406 @@ export class BaselineDetailViewProvider {
             font-size: 16px;
         }
 
-        /* Chat interface styles */
+        /* ChatGPT-like Chat Interface Styles */
         .gemini-chat-section {
             border: 1px solid var(--vscode-widget-border);
             border-radius: 8px;
             background: var(--vscode-editor-background);
-            margin-top: 12px;
+            margin-top: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
-        .chat-context-info {
-            background: var(--vscode-badge-background);
-            color: var(--vscode-badge-foreground);
-            padding: 12px;
-            border-radius: 6px 6px 0 0;
-            margin-bottom: 16px;
+        .chat-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--vscode-widget-border);
+            background: var(--vscode-titleBar-activeBackground, var(--vscode-sideBar-background));
         }
 
-        .chat-context-info h5 {
-            margin: 0 0 8px 0;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .context-details {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            font-size: 12px;
-            opacity: 0.9;
-        }
-
-        .chat-history {
-            margin-bottom: 16px;
-        }
-
-        .chat-message {
-            margin-bottom: 16px;
-            padding: 12px;
-            border-radius: 6px;
-        }
-
-        .chat-message.initial-question {
-            background: var(--vscode-inputValidation-infoBackground);
-            border-left: 3px solid var(--vscode-inputValidation-infoBorder);
-        }
-
-        .chat-message.gemini-response {
-            background: var(--vscode-textPreformat-background);
-            border-left: 3px solid var(--vscode-charts-yellow);
-        }
-
-        .chat-message.follow-up-question {
-            background: var(--vscode-inputValidation-warningBackground);
-            border-left: 3px solid var(--vscode-inputValidation-warningBorder);
-        }
-
-        .message-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--vscode-descriptionForeground);
-            margin-bottom: 8px;
+        .chat-title {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 12px;
+        }
+
+        .title-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 6px;
+            color: white;
+        }
+
+        .chat-title h4 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--vscode-titleBar-activeForeground, var(--vscode-foreground));
+        }
+
+        /* Collapsible Context */
+        .chat-context-section {
+            border-bottom: 1px solid var(--vscode-widget-border);
+        }
+
+        .chat-context-toggle {
+            width: 100%;
+            background: transparent;
+            color: var(--vscode-foreground);
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .context-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .chat-context-toggle:hover .context-header {
+            background: var(--vscode-list-hoverBackground);
+        }
+
+        .context-icon {
+            font-size: 14px;
+        }
+
+        .context-toggle-icon {
+            margin-left: auto;
+            transition: transform 0.2s ease;
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .chat-context-toggle[data-expanded="true"] .context-toggle-icon {
+            transform: rotate(90deg);
+        }
+
+        .chat-context-details {
+            padding: 16px 20px;
+            background: var(--vscode-textCodeBlock-background);
+        }
+
+        .context-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .context-item {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .context-label {
+            font-weight: 500;
+            color: var(--vscode-foreground);
+            min-width: 60px;
+            margin-right: 12px;
+        }
+
+        .context-value {
+            color: var(--vscode-descriptionForeground);
+            font-family: var(--vscode-editor-font-family, monospace);
+            font-size: 12px;
+        }
+
+        /* Conversation Area */
+        .chat-conversation {
+            display: flex;
+            flex-direction: column;
+            min-height: 200px;
+            max-height: 600px;
+        }
+
+        .chat-messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .chat-messages {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Message Styles */
+        .chat-message {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .message-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .avatar-icon {
+            font-size: 14px;
+        }
+
+        .user-message .message-avatar {
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+        }
+
+        .ai-message .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
 
         .message-content {
-            font-size: 13px;
-            line-height: 1.5;
+            flex: 1;
+            min-width: 0;
         }
 
-        .chat-input-section {
-            border-top: 1px solid var(--vscode-widget-border);
-            padding: 16px;
-        }
-
-        .chat-input-header {
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 8px;
+        .message-text {
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
+            font-size: 14px;
+            line-height: 1.6;
             color: var(--vscode-foreground);
+            word-wrap: break-word;
+        }
+
+        .message-text p {
+            margin: 0 0 12px 0;
+        }
+
+        .message-text p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-text strong {
+            font-weight: 600;
+            color: var(--vscode-foreground);
+        }
+
+        .message-text em {
+            font-style: italic;
+            color: var(--vscode-foreground);
+        }
+
+        .message-text .inline-code {
+            background: var(--vscode-textCodeBlock-background);
+            color: var(--vscode-textPreformat-foreground);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: var(--vscode-editor-font-family, monospace);
+            font-size: 13px;
+            border: 1px solid var(--vscode-widget-border);
+        }
+
+        .message-text .code-block-container {
+            margin: 12px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--vscode-widget-border);
+            background: var(--vscode-textCodeBlock-background);
+        }
+
+        .code-block-header {
             display: flex;
             align-items: center;
-            gap: 6px;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: var(--vscode-titleBar-activeBackground, var(--vscode-button-secondaryBackground));
+            border-bottom: 1px solid var(--vscode-widget-border);
+            font-size: 12px;
+            font-weight: 500;
         }
 
-        .chat-input-area {
+        .code-block-lang {
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .code-copy-button {
+            background: transparent;
+            border: none;
+            color: var(--vscode-descriptionForeground);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
             display: flex;
-            flex-direction: column;
-            gap: 8px;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .code-copy-button:hover {
+            background: var(--vscode-list-hoverBackground);
+            color: var(--vscode-foreground);
+        }
+
+        .copy-icon {
+            width: 14px;
+            height: 14px;
+        }
+
+        .code-block {
+            margin: 0;
+            font-family: var(--vscode-editor-font-family, monospace);
+            font-size: 13px;
+            line-height: 1.4;
+            padding: 12px;
+            background: var(--vscode-textCodeBlock-background);
+            color: var(--vscode-textPreformat-foreground);
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            background: transparent;
+            padding: 0;
+            font-family: inherit;
+            font-size: inherit;
+            color: inherit;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: var(--vscode-descriptionForeground);
+            margin-top: 6px;
+            opacity: 0.8;
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            padding: 0 20px 16px;
+        }
+
+        .typing-dots {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 16px;
+            background: var(--vscode-textCodeBlock-background);
+            border-radius: 16px;
+            width: fit-content;
+        }
+
+        .typing-dots span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--vscode-descriptionForeground);
+            animation: typing-pulse 1.5s ease-in-out infinite;
+        }
+
+        .typing-dots span:nth-child(1) { animation-delay: 0s; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.3s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.6s; }
+
+        @keyframes typing-pulse {
+            0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+            30% { opacity: 1; transform: scale(1); }
+        }
+
+        /* Input Area */
+        .chat-input-container {
+            border-top: 1px solid var(--vscode-widget-border);
+            padding: 16px 20px;
+            background: var(--vscode-editor-background);
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            align-items: flex-end;
+            background: var(--vscode-input-background);
+            border: 2px solid var(--vscode-input-border);
+            border-radius: 12px;
+            padding: 8px 12px;
+            transition: border-color 0.2s ease;
+            position: relative;
+        }
+
+        .chat-input-wrapper:focus-within {
+            border-color: var(--vscode-focusBorder);
+            box-shadow: 0 0 0 1px var(--vscode-focusBorder);
         }
 
         .chat-input {
-            min-height: 80px;
-            max-height: 200px;
-            resize: vertical;
-            background: var(--vscode-input-background);
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
             color: var(--vscode-input-foreground);
-            border: 1px solid var(--vscode-input-border);
-            border-radius: 4px;
-            padding: 8px;
             font-family: var(--vscode-font-family);
-            font-size: 13px;
-            line-height: 1.4;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            min-height: 20px;
+            max-height: 120px;
+            padding: 4px 0;
         }
 
-        .chat-input:focus {
-            outline: none;
-            border-color: var(--vscode-focusBorder);
+        .chat-input::placeholder {
+            color: var(--vscode-input-placeholderForeground);
         }
 
         .chat-send-button {
-            align-self: flex-end;
             background: var(--vscode-button-background);
             color: var(--vscode-button-foreground);
             border: none;
-            border-radius: 4px;
-            padding: 8px 16px;
-            font-size: 13px;
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 6px;
-            transition: background-color 0.2s;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            margin-left: 8px;
         }
 
         .chat-send-button:hover:not(:disabled) {
             background: var(--vscode-button-hoverBackground);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .chat-send-button:disabled {
             background: var(--vscode-button-secondaryBackground);
             color: var(--vscode-button-secondaryForeground);
             cursor: not-allowed;
-            opacity: 0.6;
+            opacity: 0.5;
+            transform: none;
+            box-shadow: none;
         }
 
-        .chat-guidelines {
+        .send-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .chat-input-footer {
             margin-top: 8px;
-            padding: 8px;
-            background: var(--vscode-textCodeBlock-background);
-            border-radius: 4px;
-            font-size: 11px;
+            text-align: center;
+        }
+
+        .chat-input-footer small {
             color: var(--vscode-descriptionForeground);
+            font-size: 11px;
         }
 
         /* Responsive design */
@@ -581,6 +838,39 @@ export class BaselineDetailViewProvider {
 
         // Handle clicks on buttons and links
         document.addEventListener('click', (event) => {
+            // Handle code copy buttons in chat interface
+            const codeCopyButton = event.target.closest('.code-copy-button');
+            if (codeCopyButton) {
+                const codeId = codeCopyButton.getAttribute('data-code-id');
+                const codeElement = document.getElementById(codeId);
+                const codeText = codeElement ? codeElement.textContent || '' : '';
+                navigator.clipboard.writeText(codeText).then(() => {
+                    // Visual feedback
+                    const originalContent = codeCopyButton.innerHTML;
+                    codeCopyButton.innerHTML = '<span>✓</span>';
+                    setTimeout(() => {
+                        codeCopyButton.innerHTML = originalContent;
+                    }, 2000);
+                }).catch(() => {
+                    // Fallback to VS Code message
+                    vscode.postMessage({ type: 'copyCodeSnippet', code: codeText });
+                });
+                return;
+            }
+
+            // Handle context toggle
+            const contextToggle = event.target.closest('.chat-context-toggle');
+            if (contextToggle) {
+                const isExpanded = contextToggle.getAttribute('data-expanded') === 'true';
+                const contextDetails = contextToggle.parentElement.querySelector('.chat-context-details');
+                
+                if (contextDetails) {
+                    contextToggle.setAttribute('data-expanded', !isExpanded);
+                    contextDetails.style.display = isExpanded ? 'none' : 'block';
+                }
+                return;
+            }
+
             const copyCodeButton = event.target.closest('[data-action="copy-code"]');
             if (copyCodeButton) {
                 const container = copyCodeButton.closest('[data-code-block]');
@@ -711,11 +1001,15 @@ export class BaselineDetailViewProvider {
         document.addEventListener('keydown', (event) => {
             if (event.target.classList.contains('chat-input')) {
                 if (event.key === 'Enter' && !event.shiftKey) {
+                    // Enter sends message
                     event.preventDefault();
                     const sendButton = event.target.parentElement.querySelector('.chat-send-button');
                     if (!sendButton.disabled) {
                         sendButton.click();
                     }
+                } else if (event.key === 'Enter' && event.shiftKey) {
+                    // Shift+Enter adds new line (default behavior)
+                    return;
                 }
             }
         });

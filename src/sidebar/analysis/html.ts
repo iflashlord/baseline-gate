@@ -998,28 +998,45 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         background: var(--vscode-button-secondaryHoverBackground);
       }
 
-      /* Modern Chat Interface Styles */
+      /* ChatGPT-like Chat Interface Styles */
       .gemini-chat-section {
         border: 1px solid var(--vscode-widget-border);
-        border-radius: 12px;
+        border-radius: 8px;
         background: var(--vscode-editor-background);
         margin-top: 16px;
         overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
       .chat-header {
-        padding: 16px 20px 12px;
+        padding: 16px 20px;
         border-bottom: 1px solid var(--vscode-widget-border);
-        background: var(--vscode-textCodeBlock-background);
+        background: var(--vscode-titleBar-activeBackground, var(--vscode-sideBar-background));
       }
 
-      .chat-header h4 {
+      .chat-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .title-icon {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 6px;
+        color: white;
+      }
+
+      .chat-title h4 {
         margin: 0;
         font-size: 16px;
         font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        color: var(--vscode-titleBar-activeForeground, var(--vscode-foreground));
       }
 
       /* Collapsible Context */
@@ -1029,27 +1046,36 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
 
       .chat-context-toggle {
         width: 100%;
-        background: var(--vscode-badge-background);
-        color: var(--vscode-badge-foreground);
+        background: transparent;
+        color: var(--vscode-foreground);
         border: none;
-        padding: 12px 20px;
-        font-size: 13px;
-        font-weight: 500;
+        padding: 0;
         cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
         transition: background-color 0.2s;
       }
 
-      .chat-context-toggle:hover {
+      .context-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .chat-context-toggle:hover .context-header {
         background: var(--vscode-list-hoverBackground);
+      }
+
+      .context-icon {
+        font-size: 14px;
       }
 
       .context-toggle-icon {
         margin-left: auto;
-        transition: transform 0.2s;
-        font-size: 10px;
+        transition: transform 0.2s ease;
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
       }
 
       .chat-context-toggle[data-expanded="true"] .context-toggle-icon {
@@ -1061,87 +1087,81 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         background: var(--vscode-textCodeBlock-background);
       }
 
-      .context-item {
-        font-size: 12px;
-        margin-bottom: 6px;
-        color: var(--vscode-descriptionForeground);
+      .context-grid {
+        display: grid;
+        gap: 12px;
       }
 
-      .context-item:last-child {
-        margin-bottom: 0;
+      .context-item {
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+      }
+
+      .context-label {
+        font-weight: 500;
+        color: var(--vscode-foreground);
+        min-width: 60px;
+        margin-right: 12px;
+      }
+
+      .context-value {
+        color: var(--vscode-descriptionForeground);
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 12px;
       }
 
       /* Conversation Area */
       .chat-conversation {
-        max-height: 400px;
+        display: flex;
+        flex-direction: column;
+        min-height: 200px;
+        max-height: 600px;
+      }
+
+      .chat-messages-container {
+        flex: 1;
         overflow-y: auto;
         padding: 0;
       }
 
-      .conversation-header {
-        padding: 12px 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        font-size: 12px;
-        color: var(--vscode-descriptionForeground);
-        border-bottom: 1px solid var(--vscode-widget-border);
-        background: var(--vscode-textCodeBlock-background);
-      }
-
-      .show-all-messages {
-        background: none;
-        border: none;
-        color: var(--vscode-textLink-foreground);
-        cursor: pointer;
-        font-size: 12px;
-        text-decoration: underline;
-      }
-
-      .show-all-messages:hover {
-        color: var(--vscode-textLink-activeForeground);
-      }
-
       .chat-messages {
         padding: 20px;
-      }
-
-      .chat-history-messages {
-        padding: 20px;
-        border-top: 1px solid var(--vscode-widget-border);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
       }
 
       /* Message Styles */
       .chat-message {
         display: flex;
         gap: 12px;
-        margin-bottom: 20px;
         align-items: flex-start;
       }
 
-      .chat-message:last-child {
-        margin-bottom: 0;
-      }
-
       .message-avatar {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 16px;
         flex-shrink: 0;
-        background: var(--vscode-button-secondaryBackground);
+        margin-top: 2px;
+      }
+
+      .avatar-icon {
+        font-size: 14px;
       }
 
       .user-message .message-avatar {
-        background: var(--vscode-inputValidation-infoBackground);
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
       }
 
-      .gemini-message .message-avatar {
-        background: var(--vscode-charts-yellow);
-        color: var(--vscode-editor-background);
+      .ai-message .message-avatar {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
       }
 
       .message-content {
@@ -1150,68 +1170,146 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       }
 
       .message-text {
+        background: transparent;
+        padding: 0;
+        border-radius: 0;
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--vscode-foreground);
+        word-wrap: break-word;
+      }
+
+      .message-text p {
+        margin: 0 0 12px 0;
+      }
+
+      .message-text p:last-child {
+        margin-bottom: 0;
+      }
+
+      .message-text strong {
+        font-weight: 600;
+        color: var(--vscode-foreground);
+      }
+
+      .message-text em {
+        font-style: italic;
+        color: var(--vscode-foreground);
+      }
+
+      .message-text .inline-code {
         background: var(--vscode-textCodeBlock-background);
-        padding: 12px 16px;
-        border-radius: 12px;
+        color: var(--vscode-textPreformat-foreground);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: var(--vscode-editor-font-family, monospace);
         font-size: 13px;
-        line-height: 1.5;
         border: 1px solid var(--vscode-widget-border);
       }
 
-      .user-message .message-text {
-        background: var(--vscode-inputValidation-infoBackground);
-        border-color: var(--vscode-inputValidation-infoBorder);
+      .message-text .code-block-container {
+        margin: 12px 0;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--vscode-widget-border);
+        background: var(--vscode-textCodeBlock-background);
       }
 
-      .gemini-message .message-text {
-        background: var(--vscode-textPreformat-background);
-        border-color: var(--vscode-charts-yellow);
+      .code-block-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        background: var(--vscode-titleBar-activeBackground, var(--vscode-button-secondaryBackground));
+        border-bottom: 1px solid var(--vscode-widget-border);
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .code-block-lang {
+        color: var(--vscode-descriptionForeground);
+      }
+
+      .code-copy-button {
+        background: transparent;
+        border: none;
+        color: var(--vscode-descriptionForeground);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        transition: all 0.2s;
+      }
+
+      .code-copy-button:hover {
+        background: var(--vscode-list-hoverBackground);
+        color: var(--vscode-foreground);
+      }
+
+      .copy-icon {
+        width: 14px;
+        height: 14px;
+      }
+
+      .code-block {
+        margin: 0;
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 13px;
+        line-height: 1.4;
+        padding: 12px;
+        background: var(--vscode-textCodeBlock-background);
+        color: var(--vscode-textPreformat-foreground);
+        overflow-x: auto;
+      }
+
+      .code-block code {
+        background: transparent;
+        padding: 0;
+        font-family: inherit;
+        font-size: inherit;
+        color: inherit;
       }
 
       .message-time {
         font-size: 11px;
         color: var(--vscode-descriptionForeground);
-        margin-top: 4px;
-        opacity: 0.7;
+        margin-top: 6px;
+        opacity: 0.8;
       }
 
-      /* Loading Message */
-      .loading-message {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 20px;
-        align-items: flex-start;
+      /* Typing Indicator */
+      .typing-indicator {
+        padding: 0 20px 16px;
       }
 
-      .loading-message .message-text {
-        background: var(--vscode-textPreformat-background);
-        border-color: var(--vscode-charts-yellow);
+      .typing-dots {
         display: flex;
         align-items: center;
-        gap: 8px;
-        color: var(--vscode-descriptionForeground);
+        gap: 4px;
+        padding: 12px 16px;
+        background: var(--vscode-textCodeBlock-background);
+        border-radius: 16px;
+        width: fit-content;
       }
 
-      .loading-dots {
-        display: inline-flex;
-        gap: 2px;
-      }
-
-      .loading-dots span {
-        width: 4px;
-        height: 4px;
+      .typing-dots span {
+        width: 6px;
+        height: 6px;
         border-radius: 50%;
-        background: var(--vscode-charts-yellow);
-        animation: loading-pulse 1.4s ease-in-out infinite both;
+        background: var(--vscode-descriptionForeground);
+        animation: typing-pulse 1.5s ease-in-out infinite;
       }
 
-      .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
-      .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
-      .loading-dots span:nth-child(3) { animation-delay: 0s; }
+      .typing-dots span:nth-child(1) { animation-delay: 0s; }
+      .typing-dots span:nth-child(2) { animation-delay: 0.3s; }
+      .typing-dots span:nth-child(3) { animation-delay: 0.6s; }
 
-      @keyframes loading-pulse {
-        0%, 80%, 100% { opacity: 0.3; }
-        40% { opacity: 1; }
+      @keyframes typing-pulse {
+        0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+        30% { opacity: 1; transform: scale(1); }
       }
 
       /* Input Area */
@@ -1223,17 +1321,18 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
 
       .chat-input-wrapper {
         display: flex;
-        gap: 8px;
         align-items: flex-end;
         background: var(--vscode-input-background);
-        border: 1px solid var(--vscode-input-border);
-        border-radius: 20px;
+        border: 2px solid var(--vscode-input-border);
+        border-radius: 12px;
         padding: 8px 12px;
-        transition: border-color 0.2s;
+        transition: border-color 0.2s ease;
+        position: relative;
       }
 
       .chat-input-wrapper:focus-within {
         border-color: var(--vscode-focusBorder);
+        box-shadow: 0 0 0 1px var(--vscode-focusBorder);
       }
 
       .chat-input {
@@ -1243,12 +1342,12 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         outline: none;
         color: var(--vscode-input-foreground);
         font-family: var(--vscode-font-family);
-        font-size: 13px;
-        line-height: 1.4;
+        font-size: 14px;
+        line-height: 1.5;
         resize: none;
         min-height: 20px;
         max-height: 120px;
-        padding: 0;
+        padding: 4px 0;
       }
 
       .chat-input::placeholder {
@@ -1259,20 +1358,22 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         background: var(--vscode-button-background);
         color: var(--vscode-button-foreground);
         border: none;
-        border-radius: 50%;
+        border-radius: 8px;
         width: 32px;
         height: 32px;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s;
+        transition: all 0.2s ease;
         flex-shrink: 0;
+        margin-left: 8px;
       }
 
       .chat-send-button:hover:not(:disabled) {
         background: var(--vscode-button-hoverBackground);
-        transform: scale(1.05);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
 
       .chat-send-button:disabled {
@@ -1281,11 +1382,12 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         cursor: not-allowed;
         opacity: 0.5;
         transform: none;
+        box-shadow: none;
       }
 
       .send-icon {
-        font-size: 14px;
-        margin-left: 1px;
+        width: 16px;
+        height: 16px;
       }
 
       .chat-input-footer {
@@ -1555,6 +1657,39 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       });
 
       detailBodyNode.addEventListener('click', (event) => {
+        // Handle code copy buttons in chat interface
+        const codeCopyButton = event.target.closest('.code-copy-button');
+        if (codeCopyButton) {
+          const codeId = codeCopyButton.getAttribute('data-code-id');
+          const codeElement = document.getElementById(codeId);
+          const codeText = codeElement ? codeElement.textContent || '' : '';
+          navigator.clipboard.writeText(codeText).then(() => {
+            // Visual feedback
+            const originalContent = codeCopyButton.innerHTML;
+            codeCopyButton.innerHTML = '<span>✓</span>';
+            setTimeout(() => {
+              codeCopyButton.innerHTML = originalContent;
+            }, 2000);
+          }).catch(() => {
+            // Fallback to VS Code message
+            vscode.postMessage({ type: 'copyCodeSnippet', code: codeText });
+          });
+          return;
+        }
+
+        // Handle context toggle
+        const contextToggle = event.target.closest('.chat-context-toggle');
+        if (contextToggle) {
+          const isExpanded = contextToggle.getAttribute('data-expanded') === 'true';
+          const contextDetails = contextToggle.parentElement.querySelector('.chat-context-details');
+          
+          if (contextDetails) {
+            contextToggle.setAttribute('data-expanded', !isExpanded);
+            contextDetails.style.display = isExpanded ? 'none' : 'block';
+          }
+          return;
+        }
+
         const copyCodeButton = event.target.closest('[data-action="copy-code"]');
         if (copyCodeButton) {
           const container = copyCodeButton.closest('[data-code-block]');
@@ -1635,14 +1770,25 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
           const sendButton = input.parentElement.querySelector('.chat-send-button');
           const hasText = input.value.trim().length > 0;
           sendButton.disabled = !hasText;
+
+          // Auto-resize textarea
+          input.style.height = 'auto';
+          input.style.height = Math.min(input.scrollHeight, 120) + 'px';
         }
       });
 
       detailBodyNode.addEventListener('keydown', (event) => {
-        if (event.target.classList.contains('chat-input') && event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-          const sendButton = event.target.parentElement.querySelector('.chat-send-button');
-          if (!sendButton.disabled) {
-            sendButton.click();
+        if (event.target.classList.contains('chat-input')) {
+          if (event.key === 'Enter' && !event.shiftKey) {
+            // Enter sends message
+            event.preventDefault();
+            const sendButton = event.target.parentElement.querySelector('.chat-send-button');
+            if (!sendButton.disabled) {
+              sendButton.click();
+            }
+          } else if (event.key === 'Enter' && event.shiftKey) {
+            // Shift+Enter adds new line (default behavior)
+            return;
           }
         }
       });
@@ -2157,54 +2303,51 @@ export function renderGeminiChatInterface(finding: BaselineFinding, target: Targ
   const contextInfo = `
     <div class="chat-context-section">
       <button class="chat-context-toggle" data-expanded="false">
-        <span class="gemini-icon">🎯</span> 
-        <span class="context-title">Context</span>
-        <span class="context-toggle-icon">▶</span>
+        <div class="context-header">
+          <span class="context-icon">🎯</span> 
+          <span class="context-title">Context</span>
+          <span class="context-toggle-icon">▶</span>
+        </div>
       </button>
       <div class="chat-context-details" style="display: none;">
-        <div class="context-item"><strong>Target:</strong> ${escapeHtml(target)} baseline support</div>
-        <div class="context-item"><strong>Feature:</strong> ${escapeHtml(finding.feature.name)}</div>
-        <div class="context-item"><strong>File:</strong> ${escapeHtml(vscode.workspace.asRelativePath(finding.uri, false))}</div>
-        <div class="context-item"><strong>Focus:</strong> Fix the baseline compatibility issue</div>
+        <div class="context-grid">
+          <div class="context-item">
+            <span class="context-label">Target:</span>
+            <span class="context-value">${escapeHtml(target)} baseline</span>
+          </div>
+          <div class="context-item">
+            <span class="context-label">Feature:</span>
+            <span class="context-value">${escapeHtml(finding.feature.name)}</span>
+          </div>
+          <div class="context-item">
+            <span class="context-label">File:</span>
+            <span class="context-value">${escapeHtml(vscode.workspace.asRelativePath(finding.uri, false))}</span>
+          </div>
+        </div>
       </div>
     </div>
   `;
 
-  // Show only the last conversation pair by default
-  const lastUserMessage = suggestions.length > 1 ? suggestions[suggestions.length - 1] : suggestions[0];
-  const isFollowUp = lastUserMessage.issue.includes('Follow-up question about') || lastUserMessage.issue.includes('Context: This is a follow-up');
-  let lastUserQuestion = lastUserMessage.issue;
-  
-  if (isFollowUp) {
-    const questionMatch = lastUserMessage.issue.match(/Follow-up question about.*?: (.+?)(?:\n\nContext:|$)/s);
-    lastUserQuestion = questionMatch ? questionMatch[1].trim() : lastUserMessage.issue;
-  }
-
   const conversationHistory = `
     <div class="chat-conversation">
-      <div class="conversation-header">
-        <span class="conversation-count">${suggestions.length} message${suggestions.length > 1 ? 's' : ''}</span>
-        ${suggestions.length > 1 ? `<button class="show-all-messages">Show all messages</button>` : ''}
-      </div>
-      
-      <div class="chat-messages" id="chat-messages">
-        <div class="chat-message user-message">
-          <div class="message-avatar">👤</div>
-          <div class="message-content">
-            <div class="message-text">${escapeHtml(lastUserQuestion)}</div>
+      <div class="chat-messages-container" id="chat-messages-container">
+        <div class="chat-messages" id="chat-messages">
+          ${renderAllMessages(suggestions)}
+        </div>
+        <div class="typing-indicator" id="typing-indicator" style="display: none;">
+          <div class="chat-message ai-message">
+            <div class="message-avatar">
+              <div class="avatar-icon">✨</div>
+            </div>
+            <div class="message-content">
+              <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
           </div>
         </div>
-        
-        <div class="chat-message gemini-message">
-          <div class="message-avatar">✨</div>
-          <div class="message-content">
-            <div class="message-text">${renderSimpleMarkdown(lastUserMessage.suggestion)}</div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="chat-history-messages" style="display: none;">
-        ${renderAllMessages(suggestions)}
       </div>
     </div>
   `;
@@ -2214,7 +2357,7 @@ export function renderGeminiChatInterface(finding: BaselineFinding, target: Targ
       <div class="chat-input-wrapper">
         <textarea 
           class="chat-input" 
-          placeholder="Ask a follow-up question..."
+          placeholder="Message Gemini..."
           rows="1"
           data-finding-id="${escapeAttribute(finding.id)}"
           data-feature-name="${escapeAttribute(finding.feature.name)}"
@@ -2222,7 +2365,9 @@ export function renderGeminiChatInterface(finding: BaselineFinding, target: Targ
           data-target="${escapeAttribute(target)}"
         ></textarea>
         <button class="chat-send-button" disabled>
-          <span class="send-icon">➤</span>
+          <svg class="send-icon" viewBox="0 0 24 24" width="16" height="16">
+            <path fill="currentColor" d="M2,21L23,12L2,3V10L17,12L2,14V21Z"/>
+          </svg>
         </button>
       </div>
       <div class="chat-input-footer">
@@ -2234,9 +2379,10 @@ export function renderGeminiChatInterface(finding: BaselineFinding, target: Targ
   return `
     <div class="detail-section gemini-chat-section">
       <div class="chat-header">
-        <h4>
-          <span class="gemini-icon">�</span> Conversation with Gemini
-        </h4>
+        <div class="chat-title">
+          <div class="title-icon">✨</div>
+          <h4>Gemini</h4>
+        </div>
       </div>
       ${contextInfo}
       ${conversationHistory}
@@ -2251,15 +2397,19 @@ function renderAllMessages(suggestions: GeminiSuggestion[]): string {
 
   let allMessages = `
     <div class="chat-message user-message">
-      <div class="message-avatar">👤</div>
+      <div class="message-avatar">
+        <div class="avatar-icon">👤</div>
+      </div>
       <div class="message-content">
         <div class="message-text">${escapeHtml(initialSuggestion.issue)}</div>
         <div class="message-time">${initialSuggestion.timestamp.toLocaleString()}</div>
       </div>
     </div>
     
-    <div class="chat-message gemini-message">
-      <div class="message-avatar">✨</div>
+    <div class="chat-message ai-message">
+      <div class="message-avatar">
+        <div class="avatar-icon">✨</div>
+      </div>
       <div class="message-content">
         <div class="message-text">${renderSimpleMarkdown(initialSuggestion.suggestion)}</div>
         <div class="message-time">${initialSuggestion.timestamp.toLocaleString()}</div>
@@ -2275,15 +2425,19 @@ function renderAllMessages(suggestions: GeminiSuggestion[]): string {
       
       allMessages += `
         <div class="chat-message user-message">
-          <div class="message-avatar">👤</div>
+          <div class="message-avatar">
+            <div class="avatar-icon">👤</div>
+          </div>
           <div class="message-content">
             <div class="message-text">${escapeHtml(actualQuestion)}</div>
             <div class="message-time">${suggestion.timestamp.toLocaleString()}</div>
           </div>
         </div>
         
-        <div class="chat-message gemini-message">
-          <div class="message-avatar">✨</div>
+        <div class="chat-message ai-message">
+          <div class="message-avatar">
+            <div class="avatar-icon">✨</div>
+          </div>
           <div class="message-content">
             <div class="message-text">${renderSimpleMarkdown(suggestion.suggestion)}</div>
             <div class="message-time">${suggestion.timestamp.toLocaleString()}</div>
@@ -2348,10 +2502,13 @@ export function buildIssueDetailHtml(options: {
 
   const geminiIssueContent = buildGeminiIssueContent(finding, target);
   const hasExistingSuggestion = gemini?.hasExistingSuggestion ?? false;
-  const geminiButtonText = hasExistingSuggestion ? "Continue with Gemini" : "Fix with Gemini";
-  const geminiButton = `<button class="detail-gemini-button" data-gemini-issue="${escapeAttribute(geminiIssueContent)}" data-feature-name="${escapeAttribute(feature.name)}" data-file-path="${escapeAttribute(relativePath)}" data-finding-id="${escapeAttribute(finding.id)}" data-target="${escapeAttribute(target)}" data-has-existing="${hasExistingSuggestion}">
-      <span class="gemini-icon">✨</span> ${geminiButtonText}
-    </button>`;
+  
+  // Only show the Gemini button if there are no existing suggestions (chat interface will handle continuation)
+  const geminiButton = !hasExistingSuggestion 
+    ? `<button class="detail-gemini-button" data-gemini-issue="${escapeAttribute(geminiIssueContent)}" data-feature-name="${escapeAttribute(feature.name)}" data-file-path="${escapeAttribute(relativePath)}" data-finding-id="${escapeAttribute(finding.id)}" data-target="${escapeAttribute(target)}" data-has-existing="${hasExistingSuggestion}">
+        <span class="gemini-icon">✨</span> Fix with Gemini
+      </button>`
+    : "";
 
   const docButton = feature.docsUrl
     ? `<button class="detail-doc-link" data-doc-url="${escapeAttribute(feature.docsUrl)}">Open documentation</button>`
