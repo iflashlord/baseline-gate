@@ -4,7 +4,7 @@ import type { Target } from "../../core/targets";
 import type { Verdict } from "../../core/scoring";
 import type { BaselineFinding } from "../workspaceScanner";
 import type { BaselineAnalysisAssets } from "./types";
-import type { GeminiSuggestion } from "../gemini/geminiService";
+import type { GeminiSuggestion } from "../../gemini/geminiService";
 import {
   buildGeminiIssueContent,
   capitalize,
