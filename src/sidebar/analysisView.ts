@@ -1272,11 +1272,15 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         background: transparent;
         color: var(--vscode-button-secondaryForeground);
         cursor: pointer;
-        padding: 0.125rem 0.375rem;
-        font-size: 0.7rem;
+        padding: 0.25rem;
+        font-size: 0.8rem;
         line-height: 1.2;
         font-weight: 500;
         height: 24px;
+        width: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .file-detail-button:hover {
         color: var(--vscode-button-foreground);
@@ -1411,10 +1415,10 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       }
       .issue-actions {
         display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        justify-content: flex-start;
-        gap: 0.2rem;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.25rem;
       }
       .issue-actions button {
         border: 1px solid transparent;
@@ -1422,10 +1426,14 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         background: transparent;
         color: var(--vscode-button-secondaryForeground);
         cursor: pointer;
-        padding: 0.125rem 0.3rem;
-        font-size: 0.7rem;
+        padding: 0.25rem;
+        font-size: 0.8rem;
         font-weight: 500;
-        height: 22px;
+        height: 24px;
+        width: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .issue-actions button:hover {
         color: var(--vscode-button-foreground);
@@ -1454,18 +1462,22 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         left: 0;
         right: 0;
         height: 4px;
-        background: transparent;
+        background: var(--vscode-sideBarSectionHeader-border, #606060);
         cursor: ns-resize;
         z-index: 10;
         user-select: none;
         display: flex;
         align-items: center;
         justify-content: center;
+        transition: background-color 0.2s ease;
       }
       
-      .detail-resize-handle:hover,
+      .detail-resize-handle:hover {
+        background: var(--vscode-focusBorder, #4a9eff);
+      }
+      
       .detail-resize-handle.dragging {
-        background: var(--vscode-focusBorder, rgba(90, 133, 204, 0.6));
+        background: var(--vscode-focusBorder, #007acc);
       }
       
       .detail-resize-handle::before {
@@ -1526,6 +1538,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         gap: 1rem;
         width: 100%;
         padding: 0.75rem;
+        padding-top: 0;
         box-sizing: border-box;
       }
       .detail-top {
@@ -1533,21 +1546,33 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         justify-content: space-between;
         align-items: flex-start;
         gap: 0.75rem;
-        padding-bottom: 0.5rem;
+        padding: 0.75rem 0.75rem 0.5rem 0.75rem;
+        margin: -0.75rem -0.75rem 0 -0.75rem;
         border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+        background: var(--vscode-sideBar-background);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
       .detail-close {
         border: 1px solid var(--vscode-button-border, transparent);
-        border-radius: 6px;
-        padding: 0.4rem 0.8rem;
+        border-radius: 4px;
+        padding: 0.25rem;
         background: var(--vscode-button-secondaryBackground);
         color: var(--vscode-button-secondaryForeground);
         cursor: pointer;
         flex-shrink: 0;
-        font-size: 0.8rem;
-        font-weight: 500;
+        font-size: 1.1rem;
+        font-weight: 400;
         transition: all 0.2s ease;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
       }
       .detail-close:hover {
         background: var(--vscode-button-secondaryHoverBackground, var(--vscode-button-secondaryBackground));
@@ -1804,12 +1829,16 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         .detail-resize-handle {
           top: 0;
           height: 6px;
-          background: var(--vscode-sideBarSectionHeader-border);
+          background: var(--vscode-sideBarSectionHeader-border, #707070);
           opacity: 0.7;
+          transition: background-color 0.2s ease, opacity 0.2s ease;
         }
-        .detail-resize-handle:hover,
+        .detail-resize-handle:hover {
+          background: var(--vscode-focusBorder, #4a9eff);
+          opacity: 1;
+        }
         .detail-resize-handle.dragging {
-          background: var(--vscode-focusBorder, rgba(90, 133, 204, 0.8));
+          background: var(--vscode-focusBorder, #007acc);
           opacity: 1;
         }
         .detail-content {
@@ -1890,7 +1919,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
                   <div class="detail-heading" data-detail-title></div>
                   <div class="detail-subheading hidden" data-detail-subtitle></div>
                 </div>
-                <button class="detail-close" data-detail-close>Close</button>
+                <button class="detail-close" data-detail-close title="Close details" aria-label="Close details">×</button>
               </div>
               <div class="detail-path" data-detail-path></div>
               <div class="detail-body" data-detail-body></div>
@@ -2295,6 +2324,10 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           summary.addEventListener('click', () => {
             vscode.postMessage({ type: 'selectFile', uri: file.uri });
           });
+          
+          summary.addEventListener('dblclick', () => {
+            vscode.postMessage({ type: 'openFileDetail', uri: file.uri });
+          });
 
           const toggle = document.createElement('span');
           toggle.className = 'file-toggle';
@@ -2325,7 +2358,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           const detailBtn = document.createElement('button');
           detailBtn.className = 'file-detail-button';
           detailBtn.type = 'button';
-          detailBtn.textContent = 'Details';
+          detailBtn.textContent = '🔍';
+          detailBtn.title = 'View file details';
+          detailBtn.setAttribute('aria-label', 'View file details');
           detailBtn.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -2391,20 +2426,15 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
               issue.column;
             main.appendChild(meta);
 
-            const snippet = document.createElement('pre');
-            snippet.className = 'issue-snippet';
-            const preview = formatSnippet(issue.snippet);
-            snippet.textContent = preview;
-            snippet.title = issue.snippet;
-            main.appendChild(snippet);
-
             issueRow.appendChild(main);
 
             const actions = document.createElement('div');
             actions.className = 'issue-actions';
 
             const detailBtn = document.createElement('button');
-            detailBtn.textContent = 'Details';
+            detailBtn.textContent = '🔍';
+            detailBtn.title = 'Details';
+            detailBtn.setAttribute('aria-label', 'View details');
             detailBtn.addEventListener('click', (event) => {
               event.stopPropagation();
               vscode.postMessage({ type: 'openIssueDetail', id: issue.id });
@@ -2412,7 +2442,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
             actions.appendChild(detailBtn);
 
             const openBtn = document.createElement('button');
-            openBtn.textContent = 'Open file';
+            openBtn.textContent = '📄';
+            openBtn.title = 'Open file';
+            openBtn.setAttribute('aria-label', 'Open file');
             openBtn.addEventListener('click', (event) => {
               event.stopPropagation();
               vscode.postMessage({
@@ -2426,7 +2458,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
             if (issue.docsUrl) {
               const docsBtn = document.createElement('button');
-              docsBtn.textContent = 'Docs';
+              docsBtn.textContent = '📖';
+              docsBtn.title = 'Open documentation';
+              docsBtn.setAttribute('aria-label', 'Open documentation');
               docsBtn.addEventListener('click', (event) => {
                 event.stopPropagation();
                 vscode.postMessage({ type: 'openDocs', url: issue.docsUrl });
@@ -2434,12 +2468,35 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
               actions.appendChild(docsBtn);
             }
 
+            const askAiBtn = document.createElement('button');
+            askAiBtn.textContent = '✨';
+            askAiBtn.title = 'Ask AI for help';
+            askAiBtn.setAttribute('aria-label', 'Ask AI for help');
+            askAiBtn.addEventListener('click', (event) => {
+              event.stopPropagation();
+              vscode.postMessage({ 
+                type: 'askGemini', 
+                issue: issue.featureName + ' - ' + issue.verdictLabel,
+                feature: issue.featureName,
+                filePath: file.relativePath,
+                findingId: issue.id
+              });
+            });
+            actions.appendChild(askAiBtn);
+
             issueRow.appendChild(actions);
             issueRow.addEventListener('click', (event) => {
               if (event.target.closest('button')) {
                 return;
               }
               vscode.postMessage({ type: 'selectIssue', id: issue.id });
+            });
+            
+            issueRow.addEventListener('dblclick', (event) => {
+              if (event.target.closest('button')) {
+                return;
+              }
+              vscode.postMessage({ type: 'openIssueDetail', id: issue.id });
             });
             issuesList.appendChild(issueRow);
           }

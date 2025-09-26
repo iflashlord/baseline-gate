@@ -168,7 +168,8 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "web-features": "^3.0.0",
-    "@google/generative-ai": "^0.21.0"
+    "@google/generative-ai": "^0.21.0",
+    "@vscode/codicons": "^0.0.40",
+    "web-features": "^3.0.0"
   }
 }
