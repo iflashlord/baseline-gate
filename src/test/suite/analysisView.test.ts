@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { BaselineAnalysisViewProvider, type BaselineAnalysisAssets } from '../../sidebar/analysisView';
+import { BaselineAnalysisViewProvider } from '../../sidebar/analysisView';
+import type { BaselineAnalysisAssets } from '../../sidebar/analysis/types';
 import type { Target } from '../../core/targets';
 import type { BaselineFinding } from '../../sidebar/workspaceScanner';
 import type { BaselineFeature } from '../../core/baselineData';
