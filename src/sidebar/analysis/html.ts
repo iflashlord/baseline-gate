@@ -1133,6 +1133,12 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         gap: 16px;
       }
 
+      .chat-content-area {
+        flex: 1;
+        overflow-y: auto;
+        max-height: 400px;
+      }
+
       /* Message Styles */
       .chat-message {
         display: flex;
@@ -2267,7 +2273,56 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
           detailSubtitleNode.classList.add('hidden');
         }
         detailPathNode.textContent = detail.filePath;
-        detailBodyNode.innerHTML = detail.html;
+        
+        // Check if this is a Gemini chat update by looking for existing chat section
+        const existingChatSection = detailBodyNode.querySelector('.gemini-chat-section');
+        const existingChatContentArea = existingChatSection ? existingChatSection.querySelector('.chat-content-area') : null;
+        
+        if (existingChatContentArea && detail.html.includes('gemini-chat-section')) {
+          // This is a Gemini chat update - only update the content area, preserve input
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = detail.html;
+          const newChatSection = tempDiv.querySelector('.gemini-chat-section');
+          const newContentArea = newChatSection ? newChatSection.querySelector('.chat-content-area') : null;
+          
+          if (newContentArea) {
+            // Update only the conversation content, preserve the input area
+            existingChatContentArea.innerHTML = newContentArea.innerHTML;
+            
+            // Scroll to bottom of conversation
+            setTimeout(() => {
+              existingChatContentArea.scrollTop = existingChatContentArea.scrollHeight;
+            }, 10);
+          }
+        } else {
+          // Regular detail update - preserve chat input state if any
+          const existingChatInput = detailBodyNode.querySelector('.chat-input');
+          const chatInputValue = existingChatInput ? existingChatInput.value : '';
+          const chatInputFocused = existingChatInput && document.activeElement === existingChatInput;
+          
+          detailBodyNode.innerHTML = detail.html;
+          
+          // Restore chat input state after HTML update
+          const newChatInput = detailBodyNode.querySelector('.chat-input');
+          if (newChatInput && chatInputValue) {
+            newChatInput.value = chatInputValue;
+            const sendButton = newChatInput.parentElement.querySelector('.chat-send-button');
+            if (sendButton) {
+              sendButton.disabled = chatInputValue.trim().length === 0;
+            }
+            // Restore textarea height
+            newChatInput.style.height = 'auto';
+            newChatInput.style.height = Math.min(newChatInput.scrollHeight, 120) + 'px';
+          }
+          if (newChatInput && chatInputFocused) {
+            // Restore focus after a brief delay to ensure DOM is ready
+            setTimeout(() => {
+              newChatInput.focus();
+              // Move cursor to end of text
+              newChatInput.setSelectionRange(newChatInput.value.length, newChatInput.value.length);
+            }, 10);
+          }
+        }
       }
     </script>
   </body>
@@ -2397,7 +2452,9 @@ export function renderGeminiChatInterface(finding: BaselineFinding, target: Targ
         </div>
       </div>
       ${contextInfo}
-      ${conversationHistory}
+      <div class="chat-content-area">
+        ${conversationHistory}
+      </div>
       ${chatInputArea}
     </div>
   `;
