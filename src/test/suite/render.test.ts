@@ -158,4 +158,70 @@ suite("rendering hover content", () => {
     const uniqueLines = new Set(lines);
     assert.strictEqual(lines.length, uniqueLines.size, "dedupe should remove repeated fallback messages");
   });
+
+  test("discouraged features surface sources and alternatives", () => {
+    const feature = buildFeature({
+      baseline: "low",
+      discouraged: {
+        accordingTo: [
+          "https://web.dev/patterns/bad-idea",
+          "https://example.com/avoid"
+        ],
+        alternatives: ["css-grid", "flexbox"]
+      },
+      support: supportMatrix({ chrome: 118, edge: 118, firefox: 118, safari: 17 })
+    });
+
+    const md = renderHover(feature, "warning", "modern");
+    const discouragedBlock = md.value
+      .split("$(alert) **Discouraged**")[1]
+      .split("\n\n")[0];
+
+    assert.ok(
+      discouragedBlock.includes("[web.dev](https://web.dev/patterns/bad-idea)"),
+      "should include formatted host name for first discouraged source"
+    );
+    assert.ok(
+      discouragedBlock.includes("[example.com](https://example.com/avoid)"),
+      "should include formatted host name for second discouraged source"
+    );
+    assert.ok(
+      discouragedBlock.includes("Alternatives: `css-grid`, `flexbox`"),
+      "should list alternative suggestions in inline code"
+    );
+  });
+
+  test("support tables highlight release dates, gaps, and missing data", () => {
+    const feature = buildFeature({
+      support: {
+        chrome: { raw: "113", version: 113, releaseDate: "2024-05-01" },
+        edge: { raw: "114", version: 114 },
+        firefox: { raw: "beta" }
+      }
+    });
+
+    const md = renderHover(feature, "warning", "enterprise");
+    const value = md.value;
+
+    assert.match(
+      value,
+      /\| Chrome \| `113` \(May [0-9]{1,2}, 2024\) \| ≥`114` \| ⛔ Gap \|/,
+      "Chrome row should include formatted release date and gap status"
+    );
+    assert.match(
+      value,
+      /\| Edge \| `114` \| ≥`114` \| ✅ Meets target \|/,
+      "Edge row should mark target met"
+    );
+    assert.match(
+      value,
+      /\| Firefox \| `beta` \| ≥`115` \| ⚠️ Missing data \|/,
+      "Firefox row should surface missing numeric version"
+    );
+    assert.match(
+      value,
+      /\| Safari \| — \| ≥`16.4` \| ⚠️ Missing data \|/,
+      "Safari row should warn when data is absent"
+    );
+  });
 });
