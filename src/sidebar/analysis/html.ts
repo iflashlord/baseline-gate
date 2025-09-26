@@ -1139,6 +1139,14 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         max-height: 400px;
       }
 
+      .typing-indicator {
+        opacity: 0.7;
+      }
+
+      .typing-indicator .message-text {
+        font-style: italic;
+      }
+
       /* Message Styles */
       .chat-message {
         display: flex;
@@ -1756,6 +1764,50 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
             const filePath = chatInput.getAttribute('data-file-path');
             const target = chatInput.getAttribute('data-target');
             
+            // Show user message immediately
+            const chatContentArea = detailBodyNode.querySelector('.chat-content-area');
+            if (chatContentArea) {
+              const userMessage = document.createElement('div');
+              userMessage.className = 'chat-message user-message';
+              userMessage.innerHTML = \`
+                <div class="message-avatar">
+                  <div class="avatar-icon">👤</div>
+                </div>
+                <div class="message-content">
+                  <div class="message-text">\${followUpQuestion.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                  <div class="message-time">\${new Date().toLocaleString()}</div>
+                </div>
+              \`;
+              
+              // Find chat-messages container or create one if it doesn't exist
+              let messagesContainer = chatContentArea.querySelector('.chat-messages');
+              if (!messagesContainer) {
+                messagesContainer = document.createElement('div');
+                messagesContainer.className = 'chat-messages';
+                chatContentArea.appendChild(messagesContainer);
+              }
+              
+              messagesContainer.appendChild(userMessage);
+              
+              // Add typing indicator
+              const typingIndicator = document.createElement('div');
+              typingIndicator.className = 'chat-message ai-message typing-indicator';
+              typingIndicator.innerHTML = \`
+                <div class="message-avatar">
+                  <div class="avatar-icon">✨</div>
+                </div>
+                <div class="message-content">
+                  <div class="message-text">Gemini is thinking...</div>
+                </div>
+              \`;
+              messagesContainer.appendChild(typingIndicator);
+              
+              // Scroll to bottom
+              setTimeout(() => {
+                chatContentArea.scrollTop = chatContentArea.scrollHeight;
+              }, 10);
+            }
+            
             vscode.postMessage({ 
               type: 'askGeminiFollowUp', 
               question: followUpQuestion,
@@ -2286,6 +2338,10 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
           const newContentArea = newChatSection ? newChatSection.querySelector('.chat-content-area') : null;
           
           if (newContentArea) {
+            // Remove typing indicators before updating content
+            const typingIndicators = existingChatContentArea.querySelectorAll('.typing-indicator');
+            typingIndicators.forEach(indicator => indicator.remove());
+            
             // Update only the conversation content, preserve the input area
             existingChatContentArea.innerHTML = newContentArea.innerHTML;
             

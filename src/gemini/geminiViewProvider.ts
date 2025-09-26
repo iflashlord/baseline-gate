@@ -85,7 +85,12 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    await vscode.window.withProgress(
+    let progressResolve: (() => void) | undefined;
+    const progressPromise = new Promise<void>((resolve) => {
+      progressResolve = resolve;
+    });
+
+    const progressTask = vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
         title: 'Getting suggestion from Gemini...',
@@ -93,8 +98,10 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
       },
       async (progress) => {
         try {
-          progress.report({ increment: 50 });
+          progress.report({ increment: 30, message: 'Connecting to Gemini...' });
           const suggestionText = await geminiService.getSuggestion(issue, feature, file);
+
+          progress.report({ increment: 70, message: 'Processing response...' });
 
           const newSuggestion: GeminiSuggestion = {
             id: Date.now().toString(),
@@ -108,7 +115,8 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
 
           this.state = addSuggestionToState(this.state, newSuggestion);
           await this.saveSuggestions();
-          progress.report({ increment: 100 });
+          
+          progress.report({ increment: 100, message: 'Complete!' });
 
           // Send response to detail view via command
           await vscode.commands.executeCommand('baseline-gate.sendGeminiResponse', {
@@ -117,12 +125,16 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
             findingId
           });
 
-          await vscode.window.showInformationMessage('Gemini suggestion added successfully!');
-          await vscode.commands.executeCommand('baselineGate.geminiView.focus');
           this.refresh();
 
           // Notify detail view to refresh if it's showing this finding
           await vscode.commands.executeCommand('baseline-gate.refreshDetailView', findingId);
+          
+          // Don't show success notification for follow-up questions to reduce spam
+          if (!issue.includes('Follow-up question about')) {
+            await vscode.window.showInformationMessage('Gemini suggestion added successfully!');
+            await vscode.commands.executeCommand('baselineGate.geminiView.focus');
+          }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           
@@ -136,9 +148,20 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
           vscode.window.showErrorMessage(
             `Failed to get Gemini suggestion: ${errorMessage}`,
           );
+        } finally {
+          // Ensure progress notification is always dismissed
+          if (progressResolve) {
+            progressResolve();
+          }
         }
+        
+        // Wait for the promise to ensure progress is properly handled
+        return progressPromise;
       },
     );
+    
+    // Await the progress task to ensure it completes properly
+    await progressTask;
   }
 
   public refresh(): void {
