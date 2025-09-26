@@ -73,13 +73,21 @@ export class BaselineDetailViewProvider {
             });
             break;
           case 'askGeminiFollowUp':
-            await vscode.commands.executeCommand("baseline-gate.askGeminiFollowUp", {
-              question: message.question,
-              findingId: message.findingId,
-              feature: message.feature,
-              filePath: message.filePath,
-              target: message.target
-            });
+            try {
+              // Show loading state
+              await BaselineDetailViewProvider.sendLoadingState(panel.webview);
+              
+              await vscode.commands.executeCommand("baseline-gate.askGeminiFollowUp", {
+                question: message.question,
+                findingId: message.findingId,
+                feature: message.feature,
+                filePath: message.filePath,
+                target: message.target
+              });
+            } catch (error) {
+              // Send error state to webview
+              await BaselineDetailViewProvider.sendErrorState(panel.webview, error instanceof Error ? error.message : 'Unknown error');
+            }
             break;
           case 'copyCodeSnippet':
             await vscode.env.clipboard.writeText(message.code);
@@ -611,7 +619,7 @@ export class BaselineDetailViewProvider {
             }
 
             const chatSendButton = event.target.closest('.chat-send-button');
-            if (chatSendButton && !chatSendButton.disabled) {
+            if (chatSendButton && !chatSendButton.disabled && !isWaitingForResponse) {
                 const chatInput = chatSendButton.parentElement.querySelector('.chat-input');
                 const followUpQuestion = chatInput.value.trim();
                 
@@ -621,6 +629,18 @@ export class BaselineDetailViewProvider {
                     const filePath = chatInput.getAttribute('data-file-path');
                     const target = chatInput.getAttribute('data-target');
                     
+                    // Add user message immediately
+                    addUserMessage(followUpQuestion);
+                    
+                    // Add loading message
+                    addLoadingMessage();
+                    
+                    // Clear the input and disable button
+                    chatInput.value = '';
+                    chatInput.style.height = 'auto';
+                    chatSendButton.disabled = true;
+                    isWaitingForResponse = true;
+                    
                     vscode.postMessage({ 
                         type: 'askGeminiFollowUp', 
                         question: followUpQuestion,
@@ -629,14 +649,52 @@ export class BaselineDetailViewProvider {
                         filePath,
                         target
                     });
-                    
-                    // Clear the input and disable button
-                    chatInput.value = '';
-                    chatSendButton.disabled = true;
                 }
                 return;
             }
         });
+
+        // Context toggle functionality
+        document.addEventListener('click', (event) => {
+            if (event.target.closest('.chat-context-toggle')) {
+                const toggle = event.target.closest('.chat-context-toggle');
+                const details = toggle.parentElement.querySelector('.chat-context-details');
+                const toggleIcon = toggle.querySelector('.context-toggle-icon');
+                const isExpanded = toggle.getAttribute('data-expanded') === 'true';
+                
+                if (isExpanded) {
+                    details.style.display = 'none';
+                    toggle.setAttribute('data-expanded', 'false');
+                    toggleIcon.textContent = '▶';
+                } else {
+                    details.style.display = 'block';
+                    toggle.setAttribute('data-expanded', 'true');
+                    toggleIcon.textContent = '▼';
+                }
+            }
+
+            if (event.target.closest('.show-all-messages')) {
+                const chatMessages = document.querySelector('.chat-messages');
+                const historyMessages = document.querySelector('.chat-history-messages');
+                const showAllButton = event.target.closest('.show-all-messages');
+                
+                if (historyMessages.style.display === 'none') {
+                    chatMessages.style.display = 'none';
+                    historyMessages.style.display = 'block';
+                    showAllButton.textContent = 'Show recent only';
+                } else {
+                    chatMessages.style.display = 'block';
+                    historyMessages.style.display = 'none';
+                    showAllButton.textContent = 'Show all messages';
+                }
+            }
+        });
+
+        // Auto-resize textarea
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
 
         // Handle chat input changes
         document.addEventListener('input', (event) => {
@@ -645,15 +703,115 @@ export class BaselineDetailViewProvider {
                 const sendButton = input.parentElement.querySelector('.chat-send-button');
                 const hasText = input.value.trim().length > 0;
                 sendButton.disabled = !hasText;
+                autoResizeTextarea(input);
             }
         });
 
         // Handle keyboard shortcuts
         document.addEventListener('keydown', (event) => {
-            if (event.target.classList.contains('chat-input') && event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                const sendButton = event.target.parentElement.querySelector('.chat-send-button');
-                if (!sendButton.disabled) {
-                    sendButton.click();
+            if (event.target.classList.contains('chat-input')) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    const sendButton = event.target.parentElement.querySelector('.chat-send-button');
+                    if (!sendButton.disabled) {
+                        sendButton.click();
+                    }
+                }
+            }
+        });
+
+        // Add new message to chat
+        function addUserMessage(text) {
+            const messagesContainer = document.querySelector('.chat-messages');
+            const userMessage = document.createElement('div');
+            userMessage.className = 'chat-message user-message';
+            userMessage.innerHTML = \`
+                <div class="message-avatar">👤</div>
+                <div class="message-content">
+                    <div class="message-text">\${escapeHtml(text)}</div>
+                    <div class="message-time">Just now</div>
+                </div>
+            \`;
+            messagesContainer.appendChild(userMessage);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addLoadingMessage() {
+            const messagesContainer = document.querySelector('.chat-messages');
+            const loadingMessage = document.createElement('div');
+            loadingMessage.className = 'loading-message';
+            loadingMessage.id = 'loading-message';
+            loadingMessage.innerHTML = \`
+                <div class="message-avatar">✨</div>
+                <div class="message-content">
+                    <div class="message-text">
+                        <span>Thinking</span>
+                        <div class="loading-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+            \`;
+            messagesContainer.appendChild(loadingMessage);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function replaceLoadingWithResponse(responseText) {
+            const loadingMessage = document.getElementById('loading-message');
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+            
+            const messagesContainer = document.querySelector('.chat-messages');
+            const responseMessage = document.createElement('div');
+            responseMessage.className = 'chat-message gemini-message';
+            responseMessage.innerHTML = \`
+                <div class="message-avatar">✨</div>
+                <div class="message-content">
+                    <div class="message-text">\${responseText}</div>
+                    <div class="message-time">Just now</div>
+                </div>
+            \`;
+            messagesContainer.appendChild(responseMessage);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Store original chat send handler
+        let isWaitingForResponse = false;
+
+        // Listen for Gemini responses
+        window.addEventListener('message', (event) => {
+            const message = event.data;
+            if (message.type === 'geminiResponse') {
+                switch (message.state) {
+                    case 'success':
+                        replaceLoadingWithResponse(message.response);
+                        isWaitingForResponse = false;
+                        // Re-enable send button if there's text
+                        const chatInput = document.querySelector('.chat-input');
+                        const sendButton = document.querySelector('.chat-send-button');
+                        if (chatInput && sendButton) {
+                            sendButton.disabled = chatInput.value.trim().length === 0;
+                        }
+                        break;
+                    case 'error':
+                        replaceLoadingWithResponse(\`<div style="color: var(--vscode-errorForeground);">❌ Error: \${message.error}</div>\`);
+                        isWaitingForResponse = false;
+                        // Re-enable send button if there's text
+                        const errorChatInput = document.querySelector('.chat-input');
+                        const errorSendButton = document.querySelector('.chat-send-button');
+                        if (errorChatInput && errorSendButton) {
+                            errorSendButton.disabled = errorChatInput.value.trim().length === 0;
+                        }
+                        break;
                 }
             }
         });
@@ -696,6 +854,29 @@ export class BaselineDetailViewProvider {
 
   public static getCurrentPanel(): vscode.WebviewPanel | undefined {
     return BaselineDetailViewProvider.currentPanel;
+  }
+
+  public static async sendLoadingState(webview: vscode.Webview): Promise<void> {
+    await webview.postMessage({
+      type: 'geminiResponse',
+      state: 'loading'
+    });
+  }
+
+  public static async sendErrorState(webview: vscode.Webview, error: string): Promise<void> {
+    await webview.postMessage({
+      type: 'geminiResponse',
+      state: 'error',
+      error: error
+    });
+  }
+
+  public static async sendSuccessState(webview: vscode.Webview, response: string): Promise<void> {
+    await webview.postMessage({
+      type: 'geminiResponse',
+      state: 'success',
+      response: response
+    });
   }
 
   public static dispose(): void {

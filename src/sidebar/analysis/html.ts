@@ -998,149 +998,304 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         background: var(--vscode-button-secondaryHoverBackground);
       }
 
-      /* Chat Interface Styles */
+      /* Modern Chat Interface Styles */
       .gemini-chat-section {
         border: 1px solid var(--vscode-widget-border);
-        border-radius: 8px;
+        border-radius: 12px;
         background: var(--vscode-editor-background);
-        margin-top: 12px;
+        margin-top: 16px;
+        overflow: hidden;
       }
 
-      .chat-context-info {
-        background: var(--vscode-badge-background);
-        color: var(--vscode-badge-foreground);
-        padding: 12px;
-        border-radius: 6px 6px 0 0;
-        margin-bottom: 16px;
+      .chat-header {
+        padding: 16px 20px 12px;
+        border-bottom: 1px solid var(--vscode-widget-border);
+        background: var(--vscode-textCodeBlock-background);
       }
 
-      .chat-context-info h5 {
-        margin: 0 0 8px 0;
-        font-size: 14px;
+      .chat-header h4 {
+        margin: 0;
+        font-size: 16px;
         font-weight: 600;
-      }
-
-      .context-details {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        font-size: 12px;
-        opacity: 0.9;
-      }
-
-      .chat-history {
-        margin-bottom: 16px;
-      }
-
-      .chat-message {
-        margin-bottom: 16px;
-        padding: 12px;
-        border-radius: 6px;
-      }
-
-      .chat-message.initial-question {
-        background: var(--vscode-inputValidation-infoBackground);
-        border-left: 3px solid var(--vscode-inputValidation-infoBorder);
-      }
-
-      .chat-message.gemini-response {
-        background: var(--vscode-textPreformat-background);
-        border-left: 3px solid var(--vscode-charts-yellow);
-      }
-
-      .chat-message.follow-up-question {
-        background: var(--vscode-inputValidation-warningBackground);
-        border-left: 3px solid var(--vscode-inputValidation-warningBorder);
-      }
-
-      .message-label {
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--vscode-descriptionForeground);
-        margin-bottom: 8px;
         display: flex;
         align-items: center;
-        gap: 6px;
-      }
-
-      .message-content {
-        font-size: 13px;
-        line-height: 1.5;
-      }
-
-      .chat-input-section {
-        border-top: 1px solid var(--vscode-widget-border);
-        padding: 16px;
-      }
-
-      .chat-input-header {
-        font-size: 13px;
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: var(--vscode-foreground);
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-
-      .chat-input-area {
-        display: flex;
-        flex-direction: column;
         gap: 8px;
       }
 
-      .chat-input {
-        min-height: 80px;
-        max-height: 200px;
-        resize: vertical;
-        background: var(--vscode-input-background);
-        color: var(--vscode-input-foreground);
-        border: 1px solid var(--vscode-input-border);
-        border-radius: 4px;
-        padding: 8px;
-        font-family: var(--vscode-font-family);
-        font-size: 13px;
-        line-height: 1.4;
+      /* Collapsible Context */
+      .chat-context-section {
+        border-bottom: 1px solid var(--vscode-widget-border);
       }
 
-      .chat-input:focus {
-        outline: none;
-        border-color: var(--vscode-focusBorder);
-      }
-
-      .chat-send-button {
-        align-self: flex-end;
-        background: var(--vscode-button-background);
-        color: var(--vscode-button-foreground);
+      .chat-context-toggle {
+        width: 100%;
+        background: var(--vscode-badge-background);
+        color: var(--vscode-badge-foreground);
         border: none;
-        border-radius: 4px;
-        padding: 8px 16px;
+        padding: 12px 20px;
         font-size: 13px;
+        font-weight: 500;
         cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
         transition: background-color 0.2s;
+      }
+
+      .chat-context-toggle:hover {
+        background: var(--vscode-list-hoverBackground);
+      }
+
+      .context-toggle-icon {
+        margin-left: auto;
+        transition: transform 0.2s;
+        font-size: 10px;
+      }
+
+      .chat-context-toggle[data-expanded="true"] .context-toggle-icon {
+        transform: rotate(90deg);
+      }
+
+      .chat-context-details {
+        padding: 16px 20px;
+        background: var(--vscode-textCodeBlock-background);
+      }
+
+      .context-item {
+        font-size: 12px;
+        margin-bottom: 6px;
+        color: var(--vscode-descriptionForeground);
+      }
+
+      .context-item:last-child {
+        margin-bottom: 0;
+      }
+
+      /* Conversation Area */
+      .chat-conversation {
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 0;
+      }
+
+      .conversation-header {
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--vscode-descriptionForeground);
+        border-bottom: 1px solid var(--vscode-widget-border);
+        background: var(--vscode-textCodeBlock-background);
+      }
+
+      .show-all-messages {
+        background: none;
+        border: none;
+        color: var(--vscode-textLink-foreground);
+        cursor: pointer;
+        font-size: 12px;
+        text-decoration: underline;
+      }
+
+      .show-all-messages:hover {
+        color: var(--vscode-textLink-activeForeground);
+      }
+
+      .chat-messages {
+        padding: 20px;
+      }
+
+      .chat-history-messages {
+        padding: 20px;
+        border-top: 1px solid var(--vscode-widget-border);
+      }
+
+      /* Message Styles */
+      .chat-message {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        align-items: flex-start;
+      }
+
+      .chat-message:last-child {
+        margin-bottom: 0;
+      }
+
+      .message-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        flex-shrink: 0;
+        background: var(--vscode-button-secondaryBackground);
+      }
+
+      .user-message .message-avatar {
+        background: var(--vscode-inputValidation-infoBackground);
+      }
+
+      .gemini-message .message-avatar {
+        background: var(--vscode-charts-yellow);
+        color: var(--vscode-editor-background);
+      }
+
+      .message-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .message-text {
+        background: var(--vscode-textCodeBlock-background);
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 13px;
+        line-height: 1.5;
+        border: 1px solid var(--vscode-widget-border);
+      }
+
+      .user-message .message-text {
+        background: var(--vscode-inputValidation-infoBackground);
+        border-color: var(--vscode-inputValidation-infoBorder);
+      }
+
+      .gemini-message .message-text {
+        background: var(--vscode-textPreformat-background);
+        border-color: var(--vscode-charts-yellow);
+      }
+
+      .message-time {
+        font-size: 11px;
+        color: var(--vscode-descriptionForeground);
+        margin-top: 4px;
+        opacity: 0.7;
+      }
+
+      /* Loading Message */
+      .loading-message {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        align-items: flex-start;
+      }
+
+      .loading-message .message-text {
+        background: var(--vscode-textPreformat-background);
+        border-color: var(--vscode-charts-yellow);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--vscode-descriptionForeground);
+      }
+
+      .loading-dots {
+        display: inline-flex;
+        gap: 2px;
+      }
+
+      .loading-dots span {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--vscode-charts-yellow);
+        animation: loading-pulse 1.4s ease-in-out infinite both;
+      }
+
+      .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+      .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+      .loading-dots span:nth-child(3) { animation-delay: 0s; }
+
+      @keyframes loading-pulse {
+        0%, 80%, 100% { opacity: 0.3; }
+        40% { opacity: 1; }
+      }
+
+      /* Input Area */
+      .chat-input-container {
+        border-top: 1px solid var(--vscode-widget-border);
+        padding: 16px 20px;
+        background: var(--vscode-editor-background);
+      }
+
+      .chat-input-wrapper {
+        display: flex;
+        gap: 8px;
+        align-items: flex-end;
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border);
+        border-radius: 20px;
+        padding: 8px 12px;
+        transition: border-color 0.2s;
+      }
+
+      .chat-input-wrapper:focus-within {
+        border-color: var(--vscode-focusBorder);
+      }
+
+      .chat-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--vscode-input-foreground);
+        font-family: var(--vscode-font-family);
+        font-size: 13px;
+        line-height: 1.4;
+        resize: none;
+        min-height: 20px;
+        max-height: 120px;
+        padding: 0;
+      }
+
+      .chat-input::placeholder {
+        color: var(--vscode-input-placeholderForeground);
+      }
+
+      .chat-send-button {
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        border: none;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        flex-shrink: 0;
       }
 
       .chat-send-button:hover:not(:disabled) {
         background: var(--vscode-button-hoverBackground);
+        transform: scale(1.05);
       }
 
       .chat-send-button:disabled {
         background: var(--vscode-button-secondaryBackground);
         color: var(--vscode-button-secondaryForeground);
         cursor: not-allowed;
-        opacity: 0.6;
+        opacity: 0.5;
+        transform: none;
       }
 
-      .chat-guidelines {
+      .send-icon {
+        font-size: 14px;
+        margin-left: 1px;
+      }
+
+      .chat-input-footer {
         margin-top: 8px;
-        padding: 8px;
-        background: var(--vscode-textCodeBlock-background);
-        border-radius: 4px;
-        font-size: 11px;
+        text-align: center;
+      }
+
+      .chat-input-footer small {
         color: var(--vscode-descriptionForeground);
+        font-size: 11px;
       }
 
       .detail-entry {
@@ -1998,95 +2153,147 @@ export function renderGeminiChatInterface(finding: BaselineFinding, target: Targ
     return '';
   }
 
+  // Collapsible context info
   const contextInfo = `
-    <div class="chat-context-info">
-      <h5>🎯 Context</h5>
-      <div class="context-details">
-        <div><strong>Target:</strong> ${escapeHtml(target)} baseline support</div>
-        <div><strong>Feature:</strong> ${escapeHtml(finding.feature.name)}</div>
-        <div><strong>File:</strong> ${escapeHtml(vscode.workspace.asRelativePath(finding.uri, false))}</div>
-        <div><strong>Focus:</strong> Fix the baseline compatibility issue</div>
+    <div class="chat-context-section">
+      <button class="chat-context-toggle" data-expanded="false">
+        <span class="gemini-icon">🎯</span> 
+        <span class="context-title">Context</span>
+        <span class="context-toggle-icon">▶</span>
+      </button>
+      <div class="chat-context-details" style="display: none;">
+        <div class="context-item"><strong>Target:</strong> ${escapeHtml(target)} baseline support</div>
+        <div class="context-item"><strong>Feature:</strong> ${escapeHtml(finding.feature.name)}</div>
+        <div class="context-item"><strong>File:</strong> ${escapeHtml(vscode.workspace.asRelativePath(finding.uri, false))}</div>
+        <div class="context-item"><strong>Focus:</strong> Fix the baseline compatibility issue</div>
       </div>
     </div>
   `;
 
-  // Show the conversation history - first suggestion and then follow-ups
-  const initialSuggestion = suggestions[0];
-  const followUpSuggestions = suggestions.slice(1);
+  // Show only the last conversation pair by default
+  const lastUserMessage = suggestions.length > 1 ? suggestions[suggestions.length - 1] : suggestions[0];
+  const isFollowUp = lastUserMessage.issue.includes('Follow-up question about') || lastUserMessage.issue.includes('Context: This is a follow-up');
+  let lastUserQuestion = lastUserMessage.issue;
+  
+  if (isFollowUp) {
+    const questionMatch = lastUserMessage.issue.match(/Follow-up question about.*?: (.+?)(?:\n\nContext:|$)/s);
+    lastUserQuestion = questionMatch ? questionMatch[1].trim() : lastUserMessage.issue;
+  }
 
-  let conversationHistory = `
-    <div class="chat-history">
-      <div class="chat-message initial-question">
-        <div class="message-label">Initial Issue</div>
-        <div class="message-content">${escapeHtml(initialSuggestion.issue)}</div>
+  const conversationHistory = `
+    <div class="chat-conversation">
+      <div class="conversation-header">
+        <span class="conversation-count">${suggestions.length} message${suggestions.length > 1 ? 's' : ''}</span>
+        ${suggestions.length > 1 ? `<button class="show-all-messages">Show all messages</button>` : ''}
       </div>
-      <div class="chat-message gemini-response">
-        <div class="message-label">
-          <span class="gemini-icon">✨</span> Gemini's Solution
+      
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-message user-message">
+          <div class="message-avatar">👤</div>
+          <div class="message-content">
+            <div class="message-text">${escapeHtml(lastUserQuestion)}</div>
+          </div>
         </div>
-        <div class="message-content">${renderSimpleMarkdown(initialSuggestion.suggestion)}</div>
+        
+        <div class="chat-message gemini-message">
+          <div class="message-avatar">✨</div>
+          <div class="message-content">
+            <div class="message-text">${renderSimpleMarkdown(lastUserMessage.suggestion)}</div>
+          </div>
+        </div>
       </div>
+      
+      <div class="chat-history-messages" style="display: none;">
+        ${renderAllMessages(suggestions)}
+      </div>
+    </div>
   `;
 
-  // Add follow-up conversations
-  followUpSuggestions.forEach((suggestion, index) => {
-    const isFollowUp = suggestion.issue.includes('Follow-up question about') || suggestion.issue.includes('Context: This is a follow-up');
-    if (isFollowUp) {
-      // Extract the actual question from the contextual issue
-      const questionMatch = suggestion.issue.match(/Follow-up question about.*?: (.+?)(?:\n\nContext:|$)/s);
-      const actualQuestion = questionMatch ? questionMatch[1].trim() : suggestion.issue;
-      
-      conversationHistory += `
-        <div class="chat-message follow-up-question">
-          <div class="message-label">Follow-up Question</div>
-          <div class="message-content">${escapeHtml(actualQuestion)}</div>
-        </div>
-        <div class="chat-message gemini-response">
-          <div class="message-label">
-            <span class="gemini-icon">✨</span> Gemini's Response
-          </div>
-          <div class="message-content">${renderSimpleMarkdown(suggestion.suggestion)}</div>
-        </div>
-      `;
-    }
-  });
-
-  conversationHistory += `</div>`;
-
   const chatInputArea = `
-    <div class="chat-input-section">
-      <div class="chat-input-header">
-        <span class="gemini-icon">💬</span> Ask a follow-up question
-      </div>
-      <div class="chat-input-area">
+    <div class="chat-input-container">
+      <div class="chat-input-wrapper">
         <textarea 
           class="chat-input" 
-          placeholder="Ask about implementation details, alternatives, or request clarification..."
+          placeholder="Ask a follow-up question..."
+          rows="1"
           data-finding-id="${escapeAttribute(finding.id)}"
           data-feature-name="${escapeAttribute(finding.feature.name)}"
           data-file-path="${escapeAttribute(vscode.workspace.asRelativePath(finding.uri, false))}"
           data-target="${escapeAttribute(target)}"
         ></textarea>
         <button class="chat-send-button" disabled>
-          <span class="gemini-icon">➤</span> Ask Gemini
+          <span class="send-icon">➤</span>
         </button>
       </div>
-      <div class="chat-guidelines">
-        <small>💡 Focus on fixing the baseline issue. Ask about implementation, alternatives, or request clarification.</small>
+      <div class="chat-input-footer">
+        <small>Press Enter to send • Shift+Enter for new line</small>
       </div>
     </div>
   `;
 
   return `
-    <div class="detail-section gemini-chat-section" style="display: none;">
-      <h4>
-        <span class="gemini-icon">💬</span> Continue Conversation with Gemini
-      </h4>
+    <div class="detail-section gemini-chat-section">
+      <div class="chat-header">
+        <h4>
+          <span class="gemini-icon">�</span> Conversation with Gemini
+        </h4>
+      </div>
       ${contextInfo}
       ${conversationHistory}
       ${chatInputArea}
     </div>
   `;
+}
+
+function renderAllMessages(suggestions: GeminiSuggestion[]): string {
+  const initialSuggestion = suggestions[0];
+  const followUpSuggestions = suggestions.slice(1);
+
+  let allMessages = `
+    <div class="chat-message user-message">
+      <div class="message-avatar">👤</div>
+      <div class="message-content">
+        <div class="message-text">${escapeHtml(initialSuggestion.issue)}</div>
+        <div class="message-time">${initialSuggestion.timestamp.toLocaleString()}</div>
+      </div>
+    </div>
+    
+    <div class="chat-message gemini-message">
+      <div class="message-avatar">✨</div>
+      <div class="message-content">
+        <div class="message-text">${renderSimpleMarkdown(initialSuggestion.suggestion)}</div>
+        <div class="message-time">${initialSuggestion.timestamp.toLocaleString()}</div>
+      </div>
+    </div>
+  `;
+
+  followUpSuggestions.forEach((suggestion) => {
+    const isFollowUp = suggestion.issue.includes('Follow-up question about') || suggestion.issue.includes('Context: This is a follow-up');
+    if (isFollowUp) {
+      const questionMatch = suggestion.issue.match(/Follow-up question about.*?: (.+?)(?:\n\nContext:|$)/s);
+      const actualQuestion = questionMatch ? questionMatch[1].trim() : suggestion.issue;
+      
+      allMessages += `
+        <div class="chat-message user-message">
+          <div class="message-avatar">👤</div>
+          <div class="message-content">
+            <div class="message-text">${escapeHtml(actualQuestion)}</div>
+            <div class="message-time">${suggestion.timestamp.toLocaleString()}</div>
+          </div>
+        </div>
+        
+        <div class="chat-message gemini-message">
+          <div class="message-avatar">✨</div>
+          <div class="message-content">
+            <div class="message-text">${renderSimpleMarkdown(suggestion.suggestion)}</div>
+            <div class="message-time">${suggestion.timestamp.toLocaleString()}</div>
+          </div>
+        </div>
+      `;
+    }
+  });
+
+  return allMessages;
 }
 
 export function buildIssueDetailHtml(options: {
@@ -2155,11 +2362,9 @@ export function buildIssueDetailHtml(options: {
     : "";
 
   const existingSuggestions = gemini?.suggestions ?? [];
-  const suggestionsHtml = existingSuggestions.length
-    ? renderExistingSuggestions(existingSuggestions)
-    : "";
-
-  const chatInterface = hasExistingSuggestion
+  
+  // Show chat interface for any suggestions (replace the old suggestions section)
+  const chatInterface = existingSuggestions.length > 0
     ? renderGeminiChatInterface(finding, target, existingSuggestions)
     : "";
 
@@ -2187,7 +2392,6 @@ export function buildIssueDetailHtml(options: {
           <h4>Code snippet</h4>
           ${snippet}
         </div>
-        ${suggestionsHtml}
         ${chatInterface}
         ${actionButtons}
       </div>

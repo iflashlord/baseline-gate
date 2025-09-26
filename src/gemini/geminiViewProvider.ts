@@ -110,6 +110,13 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
           await this.saveSuggestions();
           progress.report({ increment: 100 });
 
+          // Send response to detail view via command
+          await vscode.commands.executeCommand('baseline-gate.sendGeminiResponse', {
+            type: 'success',
+            response: suggestionText,
+            findingId
+          });
+
           await vscode.window.showInformationMessage('Gemini suggestion added successfully!');
           await vscode.commands.executeCommand('baselineGate.geminiView.focus');
           this.refresh();
@@ -117,8 +124,17 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
           // Notify detail view to refresh if it's showing this finding
           await vscode.commands.executeCommand('baseline-gate.refreshDetailView', findingId);
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          
+          // Send error to detail view via command
+          await vscode.commands.executeCommand('baseline-gate.sendGeminiResponse', {
+            type: 'error',
+            error: errorMessage,
+            findingId
+          });
+
           vscode.window.showErrorMessage(
-            `Failed to get Gemini suggestion: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            `Failed to get Gemini suggestion: ${errorMessage}`,
           );
         }
       },

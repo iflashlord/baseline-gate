@@ -176,7 +176,7 @@ Context: This is a follow-up question about fixing a baseline compatibility issu
   const refreshDetailView = vscode.commands.registerCommand('baseline-gate.refreshDetailView', async (findingId?: string) => {
     if (BaselineDetailViewProvider.getCurrentPanel() && findingId) {
       // Find the finding and refresh the detail view
-      const findings = await analysisProvider.getAllFindings();
+      const findings = analysisProvider.getAllFindings();
       const finding = findings.find(f => computeFindingId(f) === findingId);
       if (finding) {
         BaselineDetailViewProvider.updateCurrentPanel(finding, target, panelAssets, geminiProvider);
@@ -184,6 +184,28 @@ Context: This is a follow-up question about fixing a baseline compatibility issu
     }
   });
   context.subscriptions.push(refreshDetailView);
+
+  const sendGeminiResponse = vscode.commands.registerCommand('baseline-gate.sendGeminiResponse', async (args?: { type: string; response?: string; error?: string; findingId?: string }) => {
+    const currentPanel = BaselineDetailViewProvider.getCurrentPanel();
+    if (currentPanel && args) {
+      switch (args.type) {
+        case 'success':
+          if (args.response) {
+            await BaselineDetailViewProvider.sendSuccessState(currentPanel.webview, args.response);
+          }
+          break;
+        case 'error':
+          if (args.error) {
+            await BaselineDetailViewProvider.sendErrorState(currentPanel.webview, args.error);
+          }
+          break;
+        case 'loading':
+          await BaselineDetailViewProvider.sendLoadingState(currentPanel.webview);
+          break;
+      }
+    }
+  });
+  context.subscriptions.push(sendGeminiResponse);
 
   const goToFinding = vscode.commands.registerCommand('baseline-gate.goToFinding', async (findingId: string) => {
     // Switch focus to the analysis view and highlight the finding
