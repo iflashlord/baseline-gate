@@ -951,10 +951,51 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         line-height: 1.4;
       }
       .existing-suggestion-content code {
-        background: var(--vscode-textPreformat-background);
+        background: var(--vscode-editorWidget-background);
+        color: var(--vscode-foreground);
         padding: 2px 4px;
-        border-radius: 3px;
+        border-radius: 4px;
         font-family: var(--vscode-editor-font-family);
+      }
+      .existing-suggestion-content code mark {
+        background: var(--vscode-editor-selectionBackground);
+        color: inherit;
+      }
+      .existing-suggestion-content .code-block {
+        position: relative;
+        margin: 8px 0;
+        border-radius: 6px;
+        background: var(--vscode-editorWidget-background);
+        border: 1px solid var(--vscode-widget-border);
+      }
+      .existing-suggestion-content .code-block pre {
+        margin: 0;
+        padding: 12px;
+        max-width: 100%;
+        overflow-x: auto;
+        box-sizing: border-box;
+        font-size: 12px;
+      }
+      .existing-suggestion-content .code-block code {
+        display: block;
+        background: transparent;
+        padding: 0;
+        white-space: pre;
+      }
+      .existing-suggestion-content .code-copy-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: var(--vscode-button-secondaryBackground);
+        color: var(--vscode-button-secondaryForeground);
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 11px;
+        padding: 2px 6px;
+      }
+      .existing-suggestion-content .code-copy-btn:hover {
+        background: var(--vscode-button-secondaryHoverBackground);
       }
       .detail-entry {
         display: flex;
@@ -1213,6 +1254,15 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       });
 
       detailBodyNode.addEventListener('click', (event) => {
+        const copyCodeButton = event.target.closest('[data-action="copy-code"]');
+        if (copyCodeButton) {
+          const container = copyCodeButton.closest('[data-code-block]');
+          const codeElement = container ? container.querySelector('code') : null;
+          const codeText = codeElement ? codeElement.textContent || '' : '';
+          vscode.postMessage({ type: 'copyCodeSnippet', code: codeText });
+          return;
+        }
+
         const docButton = event.target.closest('[data-doc-url]');
         if (docButton) {
           const url = docButton.getAttribute('data-doc-url');

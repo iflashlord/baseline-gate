@@ -563,6 +563,26 @@ suite('Ask AI/Gemini functionality', () => {
       vscode.commands.executeCommand = originalExecuteCommand;
     }
   });
+
+  test('copyCodeSnippet message copies text to clipboard', async () => {
+    const attached = attachView(provider);
+
+    let captured = '';
+    const override = provider as unknown as { copyCodeSnippet: (code: string) => Promise<void> };
+    const original = override.copyCodeSnippet;
+    override.copyCodeSnippet = async (code: string) => {
+      captured = code;
+    };
+
+    try {
+      attached.emit({ type: 'copyCodeSnippet', code: 'console.log(42);' });
+      await Promise.resolve();
+
+      assert.strictEqual(captured, 'console.log(42);', 'copy handler should receive the snippet');
+    } finally {
+      override.copyCodeSnippet = original;
+    }
+  });
 });
 
 suite('Enhanced UI interactions', () => {

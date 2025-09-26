@@ -26,6 +26,7 @@ export interface AnalysisMessageHandlers {
     findingId: string;
     context: "sidebar" | string;
   }) => void;
+  copyCodeSnippet: (code: string) => void;
 }
 
 export function processMessage(handlers: AnalysisMessageHandlers, message: MessageFromWebview): void {
@@ -77,6 +78,9 @@ export function processMessage(handlers: AnalysisMessageHandlers, message: Messa
         findingId: message.findingId,
         context: "sidebar"
       });
+      break;
+    case "copyCodeSnippet":
+      handlers.copyCodeSnippet(message.code);
       break;
     default:
       break;

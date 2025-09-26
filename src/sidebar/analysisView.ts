@@ -442,6 +442,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
             findingId,
             context
           });
+        },
+        copyCodeSnippet: (code) => {
+          void this.copyCodeSnippet(code);
         }
       },
       message
@@ -537,6 +540,21 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       warning: webview.asWebviewUri(this.assets.statusIcons.warning).toString(),
       safe: webview.asWebviewUri(this.assets.statusIcons.safe).toString()
     };
+  }
+
+  private async copyCodeSnippet(code: string): Promise<void> {
+    if (!code) {
+      void vscode.window.showWarningMessage("Unable to copy Gemini code snippet: no content available.");
+      return;
+    }
+
+    try {
+      await vscode.env.clipboard.writeText(code);
+      vscode.window.setStatusBarMessage("Gemini code snippet copied to clipboard.", 3000);
+    } catch (error) {
+      const err = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`Failed to copy Gemini code snippet: ${err}`);
+    }
   }
 
   private postState() {

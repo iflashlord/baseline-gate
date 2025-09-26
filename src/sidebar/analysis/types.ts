@@ -104,6 +104,7 @@ export type MessageFromWebview =
   | { type: "clearFilters" }
   | { type: "openFile"; uri: string; start: { line: number; character: number }; end: { line: number; character: number } }
   | { type: "openDocs"; url?: string }
+  | { type: "copyCodeSnippet"; code: string }
   | { type: "askGemini"; issue: string; feature: string; filePath: string; findingId: string }
   | { type: "selectIssue"; id: string }
   | { type: "selectFile"; uri: string }
