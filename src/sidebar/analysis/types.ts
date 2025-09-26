@@ -106,6 +106,7 @@ export type MessageFromWebview =
   | { type: "openDocs"; url?: string }
   | { type: "copyCodeSnippet"; code: string }
   | { type: "askGemini"; issue: string; feature: string; filePath: string; findingId: string }
+  | { type: "askGeminiFollowUp"; question: string; findingId: string; feature: string; filePath: string; target: string }
   | { type: "selectIssue"; id: string }
   | { type: "selectFile"; uri: string }
   | { type: "openIssueDetail"; id: string }

@@ -26,6 +26,13 @@ export interface AnalysisMessageHandlers {
     findingId: string;
     context: "sidebar" | string;
   }) => void;
+  askGeminiFollowUp: (payload: {
+    question: string;
+    findingId: string;
+    feature: string;
+    filePath: string;
+    target: string;
+  }) => void;
   copyCodeSnippet: (code: string) => void;
 }
 
@@ -77,6 +84,15 @@ export function processMessage(handlers: AnalysisMessageHandlers, message: Messa
         filePath: message.filePath,
         findingId: message.findingId,
         context: "sidebar"
+      });
+      break;
+    case "askGeminiFollowUp":
+      handlers.askGeminiFollowUp({
+        question: message.question,
+        findingId: message.findingId,
+        feature: message.feature,
+        filePath: message.filePath,
+        target: message.target
       });
       break;
     case "copyCodeSnippet":

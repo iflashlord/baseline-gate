@@ -146,6 +146,21 @@ export function activate(context: vscode.ExtensionContext) {
   });
   context.subscriptions.push(askGemini);
 
+  const askGeminiFollowUp = vscode.commands.registerCommand('baseline-gate.askGeminiFollowUp', async (args?: { question: string; findingId?: string; feature?: string; filePath?: string; target?: string }) => {
+    if (!args || !args.question) {
+      void vscode.window.showErrorMessage('No question provided for Gemini follow-up.');
+      return;
+    }
+    
+    // Build context-aware issue for follow-up
+    const contextualIssue = `Follow-up question about ${args.feature || 'baseline issue'} in ${args.filePath || 'file'} (Target: ${args.target || 'unknown'}): ${args.question}
+
+Context: This is a follow-up question about fixing a baseline compatibility issue. Please focus on practical solutions and implementation details.`;
+    
+    await geminiProvider.addSuggestion(contextualIssue, args.feature, args.filePath, args.findingId);
+  });
+  context.subscriptions.push(askGeminiFollowUp);
+
   const clearGeminiResults = vscode.commands.registerCommand('baseline-gate.clearGeminiResults', async (id?: string) => {
     // This command is handled by the webview, but we register it for completeness
   });

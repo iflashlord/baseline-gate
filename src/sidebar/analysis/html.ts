@@ -997,6 +997,152 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       .existing-suggestion-content .code-copy-btn:hover {
         background: var(--vscode-button-secondaryHoverBackground);
       }
+
+      /* Chat Interface Styles */
+      .gemini-chat-section {
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 8px;
+        background: var(--vscode-editor-background);
+        margin-top: 12px;
+      }
+
+      .chat-context-info {
+        background: var(--vscode-badge-background);
+        color: var(--vscode-badge-foreground);
+        padding: 12px;
+        border-radius: 6px 6px 0 0;
+        margin-bottom: 16px;
+      }
+
+      .chat-context-info h5 {
+        margin: 0 0 8px 0;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .context-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 12px;
+        opacity: 0.9;
+      }
+
+      .chat-history {
+        margin-bottom: 16px;
+      }
+
+      .chat-message {
+        margin-bottom: 16px;
+        padding: 12px;
+        border-radius: 6px;
+      }
+
+      .chat-message.initial-question {
+        background: var(--vscode-inputValidation-infoBackground);
+        border-left: 3px solid var(--vscode-inputValidation-infoBorder);
+      }
+
+      .chat-message.gemini-response {
+        background: var(--vscode-textPreformat-background);
+        border-left: 3px solid var(--vscode-charts-yellow);
+      }
+
+      .chat-message.follow-up-question {
+        background: var(--vscode-inputValidation-warningBackground);
+        border-left: 3px solid var(--vscode-inputValidation-warningBorder);
+      }
+
+      .message-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--vscode-descriptionForeground);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .message-content {
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .chat-input-section {
+        border-top: 1px solid var(--vscode-widget-border);
+        padding: 16px;
+      }
+
+      .chat-input-header {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--vscode-foreground);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .chat-input-area {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .chat-input {
+        min-height: 80px;
+        max-height: 200px;
+        resize: vertical;
+        background: var(--vscode-input-background);
+        color: var(--vscode-input-foreground);
+        border: 1px solid var(--vscode-input-border);
+        border-radius: 4px;
+        padding: 8px;
+        font-family: var(--vscode-font-family);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .chat-input:focus {
+        outline: none;
+        border-color: var(--vscode-focusBorder);
+      }
+
+      .chat-send-button {
+        align-self: flex-end;
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        border: none;
+        border-radius: 4px;
+        padding: 8px 16px;
+        font-size: 13px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: background-color 0.2s;
+      }
+
+      .chat-send-button:hover:not(:disabled) {
+        background: var(--vscode-button-hoverBackground);
+      }
+
+      .chat-send-button:disabled {
+        background: var(--vscode-button-secondaryBackground);
+        color: var(--vscode-button-secondaryForeground);
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .chat-guidelines {
+        margin-top: 8px;
+        padding: 8px;
+        background: var(--vscode-textCodeBlock-background);
+        border-radius: 4px;
+        font-size: 11px;
+        color: var(--vscode-descriptionForeground);
+      }
+
       .detail-entry {
         display: flex;
         flex-direction: column;
@@ -1276,7 +1422,45 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
           const feature = geminiButton.getAttribute('data-feature-name');
           const filePath = geminiButton.getAttribute('data-file-path');
           const findingId = geminiButton.getAttribute('data-finding-id');
-          vscode.postMessage({ type: 'askGemini', issue, feature, filePath, findingId });
+          const hasExisting = geminiButton.getAttribute('data-has-existing') === 'true';
+          
+          if (hasExisting) {
+            // Show chat interface for "Continue with Gemini"
+            const chatSection = document.querySelector('.gemini-chat-section');
+            if (chatSection) {
+              chatSection.style.display = chatSection.style.display === 'none' ? 'block' : 'none';
+            }
+          } else {
+            // Regular "Fix with Gemini" behavior
+            vscode.postMessage({ type: 'askGemini', issue, feature, filePath, findingId });
+          }
+          return;
+        }
+
+        const chatSendButton = event.target.closest('.chat-send-button');
+        if (chatSendButton && !chatSendButton.disabled) {
+          const chatInput = chatSendButton.parentElement.querySelector('.chat-input');
+          const followUpQuestion = chatInput.value.trim();
+          
+          if (followUpQuestion) {
+            const findingId = chatInput.getAttribute('data-finding-id');
+            const feature = chatInput.getAttribute('data-feature-name');
+            const filePath = chatInput.getAttribute('data-file-path');
+            const target = chatInput.getAttribute('data-target');
+            
+            vscode.postMessage({ 
+              type: 'askGeminiFollowUp', 
+              question: followUpQuestion,
+              findingId,
+              feature,
+              filePath,
+              target
+            });
+            
+            // Clear the input and disable button
+            chatInput.value = '';
+            chatSendButton.disabled = true;
+          }
           return;
         }
       });
@@ -1286,6 +1470,25 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         if (type === 'state') {
           currentState = payload;
           applyState();
+        }
+      });
+
+      // Chat input handling
+      detailBodyNode.addEventListener('input', (event) => {
+        if (event.target.classList.contains('chat-input')) {
+          const input = event.target;
+          const sendButton = input.parentElement.querySelector('.chat-send-button');
+          const hasText = input.value.trim().length > 0;
+          sendButton.disabled = !hasText;
+        }
+      });
+
+      detailBodyNode.addEventListener('keydown', (event) => {
+        if (event.target.classList.contains('chat-input') && event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+          const sendButton = event.target.parentElement.querySelector('.chat-send-button');
+          if (!sendButton.disabled) {
+            sendButton.click();
+          }
         }
       });
 
@@ -1790,6 +1993,102 @@ export function renderExistingSuggestions(suggestions: GeminiSuggestion[]): stri
     `;
 }
 
+export function renderGeminiChatInterface(finding: BaselineFinding, target: Target, suggestions: GeminiSuggestion[]): string {
+  if (suggestions.length === 0) {
+    return '';
+  }
+
+  const contextInfo = `
+    <div class="chat-context-info">
+      <h5>🎯 Context</h5>
+      <div class="context-details">
+        <div><strong>Target:</strong> ${escapeHtml(target)} baseline support</div>
+        <div><strong>Feature:</strong> ${escapeHtml(finding.feature.name)}</div>
+        <div><strong>File:</strong> ${escapeHtml(vscode.workspace.asRelativePath(finding.uri, false))}</div>
+        <div><strong>Focus:</strong> Fix the baseline compatibility issue</div>
+      </div>
+    </div>
+  `;
+
+  // Show the conversation history - first suggestion and then follow-ups
+  const initialSuggestion = suggestions[0];
+  const followUpSuggestions = suggestions.slice(1);
+
+  let conversationHistory = `
+    <div class="chat-history">
+      <div class="chat-message initial-question">
+        <div class="message-label">Initial Issue</div>
+        <div class="message-content">${escapeHtml(initialSuggestion.issue)}</div>
+      </div>
+      <div class="chat-message gemini-response">
+        <div class="message-label">
+          <span class="gemini-icon">✨</span> Gemini's Solution
+        </div>
+        <div class="message-content">${renderSimpleMarkdown(initialSuggestion.suggestion)}</div>
+      </div>
+  `;
+
+  // Add follow-up conversations
+  followUpSuggestions.forEach((suggestion, index) => {
+    const isFollowUp = suggestion.issue.includes('Follow-up question about') || suggestion.issue.includes('Context: This is a follow-up');
+    if (isFollowUp) {
+      // Extract the actual question from the contextual issue
+      const questionMatch = suggestion.issue.match(/Follow-up question about.*?: (.+?)(?:\n\nContext:|$)/s);
+      const actualQuestion = questionMatch ? questionMatch[1].trim() : suggestion.issue;
+      
+      conversationHistory += `
+        <div class="chat-message follow-up-question">
+          <div class="message-label">Follow-up Question</div>
+          <div class="message-content">${escapeHtml(actualQuestion)}</div>
+        </div>
+        <div class="chat-message gemini-response">
+          <div class="message-label">
+            <span class="gemini-icon">✨</span> Gemini's Response
+          </div>
+          <div class="message-content">${renderSimpleMarkdown(suggestion.suggestion)}</div>
+        </div>
+      `;
+    }
+  });
+
+  conversationHistory += `</div>`;
+
+  const chatInputArea = `
+    <div class="chat-input-section">
+      <div class="chat-input-header">
+        <span class="gemini-icon">💬</span> Ask a follow-up question
+      </div>
+      <div class="chat-input-area">
+        <textarea 
+          class="chat-input" 
+          placeholder="Ask about implementation details, alternatives, or request clarification..."
+          data-finding-id="${escapeAttribute(finding.id)}"
+          data-feature-name="${escapeAttribute(finding.feature.name)}"
+          data-file-path="${escapeAttribute(vscode.workspace.asRelativePath(finding.uri, false))}"
+          data-target="${escapeAttribute(target)}"
+        ></textarea>
+        <button class="chat-send-button" disabled>
+          <span class="gemini-icon">➤</span> Ask Gemini
+        </button>
+      </div>
+      <div class="chat-guidelines">
+        <small>💡 Focus on fixing the baseline issue. Ask about implementation, alternatives, or request clarification.</small>
+      </div>
+    </div>
+  `;
+
+  return `
+    <div class="detail-section gemini-chat-section" style="display: none;">
+      <h4>
+        <span class="gemini-icon">💬</span> Continue Conversation with Gemini
+      </h4>
+      ${contextInfo}
+      ${conversationHistory}
+      ${chatInputArea}
+    </div>
+  `;
+}
+
 export function buildIssueDetailHtml(options: {
   finding: BaselineFinding;
   severityIconUris: Record<Verdict, string>;
@@ -1842,8 +2141,8 @@ export function buildIssueDetailHtml(options: {
 
   const geminiIssueContent = buildGeminiIssueContent(finding, target);
   const hasExistingSuggestion = gemini?.hasExistingSuggestion ?? false;
-  const geminiButtonText = hasExistingSuggestion ? "Ask Gemini Again" : "Fix with Gemini";
-  const geminiButton = `<button class="detail-gemini-button" data-gemini-issue="${escapeAttribute(geminiIssueContent)}" data-feature-name="${escapeAttribute(feature.name)}" data-file-path="${escapeAttribute(relativePath)}" data-finding-id="${escapeAttribute(finding.id)}">
+  const geminiButtonText = hasExistingSuggestion ? "Continue with Gemini" : "Fix with Gemini";
+  const geminiButton = `<button class="detail-gemini-button" data-gemini-issue="${escapeAttribute(geminiIssueContent)}" data-feature-name="${escapeAttribute(feature.name)}" data-file-path="${escapeAttribute(relativePath)}" data-finding-id="${escapeAttribute(finding.id)}" data-target="${escapeAttribute(target)}" data-has-existing="${hasExistingSuggestion}">
       <span class="gemini-icon">✨</span> ${geminiButtonText}
     </button>`;
 
@@ -1858,6 +2157,10 @@ export function buildIssueDetailHtml(options: {
   const existingSuggestions = gemini?.suggestions ?? [];
   const suggestionsHtml = existingSuggestions.length
     ? renderExistingSuggestions(existingSuggestions)
+    : "";
+
+  const chatInterface = hasExistingSuggestion
+    ? renderGeminiChatInterface(finding, target, existingSuggestions)
     : "";
 
   return `
@@ -1885,6 +2188,7 @@ export function buildIssueDetailHtml(options: {
           ${snippet}
         </div>
         ${suggestionsHtml}
+        ${chatInterface}
         ${actionButtons}
       </div>
     `;

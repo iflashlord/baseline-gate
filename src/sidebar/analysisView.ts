@@ -443,6 +443,15 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
             context
           });
         },
+        askGeminiFollowUp: ({ question, findingId, feature, filePath, target }) => {
+          void vscode.commands.executeCommand("baseline-gate.askGeminiFollowUp", {
+            question,
+            findingId,
+            feature,
+            filePath,
+            target
+          });
+        },
         copyCodeSnippet: (code) => {
           void this.copyCodeSnippet(code);
         }
