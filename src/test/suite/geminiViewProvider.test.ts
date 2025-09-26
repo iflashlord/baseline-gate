@@ -2,6 +2,8 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { GeminiViewProvider } from '../../gemini/geminiViewProvider';
 import type { GeminiSuggestion } from '../../gemini/geminiService';
+import type { GeminiSuggestionState } from '../../gemini/types';
+import { renderSuggestionCard } from '../../gemini/dataTransform';
 
 function createWorkspaceState(initialSuggestions: GeminiSuggestion[] = []) {
   const storage = new Map<string, unknown>();
@@ -107,12 +109,12 @@ suite('Gemini view provider', () => {
     ];
 
     const provider = new GeminiViewProvider(createContext(persisted as GeminiSuggestion[]));
-    const suggestions = (provider as unknown as { suggestions: GeminiSuggestion[] }).suggestions;
-    const filtered = (provider as unknown as { filteredSuggestions: GeminiSuggestion[] }).filteredSuggestions;
+    const state = (provider as unknown as { state: GeminiSuggestionState }).state;
 
-    assert.strictEqual(suggestions.length, 1, 'should load stored suggestions');
-    assert.strictEqual(filtered.length, 1, 'filtered list should mirror suggestions initially');
-    assert.ok(suggestions[0].timestamp instanceof Date, 'timestamp should be normalised to Date');
+    assert.strictEqual(state.suggestions.length, 1, 'should load stored suggestions');
+    assert.strictEqual(state.filteredSuggestions.length, 1, 'filtered list should mirror suggestions initially');
+    assert.ok(state.suggestions[0].timestamp instanceof Date, 'timestamp should be normalised to Date');
+
   });
 
   test('filterSuggestions applies case-insensitive multi-term matching', () => {
@@ -123,8 +125,9 @@ suite('Gemini view provider', () => {
 
     (provider as unknown as { filterSuggestions: (query: string) => void }).filterSuggestions(' fetch network');
 
-    const filtered = (provider as unknown as { filteredSuggestions: GeminiSuggestion[]; searchQuery: string }).filteredSuggestions;
-    const searchQuery = (provider as unknown as { searchQuery: string }).searchQuery;
+    const state = (provider as unknown as { state: GeminiSuggestionState }).state;
+    const filtered = state.filteredSuggestions;
+    const searchQuery = state.searchQuery;
 
     assert.deepStrictEqual(filtered.map((item) => item.id), ['second'], 'should keep suggestions matching all terms');
     assert.strictEqual(searchQuery, 'fetch network', 'stored search query should be lower-cased and trimmed');
@@ -139,12 +142,12 @@ suite('Gemini view provider', () => {
     (provider as unknown as { filterSuggestions: (query: string) => void }).filterSuggestions('another');
     (provider as unknown as { filterSuggestions: (query: string) => void }).filterSuggestions('');
 
-    const filtered = (provider as unknown as { filteredSuggestions: GeminiSuggestion[] }).filteredSuggestions;
+    const state = (provider as unknown as { state: GeminiSuggestionState }).state;
+    const filtered = state.filteredSuggestions;
     assert.strictEqual(filtered.length, 2, 'clearing the query should restore all suggestions');
   });
 
   test('renderSuggestionCard highlights search terms and renders metadata', () => {
-    const provider = new GeminiViewProvider(createContext());
     const suggestion: GeminiSuggestion = {
       ...baseSuggestion,
       id: 'render-test',
@@ -153,8 +156,7 @@ suite('Gemini view provider', () => {
       suggestion: 'Use **IndexedDB** for offline caching.'
     };
 
-    const markup = (provider as unknown as { renderSuggestionCard: (suggestion: GeminiSuggestion, search: string) => string })
-      .renderSuggestionCard(suggestion, 'indexed');
+    const markup = renderSuggestionCard(suggestion, 'indexed');
 
     assert.ok(markup.includes('<mark>Indexed</mark>'), 'issue metadata should highlight search term');
     assert.ok(markup.includes('📄'), 'file chip should include icon');
