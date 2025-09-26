@@ -66,7 +66,16 @@ export function renderMarkdown(text: string, query?: string): string {
   html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
 
   // Code blocks
-  html = html.replace(/```([^`]*?)```/gs, '<pre><code>$1</code></pre>');
+  html = html.replace(/```([\s\S]*?)```/g, (_match, codeContent: string) => {
+    return [
+      '<div class="code-block" data-code-block>',
+      '<pre><code>',
+      codeContent,
+      '</code></pre>',
+      '<button type="button" class="code-copy-btn" data-action="copy-code" aria-label="Copy code snippet" title="Copy code snippet">📋</button>',
+      '</div>'
+    ].join('');
+  });
   html = html.replace(/`([^`]+?)`/g, '<code>$1</code>');
 
   // Lists

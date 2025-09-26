@@ -61,6 +61,10 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
           console.log('Copying suggestion to clipboard:', id);
           await this.copySuggestionToClipboard(id);
         },
+        copyCodeSnippet: async (code) => {
+          console.log('Copying Gemini code snippet');
+          await this.copyCodeSnippet(code);
+        },
       });
     });
   }
@@ -218,5 +222,21 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
       state: this.state,
       isGeminiConfigured: geminiService.isConfigured(),
     });
+  }
+
+  private async copyCodeSnippet(code: string): Promise<void> {
+    if (!code) {
+      void vscode.window.showWarningMessage('Unable to copy code snippet: content was empty.');
+      return;
+    }
+
+    try {
+      await vscode.env.clipboard.writeText(code);
+      vscode.window.setStatusBarMessage('Gemini code snippet copied to clipboard.', 3000);
+    } catch (error) {
+      void vscode.window.showErrorMessage(
+        `Failed to copy Gemini code snippet: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 }

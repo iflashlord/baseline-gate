@@ -20,6 +20,9 @@ export function handleGeminiMessage(message: GeminiWebviewMessage, handlers: Gem
     case 'copySuggestion':
       void handlers.copySuggestion(message.id);
       break;
+    case 'copyCodeSnippet':
+      void handlers.copyCodeSnippet(message.code);
+      break;
     default:
       break;
   }

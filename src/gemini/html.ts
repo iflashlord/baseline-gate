@@ -270,17 +270,66 @@ export function buildGeminiWebviewHtml({ webview, state, isGeminiConfigured }: B
             border-radius: 4px;
         }
 
-        .suggestion-text pre {
-            margin: 8px 0;
-            padding: 8px;
-            background: var(--vscode-editorWidget-background);
-            border-radius: 4px;
-            overflow-x: auto;
-        }
-
         .suggestion-text code {
             font-family: var(--vscode-editor-font-family);
-            background: var(--vscode-textPreformat-foreground);
+            background: var(--vscode-editorWidget-background);
+            color: var(--vscode-foreground);
+            padding: 1px 4px;
+            border-radius: 4px;
+        }
+
+        .suggestion-text code mark {
+            background: var(--vscode-editor-selectionBackground);
+            color: inherit;
+        }
+
+        .suggestion-text pre {
+            font-size: 12px;
+        }
+
+        .suggestion-text pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        .code-block {
+            position: relative;
+            margin: 8px 0;
+            border-radius: 6px;
+            background: var(--vscode-editorWidget-background);
+            border: 1px solid var(--vscode-widget-border);
+        }
+
+        .code-block pre {
+            margin: 0;
+            padding: 12px;
+            max-width: 100%;
+            overflow-x: auto;
+            box-sizing: border-box;
+        }
+
+        .code-block code {
+            display: block;
+            font-family: var(--vscode-editor-font-family);
+            color: var(--vscode-foreground);
+            white-space: pre;
+        }
+
+        .code-copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            padding: 2px 6px;
+        }
+
+        .code-copy-btn:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
         }
 
         .link-button {
@@ -439,6 +488,13 @@ export function buildGeminiWebviewHtml({ webview, state, isGeminiConfigured }: B
                     if (suggestionId) {
                         vscodeApi.postMessage({ type: 'copySuggestion', id: suggestionId });
                     }
+                    break;
+                }
+                case 'copy-code': {
+                    const codeBlock = actionable.closest('[data-code-block]');
+                    const codeElement = codeBlock ? codeBlock.querySelector('code') : null;
+                    const code = codeElement ? codeElement.textContent ?? '' : '';
+                    vscodeApi.postMessage({ type: 'copyCodeSnippet', code });
                     break;
                 }
                 case 'clear-search': {

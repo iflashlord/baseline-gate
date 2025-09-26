@@ -17,7 +17,8 @@ export type GeminiWebviewMessage =
   | { type: 'goToFinding'; findingId: string }
   | { type: 'openFileAtLocation'; filePath: string; line?: number; character?: number }
   | { type: 'searchSuggestions'; query: string }
-  | { type: 'copySuggestion'; id: string };
+  | { type: 'copySuggestion'; id: string }
+  | { type: 'copyCodeSnippet'; code: string };
 
 export interface GeminiMessageHandlers {
   removeSuggestion: (id: string) => Promise<void> | void;
@@ -26,4 +27,5 @@ export interface GeminiMessageHandlers {
   openFileAtLocation: (filePath: string, line?: number, character?: number) => Promise<void> | void;
   searchSuggestions: (query: string) => void;
   copySuggestion: (id: string) => Promise<void> | void;
+  copyCodeSnippet: (code: string) => Promise<void> | void;
 }

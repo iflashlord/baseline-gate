@@ -153,7 +153,7 @@ suite('Gemini view provider', () => {
       id: 'render-test',
       feature: 'IndexedDB',
       file: '/app/src/storage/indexed-db.ts',
-      suggestion: 'Use **IndexedDB** for offline caching.'
+      suggestion: 'Use **IndexedDB** for offline caching.\n```js\nconst db = await open();\n```'
     };
 
     const markup = renderSuggestionCard(suggestion, 'indexed');
@@ -161,6 +161,7 @@ suite('Gemini view provider', () => {
     assert.ok(markup.includes('<mark>Indexed</mark>'), 'issue metadata should highlight search term');
     assert.ok(markup.includes('📄'), 'file chip should include icon');
     assert.ok(markup.includes('<strong'), 'markdown should convert bold text');
+    assert.ok(markup.includes('data-action="copy-code"'), 'code blocks should render copy buttons');
   });
 
   test('webview messages dispatch to the associated handlers', () => {
@@ -171,7 +172,8 @@ suite('Gemini view provider', () => {
       clear: [],
       search: [],
       copy: [],
-      open: []
+      open: [],
+      code: []
     };
 
     (provider as unknown as { removeSuggestion: (id: string) => Promise<void> }).removeSuggestion = async (id: string) => {
@@ -185,6 +187,9 @@ suite('Gemini view provider', () => {
     };
     (provider as unknown as { copySuggestionToClipboard: (id: string) => Promise<void> }).copySuggestionToClipboard = async (id: string) => {
       received.copy.push(id);
+    };
+    (provider as unknown as { copyCodeSnippet: (code: string) => Promise<void> }).copyCodeSnippet = async (code: string) => {
+      received.code.push(code);
     };
     (provider as unknown as { openFileAtLocation: (filePath: string, line?: number, character?: number) => Promise<void> }).openFileAtLocation = async (filePath: string, line?: number, character?: number) => {
       received.open.push(filePath, line, character);
@@ -205,12 +210,14 @@ suite('Gemini view provider', () => {
     view.emit({ type: 'copySuggestion', id: 'copy-me' });
     view.emit({ type: 'openFileAtLocation', filePath: '/tmp/file.ts', line: 4, character: 2 });
     view.emit({ type: 'goToFinding', findingId: 'finding-123' });
+    view.emit({ type: 'copyCodeSnippet', code: 'const sample = true;' });
 
     assert.deepStrictEqual(received.remove, ['remove-me']);
     assert.strictEqual(received.clear.length, 1, 'clear handler should run once');
     assert.deepStrictEqual(received.search, ['polyfill']);
     assert.deepStrictEqual(received.copy, ['copy-me']);
     assert.deepStrictEqual(received.open, ['/tmp/file.ts', 4, 2]);
+    assert.deepStrictEqual(received.code, ['const sample = true;']);
     assert.deepStrictEqual(executed, [['baseline-gate.goToFinding', 'finding-123']]);
 
     (vscode.commands as unknown as { executeCommand: typeof originalExecuteCommand }).executeCommand = originalExecuteCommand;
