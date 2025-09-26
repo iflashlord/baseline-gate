@@ -18,6 +18,7 @@ import {
   renderSimpleMarkdown,
   renderSupportTables
 } from "./utils";
+import { buildResourceLinks } from "../../hover/render/contentBuilder";
 
 export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
     const nonce = generateNonce();
@@ -1474,6 +1475,17 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       .hidden {
         display: none !important;
       }
+      
+      .external-icon {
+        opacity: 0.7;
+        font-size: 0.75em;
+        margin-left: 0.2em;
+        color: var(--vscode-textLink-foreground);
+      }
+      
+      .resource-link:hover .external-icon {
+        opacity: 1;
+      }
     </style>
   </head>
   <body>
@@ -2510,19 +2522,35 @@ export function buildIssueDetailHtml(options: {
       </button>`
     : "";
 
+  // Build resource links
+  const resourceLinks = buildResourceLinks(feature);
+  const resourceSection = resourceLinks.length > 0
+    ? `<div class="detail-section">
+        <h4>Resources</h4>
+        <ul class="resource-links">
+          ${resourceLinks.map(link => {
+            // Convert markdown links to HTML for webview
+            const markdownLinkMatch = link.match(/^\[(.+?)\]\((.+?)\)$/);
+            if (markdownLinkMatch) {
+              const [, text, url] = markdownLinkMatch;
+              if (url.startsWith('command:')) {
+                return `<li><a href="#" data-command="${escapeAttribute(url)}" class="resource-link">${escapeHtml(text)}</a></li>`;
+              } else {
+                return `<li><a href="${escapeAttribute(url)}" target="_blank" class="resource-link external-link">${escapeHtml(text)} <span class="external-icon">&#8599;</span></a></li>`;
+              }
+            }
+            return `<li>${escapeHtml(link)}</li>`;
+          }).join('')}
+        </ul>
+      </div>`
+    : "";
+
   const docButton = feature.docsUrl
     ? `<button class="detail-doc-link" data-doc-url="${escapeAttribute(feature.docsUrl)}">Open documentation</button>`
     : "";
 
   const actionButtons = docButton || geminiButton
     ? `<div class="detail-section detail-actions">${docButton}${geminiButton}</div>`
-    : "";
-
-  const existingSuggestions = gemini?.suggestions ?? [];
-  
-  // Show chat interface for any suggestions (replace the old suggestions section)
-  const chatInterface = existingSuggestions.length > 0
-    ? renderGeminiChatInterface(finding, target, existingSuggestions)
     : "";
 
   return `
@@ -2545,11 +2573,7 @@ export function buildIssueDetailHtml(options: {
         ${discouraged}
         ${supportTable}
         ${contextBlock}
-        <div class="detail-section">
-          <h4>Code snippet</h4>
-          ${snippet}
-        </div>
-        ${chatInterface}
+        ${resourceSection}
         ${actionButtons}
       </div>
     `;

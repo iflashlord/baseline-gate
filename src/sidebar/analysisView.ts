@@ -314,18 +314,23 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
   }
 
   private openFileDetail(uriString: string): void {
-    const exists = this.findings.some((finding) => finding.uri.toString() === uriString);
-    if (!exists) {
-      if (this.detailSelection !== null) {
-        this.detailSelection = null;
-        this.postState();
-      }
+    const fileFindings = this.findings.filter((finding) => finding.uri.toString() === uriString);
+    if (!fileFindings.length) {
       return;
     }
 
+    // Open the file details in the large detail view panel
+    BaselineDetailViewProvider.createOrShowFileDetails(
+      this.context,
+      fileFindings,
+      this.target,
+      this.assets,
+      this.geminiProvider
+    );
+
+    // Update sidebar selection for visual feedback
     this.selectedFileUri = uriString;
     this.selectedIssueId = null;
-    this.detailSelection = { mode: "file", uri: uriString };
     this.collapsedFileUris.delete(uriString);
     this.postState();
   }

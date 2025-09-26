@@ -356,11 +356,12 @@ suite('Double-click functionality', () => {
     const lastMessage = attached.messages.at(-1);
     assert.ok(lastMessage, 'state message should be posted');
 
-    const detail = lastMessage.payload.detail;
-    assert.ok(detail, 'detail payload should be present');
-    assert.strictEqual(detail.mode, 'file');
-    assert.ok(detail.title.includes('app.ts'));
-    assert.ok(detail.html.includes('Clipboard API'));
+    // File details now open in large detail panel, not inline
+    // So we check that the selection state is updated
+    const state = lastMessage.payload;
+    assert.strictEqual(state.selectedFileUri, finding.uri.toString(), 'file should be selected');
+    // Detail is no longer in the payload since it opens in separate panel
+    assert.strictEqual(state.detail, null, 'detail should not be in sidebar payload');
   });
 
   test('double-click on issue row opens issue details in separate panel', () => {
@@ -608,10 +609,11 @@ suite('Enhanced UI interactions', () => {
     assert.strictEqual(state.selectedFileUri, finding.uri.toString());
     assert.strictEqual(state.detail, null, 'detail should not be open yet');
     
-    // Then open file details
+    // Then open file details - now opens in large detail panel
     attached.emit({ type: 'openFileDetail', uri: finding.uri.toString() });
     const lastMessage = attached.messages.at(-1);
-    assert.ok(lastMessage.payload.detail, 'detail should now be open');
+    // Detail no longer appears in sidebar payload since it opens in separate panel
+    assert.strictEqual(lastMessage.payload.detail, null, 'detail should not be in sidebar payload');
     assert.strictEqual(lastMessage.payload.selectedFileUri, finding.uri.toString(), 'file should remain selected');
   });
 
