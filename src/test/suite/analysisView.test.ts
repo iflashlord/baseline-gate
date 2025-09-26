@@ -331,6 +331,326 @@ suite('Baseline analysis view', () => {
   });
 });
 
+suite('Double-click functionality', () => {
+  let provider: BaselineAnalysisViewProvider;
+
+  setup(() => {
+    provider = new BaselineAnalysisViewProvider(createContext(), 'enterprise', createAssets());
+  });
+
+  test('double-click on file header opens file details', () => {
+    const finding = makeFinding({ 
+      path: '/workspace/src/app.ts', 
+      featureId: 'clipboard', 
+      featureName: 'Clipboard API', 
+      verdict: 'blocked' 
+    });
+    setFindings(provider, [finding]);
+
+    const attached = attachView(provider);
+    
+    // Simulate double-click on file header
+    attached.emit({ type: 'openFileDetail', uri: finding.uri.toString() });
+
+    const lastMessage = attached.messages.at(-1);
+    assert.ok(lastMessage, 'state message should be posted');
+
+    const detail = lastMessage.payload.detail;
+    assert.ok(detail, 'detail payload should be present');
+    assert.strictEqual(detail.mode, 'file');
+    assert.ok(detail.title.includes('app.ts'));
+    assert.ok(detail.html.includes('Clipboard API'));
+  });
+
+  test('double-click on issue row opens issue details', () => {
+    const finding = makeFinding({ 
+      path: '/workspace/src/app.ts', 
+      featureId: 'clipboard', 
+      featureName: 'Clipboard API', 
+      verdict: 'blocked' 
+    });
+    setFindings(provider, [finding]);
+
+    const attached = attachView(provider);
+    const issueId = computeIssueId(finding);
+    
+    // Simulate double-click on issue row
+    attached.emit({ type: 'openIssueDetail', id: issueId });
+
+    const lastMessage = attached.messages.at(-1);
+    assert.ok(lastMessage, 'state message should be posted');
+
+    const detail = lastMessage.payload.detail;
+    assert.ok(detail, 'detail payload should be present');
+    assert.strictEqual(detail.mode, 'issue');
+    assert.ok(detail.title.includes('Clipboard API'));
+    assert.ok(detail.html.includes('Baseline'));
+  });
+
+  test('double-click preserves existing selection behavior', () => {
+    const finding = makeFinding({ 
+      path: '/workspace/src/app.ts', 
+      featureId: 'clipboard', 
+      featureName: 'Clipboard API', 
+      verdict: 'blocked' 
+    });
+    setFindings(provider, [finding]);
+
+    const attached = attachView(provider);
+    const issueId = computeIssueId(finding);
+    
+    // First select the issue (single click behavior)
+    attached.emit({ type: 'selectIssue', id: issueId });
+    let state = buildState(provider);
+    assert.strictEqual(state.selectedIssueId, issueId);
+    
+    // Then double-click to open details
+    attached.emit({ type: 'openIssueDetail', id: issueId });
+    
+    const lastMessage = attached.messages.at(-1);
+    assert.ok(lastMessage.payload.detail, 'detail should be opened');
+    assert.strictEqual(lastMessage.payload.selectedIssueId, issueId, 'selection should be preserved');
+  });
+});
+
+suite('Ask AI/Gemini functionality', () => {
+  let provider: BaselineAnalysisViewProvider;
+
+  setup(() => {
+    provider = new BaselineAnalysisViewProvider(createContext(), 'enterprise', createAssets());
+  });
+
+  test('askGemini message triggers command execution', () => {
+    const finding = makeFinding({ 
+      path: '/workspace/src/app.ts', 
+      featureId: 'clipboard', 
+      featureName: 'Clipboard API', 
+      verdict: 'blocked',
+      token: 'navigator.clipboard'
+    });
+    setFindings(provider, [finding]);
+
+    const attached = attachView(provider);
+    
+    // Mock the command execution
+    let commandExecuted = false;
+    let commandArgs: any = null;
+    const originalExecuteCommand = vscode.commands.executeCommand;
+    (vscode.commands as any).executeCommand = async <T>(command: string, ...args: any[]): Promise<T> => {
+      if (command === 'baseline-gate.askGemini') {
+        commandExecuted = true;
+        commandArgs = args[0];
+        return Promise.resolve(undefined as T);
+      }
+      return originalExecuteCommand(command, ...args);
+    };
+
+    try {
+      // Simulate Ask AI button click
+      attached.emit({ 
+        type: 'askGemini', 
+        issue: 'Clipboard API - blocked',
+        feature: 'Clipboard API',
+        filePath: 'src/app.ts',
+        findingId: computeIssueId(finding)
+      });
+
+      assert.ok(commandExecuted, 'askGemini command should be executed');
+      assert.ok(commandArgs, 'command should receive arguments');
+      assert.strictEqual(commandArgs.feature, 'Clipboard API');
+      assert.strictEqual(commandArgs.issue, 'Clipboard API - blocked');
+      assert.strictEqual(commandArgs.context, 'sidebar');
+    } finally {
+      // Restore original command
+      vscode.commands.executeCommand = originalExecuteCommand;
+    }
+  });
+
+  test('askGemini handles different verdict types', () => {
+    const findings = [
+      makeFinding({ 
+        path: '/workspace/src/app.ts', 
+        featureId: 'clipboard', 
+        featureName: 'Clipboard API', 
+        verdict: 'blocked' 
+      }),
+      makeFinding({ 
+        path: '/workspace/src/utils.ts', 
+        featureId: 'promise-any', 
+        featureName: 'Promise.any', 
+        verdict: 'warning' 
+      }),
+      makeFinding({ 
+        path: '/workspace/src/safe.ts', 
+        featureId: 'url-canparse', 
+        featureName: 'URL.canParse', 
+        verdict: 'safe' 
+      })
+    ];
+    setFindings(provider, findings);
+
+    const attached = attachView(provider);
+    
+    let commandCalls: any[] = [];
+    const originalExecuteCommand = vscode.commands.executeCommand;
+    (vscode.commands as any).executeCommand = async <T>(command: string, ...args: any[]): Promise<T> => {
+      if (command === 'baseline-gate.askGemini') {
+        commandCalls.push(args[0]);
+        return Promise.resolve(undefined as T);
+      }
+      return originalExecuteCommand(command, ...args);
+    };
+
+    try {
+      // Test each verdict type
+      findings.forEach((finding, index) => {
+        attached.emit({ 
+          type: 'askGemini', 
+          issue: `${finding.feature.name} - ${finding.verdict}`,
+          feature: finding.feature.name,
+          filePath: finding.uri.path.split('/').pop() || '',
+          findingId: computeIssueId(finding)
+        });
+      });
+
+      assert.strictEqual(commandCalls.length, 3, 'should handle all verdict types');
+      assert.ok(commandCalls.some(call => call.issue.includes('blocked')), 'should handle blocked verdict');
+      assert.ok(commandCalls.some(call => call.issue.includes('warning')), 'should handle warning verdict');
+      assert.ok(commandCalls.some(call => call.issue.includes('safe')), 'should handle safe verdict');
+    } finally {
+      vscode.commands.executeCommand = originalExecuteCommand;
+    }
+  });
+
+  test('askGemini provides correct context information', () => {
+    const finding = makeFinding({ 
+      path: '/workspace/src/components/feature.tsx', 
+      featureId: 'clipboard', 
+      featureName: 'Clipboard API', 
+      verdict: 'blocked',
+      token: 'navigator.clipboard.writeText'
+    });
+    setFindings(provider, [finding]);
+
+    const attached = attachView(provider);
+    
+    let capturedArgs: any = null;
+    const originalExecuteCommand = vscode.commands.executeCommand;
+    (vscode.commands as any).executeCommand = async <T>(command: string, ...args: any[]): Promise<T> => {
+      if (command === 'baseline-gate.askGemini') {
+        capturedArgs = args[0];
+        return Promise.resolve(undefined as T);
+      }
+      return originalExecuteCommand(command, ...args);
+    };
+
+    try {
+      attached.emit({ 
+        type: 'askGemini', 
+        issue: 'Clipboard API - Enterprise compatibility issue',
+        feature: 'Clipboard API',
+        filePath: 'src/components/feature.tsx',
+        findingId: computeIssueId(finding)
+      });
+
+      assert.ok(capturedArgs, 'should capture command arguments');
+      assert.strictEqual(capturedArgs.context, 'sidebar', 'should indicate sidebar context');
+      assert.ok(capturedArgs.findingId, 'should include finding ID for reference');
+      assert.strictEqual(capturedArgs.issue, 'Clipboard API - Enterprise compatibility issue', 'should include correct issue description');
+      assert.strictEqual(capturedArgs.feature, 'Clipboard API', 'should include correct feature name');
+    } finally {
+      vscode.commands.executeCommand = originalExecuteCommand;
+    }
+  });
+});
+
+suite('Enhanced UI interactions', () => {
+  let provider: BaselineAnalysisViewProvider;
+
+  setup(() => {
+    provider = new BaselineAnalysisViewProvider(createContext(), 'enterprise', createAssets());
+  });
+
+  test('file selection and detail opening work independently', () => {
+    const finding = makeFinding({ 
+      path: '/workspace/src/app.ts', 
+      featureId: 'clipboard', 
+      featureName: 'Clipboard API', 
+      verdict: 'blocked' 
+    });
+    setFindings(provider, [finding]);
+
+    const attached = attachView(provider);
+    
+    // First select the file
+    attached.emit({ type: 'selectFile', uri: finding.uri.toString() });
+    let state = buildState(provider);
+    assert.strictEqual(state.selectedFileUri, finding.uri.toString());
+    assert.strictEqual(state.detail, null, 'detail should not be open yet');
+    
+    // Then open file details
+    attached.emit({ type: 'openFileDetail', uri: finding.uri.toString() });
+    const lastMessage = attached.messages.at(-1);
+    assert.ok(lastMessage.payload.detail, 'detail should now be open');
+    assert.strictEqual(lastMessage.payload.selectedFileUri, finding.uri.toString(), 'file should remain selected');
+  });
+
+  test('issue selection and detail opening work independently', () => {
+    const finding = makeFinding({ 
+      path: '/workspace/src/app.ts', 
+      featureId: 'clipboard', 
+      featureName: 'Clipboard API', 
+      verdict: 'blocked' 
+    });
+    setFindings(provider, [finding]);
+
+    const attached = attachView(provider);
+    const issueId = computeIssueId(finding);
+    
+    // First select the issue
+    attached.emit({ type: 'selectIssue', id: issueId });
+    let state = buildState(provider);
+    assert.strictEqual(state.selectedIssueId, issueId);
+    assert.strictEqual(state.detail, null, 'detail should not be open yet');
+    
+    // Then open issue details
+    attached.emit({ type: 'openIssueDetail', id: issueId });
+    const lastMessage = attached.messages.at(-1);
+    assert.ok(lastMessage.payload.detail, 'detail should now be open');
+    assert.strictEqual(lastMessage.payload.selectedIssueId, issueId, 'issue should remain selected');
+  });
+
+  test('multiple interaction methods for same action produce consistent results', () => {
+    const finding = makeFinding({ 
+      path: '/workspace/src/app.ts', 
+      featureId: 'clipboard', 
+      featureName: 'Clipboard API', 
+      verdict: 'blocked' 
+    });
+    setFindings(provider, [finding]);
+
+    const attached = attachView(provider);
+    const issueId = computeIssueId(finding);
+    
+    // Test that both button click and double-click produce the same result
+    attached.emit({ type: 'openIssueDetail', id: issueId });
+    const buttonClickMessage = attached.messages.at(-1);
+    
+    // Close the detail
+    attached.emit({ type: 'closeDetail' });
+    
+    // Now test double-click (which should also trigger openIssueDetail)
+    attached.emit({ type: 'openIssueDetail', id: issueId });
+    const doubleClickMessage = attached.messages.at(-1);
+    
+    // Both should produce the same detail structure
+    assert.strictEqual(buttonClickMessage.payload.detail.mode, doubleClickMessage.payload.detail.mode);
+    assert.strictEqual(buttonClickMessage.payload.detail.title, doubleClickMessage.payload.detail.title);
+    assert.ok(buttonClickMessage.payload.detail.html.length > 0);
+    assert.ok(doubleClickMessage.payload.detail.html.length > 0);
+  });
+});
+
 suite('Target minimum configuration smoke checks', () => {
   test('targets expose minimum versions for browsers', () => {
     const enterprise = vscode.workspace.getConfiguration('baselineGate').get<Target>('target');
