@@ -65,6 +65,11 @@
         "command": "baseline-gate.clearGeminiResults",
         "title": "Clear Result",
         "icon": "$(trash)"
+      },
+      {
+        "command": "baseline-gate.openGeminiFullView",
+        "title": "Open Gemini Suggestions in Full View",
+        "icon": "$(history)"
       }
     ],
     "configuration": {
@@ -134,9 +139,14 @@
     "menus": {
       "view/title": [
         {
-          "command": "baseline-gate.openSettings",
+          "command": "baseline-gate.openGeminiFullView",
           "when": "view == baselineGate.analysisView",
           "group": "navigation@1"
+        },
+        {
+          "command": "baseline-gate.openSettings",
+          "when": "view == baselineGate.analysisView",
+          "group": "navigation@2"
         }
       ]
     }

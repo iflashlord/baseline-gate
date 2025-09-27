@@ -9,6 +9,7 @@ import { BaselineDetailViewProvider } from './sidebar/detailView/index';
 import type { BaselineAnalysisAssets } from './sidebar/analysis/types';
 import { computeFindingId } from './sidebar/analysis/dataTransformation';
 import { GeminiViewProvider } from './gemini/geminiViewProvider';
+import { GeminiFullViewProvider } from './gemini/geminiFullViewProvider';
 import type { Target } from './core/targets';
 import type { Verdict } from './core/scoring';
 
@@ -230,6 +231,11 @@ Context: This is a follow-up question about fixing a baseline compatibility issu
   });
   context.subscriptions.push(showGeminiSuggestions);
 
+  const openGeminiFullView = vscode.commands.registerCommand('baseline-gate.openGeminiFullView', async () => {
+    GeminiFullViewProvider.createOrShow(context, geminiProvider);
+  });
+  context.subscriptions.push(openGeminiFullView);
+
   const openDocs = vscode.commands.registerCommand('baseline-gate.openDocs', async (payload?: { id?: string } | string) => {
     const id = typeof payload === 'string' ? payload : payload?.id;
     if (!id) {
@@ -267,6 +273,7 @@ Context: This is a follow-up question about fixing a baseline compatibility issu
 
 export function deactivate() {
   BaselineDetailViewProvider.dispose();
+  GeminiFullViewProvider.dispose();
 }
 
 function readConfiguredTarget(): Target {

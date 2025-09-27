@@ -192,7 +192,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
   }
 
   highlightFinding(findingId: string): void {
-    const finding = this.findings.find(f => f.id === findingId);
+    const finding = this.findings.find(f => computeFindingId(f) === findingId);
     if (finding) {
       this.setIssueSelection(findingId);
       this.openIssueDetail(findingId);

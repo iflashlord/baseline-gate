@@ -210,6 +210,15 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
     setTimeout(() => {
       this.view?.webview.postMessage({ type: 'scrollToLatest' });
     }, 100);
+
+    // Also refresh the full view if it's open
+    this.refreshFullView();
+  }
+
+  private refreshFullView(): void {
+    // Import here to avoid circular dependency
+    const { GeminiFullViewProvider } = require('./geminiFullViewProvider');
+    GeminiFullViewProvider.updateCurrentPanel(this.context, this);
   }
 
   public hasSuggestionForFinding(findingId: string): boolean {
@@ -229,6 +238,57 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
       this.state = applySearchFilter(this.state, searchTerm);
       this.refresh();
     }
+  }
+
+  // Public methods for external access
+  public getState(): GeminiSuggestionState {
+    return this.state;
+  }
+
+  public async removeSuggestionPublic(id: string): Promise<void> {
+    await this.removeSuggestion(id);
+  }
+
+  public async clearAllSuggestionsPublic(): Promise<void> {
+    await this.clearAllSuggestions();
+  }
+
+  public searchSuggestionsPublic(query: string): void {
+    this.filterSuggestions(query);
+  }
+
+  public async rateSuggestionPublic(id: string, rating: 1 | 2 | 3 | 4 | 5): Promise<void> {
+    await this.rateSuggestion(id, rating);
+  }
+
+  public async copySuggestionPublic(id: string): Promise<void> {
+    await this.copySuggestionToClipboard(id);
+  }
+
+  public async copyCodeSnippetPublic(code: string): Promise<void> {
+    await this.copyCodeSnippet(code);
+  }
+
+  public async retrySuggestionPublic(id: string): Promise<void> {
+    await this.retrySuggestion(id);
+  }
+
+  public async sendFollowUpPublic(message: string, parentId?: string): Promise<void> {
+    await this.sendFollowUp(message, parentId);
+  }
+
+  public async exportConversationPublic(format: 'markdown' | 'json'): Promise<void> {
+    await this.exportConversation(format);
+  }
+
+  public async openFileAtLocationPublic(filePath: string, line?: number, character?: number): Promise<void> {
+    await this.openFileAtLocation(filePath, line, character);
+  }
+
+  public toggleConversationViewPublic(conversationId: string): void {
+    // Placeholder for conversation view toggle functionality
+    // This can be implemented later if needed
+    console.log('Toggle conversation view for:', conversationId);
   }
 
   private async removeSuggestion(id: string): Promise<void> {
