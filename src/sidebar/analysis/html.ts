@@ -2768,13 +2768,17 @@ export function buildIssueDetailHtml(options: {
         <ul class="resource-links">
           ${resourceLinks.map(link => {
             // Convert markdown links to HTML for webview
-            const markdownLinkMatch = link.match(/^\[(.+?)\]\((.+?)\)$/);
+            const markdownLinkMatch = link.match(/\[([^\]]+)\]\(([^)]+)\)/);
             if (markdownLinkMatch) {
               const [, text, url] = markdownLinkMatch;
+              // clean up \ escapes in the text
+              const cleanText = text.replace(/\\([\[\]()])/g, '$1').replace(/\\+/g, '');
+
+              // Use data-command for VS Code commands, otherwise normal link
               if (url.startsWith('command:')) {
-                return `<li><a href="#" data-command="${escapeAttribute(url)}" class="resource-link">${escapeHtml(text)}</a></li>`;
+                return `<li><a href="#" data-command="${escapeAttribute(url)}" class="resource-link">${escapeHtml(cleanText)}</a></li>`;
               } else {
-                return `<li><a href="${escapeAttribute(url)}" target="_blank" class="resource-link external-link">${escapeHtml(text)} <span class="external-icon">&#8599;</span></a></li>`;
+                return `<li><a href="${escapeAttribute(url)}" target="_blank" class="resource-link">${escapeHtml(cleanText)}</a></li>`;
               }
             }
             return `<li>${escapeHtml(link)}</li>`;

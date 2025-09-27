@@ -18,7 +18,12 @@ export type GeminiWebviewMessage =
   | { type: 'openFileAtLocation'; filePath: string; line?: number; character?: number }
   | { type: 'searchSuggestions'; query: string }
   | { type: 'copySuggestion'; id: string }
-  | { type: 'copyCodeSnippet'; code: string };
+  | { type: 'copyCodeSnippet'; code: string }
+  | { type: 'rateSuggestion'; id: string; rating: 1 | 2 | 3 | 4 | 5 }
+  | { type: 'retrySuggestion'; id: string }
+  | { type: 'sendFollowUp'; message: string; parentId?: string }
+  | { type: 'exportConversation'; format: 'markdown' | 'json' }
+  | { type: 'toggleConversationView'; conversationId: string };
 
 export interface GeminiMessageHandlers {
   removeSuggestion: (id: string) => Promise<void> | void;
@@ -28,4 +33,9 @@ export interface GeminiMessageHandlers {
   searchSuggestions: (query: string) => void;
   copySuggestion: (id: string) => Promise<void> | void;
   copyCodeSnippet: (code: string) => Promise<void> | void;
+  rateSuggestion: (id: string, rating: 1 | 2 | 3 | 4 | 5) => Promise<void> | void;
+  retrySuggestion: (id: string) => Promise<void> | void;
+  sendFollowUp: (message: string, parentId?: string) => Promise<void> | void;
+  exportConversation: (format: 'markdown' | 'json') => Promise<void> | void;
+  toggleConversationView: (conversationId: string) => void;
 }

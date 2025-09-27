@@ -24,14 +24,44 @@ export function renderSuggestionCard(suggestion: GeminiSuggestion, searchTerm: s
     ? `<button type="button" class="link-button" data-action="go-to-finding" data-finding-id="${escapeHtml(suggestion.findingId)}">📍 Go to finding</button>`
     : '';
 
+  // Status indicator
+  const statusClass = suggestion.status === 'error' ? 'status-error' : suggestion.status === 'pending' ? 'status-pending' : 'status-success';
+  const statusIcon = suggestion.status === 'error' ? '❌' : suggestion.status === 'pending' ? '⏳' : '✅';
+
+  // Tags
+  const tagsMarkup = suggestion.tags && suggestion.tags.length > 0
+    ? `<div class="tags">${suggestion.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}</div>`
+    : '';
+
+  // Rating stars
+  const ratingMarkup = `
+    <div class="rating">
+      <span class="rating-label">Rate:</span>
+      ${[1, 2, 3, 4, 5].map(star => 
+        `<button type="button" class="star ${suggestion.rating && suggestion.rating >= star ? 'star-filled' : ''}" 
+                data-action="rate" data-suggestion-id="${suggestionId}" data-rating="${star}" 
+                title="Rate ${star} star${star > 1 ? 's' : ''}">${suggestion.rating && suggestion.rating >= star ? '★' : '☆'}</button>`
+      ).join('')}
+    </div>`;
+
+  // Performance metrics
+  const metricsMarkup = suggestion.responseTime || suggestion.tokensUsed
+    ? `<div class="metrics">
+        ${suggestion.responseTime ? `<span class="metric" title="Response time">${suggestion.responseTime}ms</span>` : ''}
+        ${suggestion.tokensUsed ? `<span class="metric" title="Tokens used">${suggestion.tokensUsed} tokens</span>` : ''}
+       </div>`
+    : '';
+
   return `
-        <article class="suggestion-item" data-suggestion-id="${suggestionId}">
+        <article class="suggestion-item ${statusClass}" data-suggestion-id="${suggestionId}">
             <header class="suggestion-header">
                 <div class="metadata">
+                    <span class="status-indicator" title="Status: ${suggestion.status}">${statusIcon}</span>
                     ${metadataMarkup}
                 </div>
                 <div class="header-buttons">
                     ${timestampHtml}
+                    <button type="button" class="icon-btn" data-action="retry" data-suggestion-id="${suggestionId}" title="Retry suggestion">🔄</button>
                     <button type="button" class="icon-btn" data-action="copy" data-suggestion-id="${suggestionId}" title="Copy suggestion to clipboard">📋</button>
                     <button type="button" class="icon-btn remove-btn" data-action="remove" data-suggestion-id="${suggestionId}" title="Remove suggestion">✕</button>
                 </div>
@@ -46,6 +76,14 @@ export function renderSuggestionCard(suggestion: GeminiSuggestion, searchTerm: s
                     <h4>Gemini Suggestion</h4>
                     <div class="suggestion-text">${renderMarkdown(suggestion.suggestion, searchTerm)}</div>
                 </div>
+                ${tagsMarkup}
+                <footer class="suggestion-footer">
+                    ${ratingMarkup}
+                    <div class="suggestion-actions">
+                        <button type="button" class="action-btn" data-action="follow-up" data-suggestion-id="${suggestionId}" title="Ask follow-up question">💬 Follow-up</button>
+                        ${metricsMarkup}
+                    </div>
+                </footer>
             </div>
         </article>
     `;

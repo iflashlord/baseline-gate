@@ -9,12 +9,38 @@ export interface GeminiSuggestion {
   feature?: string;
   file?: string;
   findingId?: string; // Link to the original finding
+  conversationId?: string; // For threading conversations
+  parentId?: string; // For reply chains
+  status: 'success' | 'error' | 'pending';
+  tokensUsed?: number;
+  responseTime?: number;
+  rating?: 1 | 2 | 3 | 4 | 5; // User feedback
+  tags?: string[];
+}
+
+export interface GeminiRequestOptions {
+  temperature?: number;
+  maxTokens?: number;
+  topP?: number;
+  timeout?: number;
+  retries?: number;
+}
+
+export interface GeminiResponse {
+  text: string;
+  tokensUsed?: number;
+  responseTime: number;
+  modelUsed: string;
 }
 
 export class GeminiService {
   private genAI: GoogleGenerativeAI | null = null;
   private model: any = null;
   private modelId = 'gemini-2.0-flash';
+  private requestCount = 0;
+  private errorCount = 0;
+  private readonly maxRequestsPerMinute = 60;
+  private readonly requestTimestamps: number[] = [];
 
   private initializeAPI(): boolean {
     const config = vscode.workspace.getConfiguration('baselineGate');
@@ -38,37 +64,57 @@ export class GeminiService {
     }
   }
 
-  async getSuggestion(issue: string, feature?: string, file?: string): Promise<string> {
+  async getSuggestion(issue: string, feature?: string, file?: string, options?: GeminiRequestOptions): Promise<GeminiResponse> {
     if (!this.initializeAPI()) {
       throw new Error('Gemini API key is not configured. Please set your API key in VS Code settings.');
     }
 
+    // Rate limiting check
+    if (!this.checkRateLimit()) {
+      throw new Error('Rate limit exceeded. Please wait before making another request.');
+    }
+
+    const startTime = Date.now();
+    
     // Get custom prompt from settings
     const config = vscode.workspace.getConfiguration('baselineGate');
     const customPrompt = config.get<string>('geminiCustomPrompt', '');
     
-    // Build the full prompt
-    let fullPrompt = '';
-    if (customPrompt.trim()) {
-      fullPrompt = `${customPrompt}\n\n`;
-    }
-    fullPrompt += `Act as a senior engineer. Provide a concise, enterprise-grade solution for the following technical issue: ${issue}`;
-    
-    // Add contextual information if available  
-    if (feature || file) {
-      fullPrompt += `\n\nContext:`;
-      if (feature) {
-        fullPrompt += `\n- Feature: ${feature}`;
-      }
-      if (file) {
-        fullPrompt += `\n- File: ${file}`;
-      }
-    }
+    // Build the full prompt with enhanced context
+    let fullPrompt = this.buildEnhancedPrompt(issue, feature, file, customPrompt);
+
+    // Configure generation parameters
+    const generationConfig = {
+      temperature: options?.temperature ?? 0.7,
+      topP: options?.topP ?? 0.9,
+      maxOutputTokens: options?.maxTokens ?? 2048,
+    };
 
     try {
-      const result = await this.model.generateContent(fullPrompt);
+      // Create model with configuration
+      const modelWithConfig = this.genAI!.getGenerativeModel({ 
+        model: this.modelId,
+        generationConfig
+      });
+
+      const result = await this.withTimeout(
+        modelWithConfig.generateContent(fullPrompt),
+        options?.timeout ?? 30000
+      );
+      
       const response = await result.response;
-      return response.text();
+      const text = response.text();
+      const responseTime = Date.now() - startTime;
+      
+      this.requestCount++;
+      this.requestTimestamps.push(Date.now());
+      
+      return {
+        text,
+        tokensUsed: this.estimateTokens(fullPrompt + text),
+        responseTime,
+        modelUsed: this.modelId
+      };
     } catch (error) {
       if (this.genAI && this.shouldAttemptLegacyFallback(error)) {
         try {
@@ -78,12 +124,22 @@ export class GeminiService {
           const fallbackResponse = await fallbackResult.response;
           this.model = fallbackModel;
           this.modelId = fallbackModelId;
-          return fallbackResponse.text();
+          
+          const fallbackText = fallbackResponse.text();
+          const responseTime = Date.now() - startTime;
+          
+          return {
+            text: fallbackText,
+            tokensUsed: this.estimateTokens(fullPrompt + fallbackText),
+            responseTime,
+            modelUsed: fallbackModelId
+          };
         } catch (fallbackError) {
           console.error('Gemini fallback model failed:', fallbackError);
         }
       }
 
+      this.errorCount++;
       console.error('Gemini API error:', error);
       const errorMessage = this.buildHelpfulErrorMessage(error);
       throw new Error(`Failed to get suggestion from Gemini: ${errorMessage}`);
@@ -150,6 +206,93 @@ export class GeminiService {
 5. Try the "Fix with Gemini" button again
 
 Your API key will be stored securely in your VS Code settings.`;
+  }
+
+  private checkRateLimit(): boolean {
+    const now = Date.now();
+    const oneMinuteAgo = now - 60000;
+    
+    // Clean old timestamps
+    while (this.requestTimestamps.length > 0 && this.requestTimestamps[0] < oneMinuteAgo) {
+      this.requestTimestamps.shift();
+    }
+    
+    return this.requestTimestamps.length < this.maxRequestsPerMinute;
+  }
+
+  private buildEnhancedPrompt(issue: string, feature?: string, file?: string, customPrompt?: string): string {
+    let fullPrompt = '';
+    
+    // Add custom prompt if provided
+    if (customPrompt?.trim()) {
+      fullPrompt = `${customPrompt}\n\n`;
+    }
+    
+    // Enhanced system prompt
+    fullPrompt += `You are a senior software engineer with expertise in web development, debugging, and code optimization. 
+Provide practical, production-ready solutions that follow industry best practices.
+
+Task: ${issue}`;
+    
+    // Add contextual information
+    if (feature || file) {
+      fullPrompt += `\n\nContext:`;
+      if (feature) {
+        fullPrompt += `\n- Feature/Component: ${feature}`;
+      }
+      if (file) {
+        fullPrompt += `\n- File Path: ${file}`;
+        // Extract file extension for language context
+        const ext = file.split('.').pop()?.toLowerCase();
+        if (ext) {
+          const langMap: { [key: string]: string } = {
+            'ts': 'TypeScript',
+            'js': 'JavaScript',
+            'tsx': 'TypeScript React',
+            'jsx': 'JavaScript React',
+            'css': 'CSS',
+            'scss': 'Sass',
+            'html': 'HTML',
+            'json': 'JSON'
+          };
+          const language = langMap[ext] || ext.toUpperCase();
+          fullPrompt += `\n- Language: ${language}`;
+        }
+      }
+    }
+    
+    fullPrompt += `\n\nPlease provide:
+1. Root cause analysis
+2. Step-by-step solution
+3. Code examples (if applicable)
+4. Best practices to prevent similar issues
+5. Alternative approaches (if any)
+
+Format your response in clear markdown with proper code blocks.`;
+    
+    return fullPrompt;
+  }
+
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs);
+    });
+    
+    return Promise.race([promise, timeoutPromise]);
+  }
+
+  private estimateTokens(text: string): number {
+    // Rough estimation: ~4 characters per token for English text
+    return Math.ceil(text.length / 4);
+  }
+
+  getUsageStats(): { requests: number; errors: number; successRate: number } {
+    const successRate = this.requestCount > 0 ? ((this.requestCount - this.errorCount) / this.requestCount) * 100 : 0;
+    return {
+      requests: this.requestCount,
+      errors: this.errorCount,
+      successRate: Math.round(successRate * 100) / 100
+    };
   }
 }
 

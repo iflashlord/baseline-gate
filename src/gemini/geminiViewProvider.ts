@@ -65,6 +65,26 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
           console.log('Copying Gemini code snippet');
           await this.copyCodeSnippet(code);
         },
+        rateSuggestion: async (id, rating) => {
+          console.log('Rating suggestion:', id, rating);
+          await this.rateSuggestion(id, rating);
+        },
+        retrySuggestion: async (id) => {
+          console.log('Retrying suggestion:', id);
+          await this.retrySuggestion(id);
+        },
+        sendFollowUp: async (message, parentId) => {
+          console.log('Sending follow-up:', message, parentId);
+          await this.sendFollowUp(message, parentId);
+        },
+        exportConversation: async (format) => {
+          console.log('Exporting conversation:', format);
+          await this.exportConversation(format);
+        },
+        toggleConversationView: (conversationId) => {
+          console.log('Toggling conversation view:', conversationId);
+          // Implementation for conversation threading view
+        },
       });
     });
   }
@@ -99,7 +119,7 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
       async (progress) => {
         try {
           progress.report({ increment: 30, message: 'Connecting to Gemini...' });
-          const suggestionText = await geminiService.getSuggestion(issue, feature, file);
+          const response = await geminiService.getSuggestion(issue, feature, file);
 
           progress.report({ increment: 70, message: 'Processing response...' });
 
@@ -107,10 +127,14 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
             id: Date.now().toString(),
             timestamp: new Date(),
             issue,
-            suggestion: suggestionText,
+            suggestion: response.text,
             feature,
             file,
             findingId,
+            status: 'success',
+            tokensUsed: response.tokensUsed,
+            responseTime: response.responseTime,
+            tags: this.generateTags(issue, feature, file),
           };
 
           this.state = addSuggestionToState(this.state, newSuggestion);
@@ -121,7 +145,7 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
           // Send response to detail view via command
           await vscode.commands.executeCommand('baseline-gate.sendGeminiResponse', {
             type: 'success',
-            response: suggestionText,
+            response: response.text,
             findingId
           });
 
@@ -298,5 +322,150 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
         `Failed to copy Gemini code snippet: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+  }
+
+  private generateTags(issue: string, feature?: string, file?: string): string[] {
+    const tags: string[] = [];
+    
+    // Add feature-based tags
+    if (feature) {
+      tags.push(feature.toLowerCase());
+    }
+    
+    // Add file extension tags
+    if (file) {
+      const ext = file.split('.').pop()?.toLowerCase();
+      if (ext) {
+        tags.push(ext);
+      }
+    }
+    
+    // Add issue-based tags
+    const issueLower = issue.toLowerCase();
+    if (issueLower.includes('error') || issueLower.includes('bug')) {
+      tags.push('bug');
+    }
+    if (issueLower.includes('performance')) {
+      tags.push('performance');
+    }
+    if (issueLower.includes('security')) {
+      tags.push('security');
+    }
+    if (issueLower.includes('optimization')) {
+      tags.push('optimization');
+    }
+    
+    return [...new Set(tags)]; // Remove duplicates
+  }
+
+  private async rateSuggestion(id: string, rating: 1 | 2 | 3 | 4 | 5): Promise<void> {
+    const suggestionIndex = this.state.suggestions.findIndex(s => s.id === id);
+    if (suggestionIndex === -1) {
+      void vscode.window.showWarningMessage('Suggestion not found.');
+      return;
+    }
+
+    this.state.suggestions[suggestionIndex].rating = rating;
+    await this.saveSuggestions();
+    this.refresh();
+
+    // Send telemetry data (anonymized)
+    vscode.window.setStatusBarMessage(`Thank you for rating this suggestion!`, 3000);
+  }
+
+  private async retrySuggestion(id: string): Promise<void> {
+    const suggestion = this.state.suggestions.find(s => s.id === id);
+    if (!suggestion) {
+      void vscode.window.showWarningMessage('Suggestion not found.');
+      return;
+    }
+
+    // Remove the old suggestion and create a new one
+    await this.removeSuggestion(id);
+    await this.addSuggestion(suggestion.issue, suggestion.feature, suggestion.file, suggestion.findingId);
+  }
+
+  private async sendFollowUp(message: string, parentId?: string): Promise<void> {
+    const parentSuggestion = parentId ? this.state.suggestions.find(s => s.id === parentId) : undefined;
+    let contextualIssue = message;
+    
+    if (parentSuggestion) {
+      contextualIssue = `Follow-up question about "${parentSuggestion.issue}": ${message}`;
+    }
+    
+    await this.addSuggestion(contextualIssue, parentSuggestion?.feature, parentSuggestion?.file, parentSuggestion?.findingId);
+  }
+
+  private async exportConversation(format: 'markdown' | 'json'): Promise<void> {
+    if (this.state.suggestions.length === 0) {
+      void vscode.window.showWarningMessage('No suggestions to export.');
+      return;
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `gemini-conversation-${timestamp}.${format}`;
+
+    try {
+      let content: string;
+      
+      if (format === 'markdown') {
+        content = this.generateMarkdownExport();
+      } else {
+        content = JSON.stringify(this.state.suggestions, null, 2);
+      }
+
+      const uri = await vscode.window.showSaveDialog({
+        defaultUri: vscode.Uri.file(fileName),
+        filters: {
+          [format.toUpperCase()]: [format]
+        }
+      });
+
+      if (uri) {
+        await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf8'));
+        vscode.window.showInformationMessage(`Conversation exported to ${uri.fsPath}`);
+      }
+    } catch (error) {
+      void vscode.window.showErrorMessage(
+        `Failed to export conversation: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  private generateMarkdownExport(): string {
+    const stats = geminiService.getUsageStats();
+    let markdown = `# Gemini AI Conversation Export\n\n`;
+    markdown += `**Export Date:** ${new Date().toLocaleString()}\n`;
+    markdown += `**Total Suggestions:** ${this.state.suggestions.length}\n`;
+    markdown += `**Usage Stats:** ${stats.requests} requests, ${stats.successRate}% success rate\n\n`;
+    markdown += `---\n\n`;
+
+    this.state.suggestions.forEach((suggestion, index) => {
+      markdown += `## Suggestion ${index + 1}\n\n`;
+      markdown += `**Timestamp:** ${suggestion.timestamp.toLocaleString()}\n`;
+      markdown += `**Issue:** ${suggestion.issue}\n`;
+      if (suggestion.feature) {
+        markdown += `**Feature:** ${suggestion.feature}\n`;
+      }
+      if (suggestion.file) {
+        markdown += `**File:** ${suggestion.file}\n`;
+      }
+      if (suggestion.rating) {
+        markdown += `**Rating:** ${'⭐'.repeat(suggestion.rating)}\n`;
+      }
+      if (suggestion.tags?.length) {
+        markdown += `**Tags:** ${suggestion.tags.join(', ')}\n`;
+      }
+      markdown += `\n**Solution:**\n${suggestion.suggestion}\n\n`;
+      if (suggestion.responseTime) {
+        markdown += `*Response time: ${suggestion.responseTime}ms*\n`;
+      }
+      if (suggestion.tokensUsed) {
+        markdown += `*Tokens used: ${suggestion.tokensUsed}*\n`;
+      }
+      markdown += `\n---\n\n`;
+    });
+
+    return markdown;
   }
 }

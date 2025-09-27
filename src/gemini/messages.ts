@@ -23,6 +23,21 @@ export function handleGeminiMessage(message: GeminiWebviewMessage, handlers: Gem
     case 'copyCodeSnippet':
       void handlers.copyCodeSnippet(message.code);
       break;
+    case 'rateSuggestion':
+      void handlers.rateSuggestion(message.id, message.rating);
+      break;
+    case 'retrySuggestion':
+      void handlers.retrySuggestion(message.id);
+      break;
+    case 'sendFollowUp':
+      void handlers.sendFollowUp(message.message, message.parentId);
+      break;
+    case 'exportConversation':
+      void handlers.exportConversation(message.format);
+      break;
+    case 'toggleConversationView':
+      handlers.toggleConversationView(message.conversationId);
+      break;
     default:
       break;
   }

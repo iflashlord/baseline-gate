@@ -1545,6 +1545,7 @@ export class BaselineDetailViewProvider {
     <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
 
+        
         // Tab switching functionality
         function switchTab(tabName) {
             // Update tab headers
@@ -1686,6 +1687,7 @@ export class BaselineDetailViewProvider {
                     if (cmd === 'baseline-gate.openDocs' && argsString) {
                         try {
                             const args = JSON.parse(decodeURIComponent(argsString));
+                            alert('Opening documentation: ' + args.id);
                             vscode.postMessage({ type: 'openDocs', url: args.id });
                         } catch (error) {
                             console.error('Failed to parse command args:', error);
@@ -2031,6 +2033,9 @@ export class BaselineDetailViewProvider {
                         break;
                 }
             }
+
+
+       
         });
     </script>
 </body>
