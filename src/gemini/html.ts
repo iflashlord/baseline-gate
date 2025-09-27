@@ -394,6 +394,31 @@ export function buildGeminiWebviewHtml({ webview, state, isGeminiConfigured }: B
         let currentQuery = state.searchQuery ?? '';
         let searchInput = document.querySelector('.search-input');
 
+        // Listen for messages from the extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            if (message.type === 'scrollToLatest') {
+                scrollToLatestSuggestion();
+            }
+        });
+
+        function scrollToLatestSuggestion() {
+            // Scroll to the bottom to show the latest suggestion
+            const suggestionsList = document.querySelector('.suggestions-list');
+            if (suggestionsList) {
+                // If there are suggestions, scroll to the last one
+                if (suggestionsList.children.length > 0) {
+                    const lastSuggestion = suggestionsList.lastElementChild;
+                    if (lastSuggestion && lastSuggestion.classList.contains('suggestion-item')) {
+                        lastSuggestion.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        return;
+                    }
+                }
+                // Fallback: scroll to bottom of suggestions list
+                suggestionsList.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        }
+
         if (searchInput) {
             searchInput.addEventListener('focus', () => {
                 if (!state.searchFocused) {

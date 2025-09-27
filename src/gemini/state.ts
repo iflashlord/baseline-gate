@@ -46,7 +46,7 @@ export function applySearchFilter(state: GeminiSuggestionState, query: string): 
 }
 
 export function addSuggestionToState(state: GeminiSuggestionState, suggestion: GeminiSuggestion): GeminiSuggestionState {
-  const suggestions = [suggestion, ...state.suggestions];
+  const suggestions = [...state.suggestions, suggestion];
   const nextState: GeminiSuggestionState = {
     ...state,
     suggestions,

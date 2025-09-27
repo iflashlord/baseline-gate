@@ -130,10 +130,12 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
           // Notify detail view to refresh if it's showing this finding
           await vscode.commands.executeCommand('baseline-gate.refreshDetailView', findingId);
           
+          // Focus the Gemini view to show the new suggestion
+          await vscode.commands.executeCommand('baselineGate.geminiView.focus');
+          
           // Don't show success notification for follow-up questions to reduce spam
           if (!issue.includes('Follow-up question about')) {
             await vscode.window.showInformationMessage('Gemini suggestion added successfully!');
-            await vscode.commands.executeCommand('baselineGate.geminiView.focus');
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -179,6 +181,11 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
     );
 
     this.view.webview.html = this.getHtmlForWebview(this.view.webview);
+    
+    // Auto-scroll to the latest suggestion after refresh (with small delay to ensure DOM is ready)
+    setTimeout(() => {
+      this.view?.webview.postMessage({ type: 'scrollToLatest' });
+    }, 100);
   }
 
   public hasSuggestionForFinding(findingId: string): boolean {

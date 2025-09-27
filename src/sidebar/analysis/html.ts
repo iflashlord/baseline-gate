@@ -890,6 +890,105 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       .detail-table th {
         background: var(--vscode-sideBarSectionHeader-background, rgba(128, 128, 128, 0.1));
       }
+      
+      /* Enhanced Browser Support Table Styling */
+      .browser-support-container {
+        margin-top: 0.5rem;
+      }
+      .browser-support-table {
+        margin-top: 0.5rem;
+      }
+      .support-heading {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem 0;
+        color: var(--vscode-foreground);
+      }
+      .support-table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        background: var(--vscode-editor-background);
+      }
+      .support-table thead {
+        background: var(--vscode-sideBar-background);
+      }
+      .support-table th {
+        padding: 0.6rem 0.8rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.8rem;
+        color: var(--vscode-sideBarTitle-foreground);
+        border-bottom: 2px solid var(--vscode-sideBarSectionHeader-border);
+      }
+      .browser-header {
+        width: 40%;
+      }
+      .support-header, .target-header {
+        width: 20%;
+        text-align: center;
+      }
+      .status-header {
+        width: 20%;
+        text-align: center;
+      }
+      .browser-support-row {
+        transition: background-color 0.2s ease;
+      }
+      .browser-support-row:hover {
+        background: var(--vscode-list-hoverBackground);
+      }
+      .browser-support-row.status-supported {
+        border-left: 3px solid #28a745;
+      }
+      .browser-support-row.status-blocked {
+        border-left: 3px solid #dc3545;
+      }
+      .browser-support-row.status-unsupported {
+        border-left: 3px solid #ffc107;
+      }
+      .browser-support-row.status-unknown {
+        border-left: 3px solid #6c757d;
+      }
+      .support-table td {
+        padding: 0.6rem 0.8rem;
+        border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+        font-size: 0.85rem;
+      }
+      .browser-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .browser-icon {
+        font-size: 1.1rem;
+        width: 1.2rem;
+        text-align: center;
+      }
+      .browser-name {
+        font-weight: 500;
+      }
+      .support-cell, .target-cell {
+        text-align: center;
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-weight: 500;
+      }
+      .status-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+      }
+      .status-icon {
+        font-size: 0.9rem;
+      }
+      .status-text {
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
+      
       .detail-discouraged p {
         margin: 0;
       }
