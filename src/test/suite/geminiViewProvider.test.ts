@@ -95,7 +95,8 @@ suite('Gemini view provider', () => {
     id: '1',
     issue: 'Use of deprecated API',
     suggestion: 'Replace with supported alternative',
-    timestamp: new Date('2024-01-01T00:00:00Z')
+    timestamp: new Date('2024-01-01T00:00:00Z'),
+    status: 'success' as const
   } satisfies GeminiSuggestion;
 
   test('constructor normalises stored suggestions into filtered list', () => {
@@ -104,7 +105,8 @@ suite('Gemini view provider', () => {
         id: 'persisted',
         issue: 'Stored issue',
         suggestion: 'Stored suggestion',
-        timestamp: '2024-03-05T10:00:00.000Z' as unknown as Date
+        timestamp: '2024-03-05T10:00:00.000Z' as unknown as Date,
+        status: 'success' as const
       }
     ];
 
@@ -119,8 +121,8 @@ suite('Gemini view provider', () => {
 
   test('filterSuggestions applies case-insensitive multi-term matching', () => {
     const provider = new GeminiViewProvider(createContext([
-      { ...baseSuggestion, id: 'first', feature: 'Clipboard', file: '/workspace/src/clipboard.ts' },
-      { ...baseSuggestion, id: 'second', feature: 'Fetch API', file: '/workspace/src/network.ts', issue: 'Missing fetch polyfill' }
+      { ...baseSuggestion, id: 'first', feature: 'Clipboard', file: '/workspace/src/clipboard.ts', status: 'success' as const },
+      { ...baseSuggestion, id: 'second', feature: 'Fetch API', file: '/workspace/src/network.ts', issue: 'Missing fetch polyfill', status: 'success' as const }
     ]));
 
     (provider as unknown as { filterSuggestions: (query: string) => void }).filterSuggestions(' fetch network');
@@ -135,8 +137,8 @@ suite('Gemini view provider', () => {
 
   test('filterSuggestions resets when query is cleared', () => {
     const provider = new GeminiViewProvider(createContext([
-      { ...baseSuggestion, id: 'first' },
-      { ...baseSuggestion, id: 'second', issue: 'Another issue' }
+      { ...baseSuggestion, id: 'first', status: 'success' as const },
+      { ...baseSuggestion, id: 'second', issue: 'Another issue', status: 'success' as const }
     ]));
 
     (provider as unknown as { filterSuggestions: (query: string) => void }).filterSuggestions('another');
@@ -153,7 +155,8 @@ suite('Gemini view provider', () => {
       id: 'render-test',
       feature: 'IndexedDB',
       file: '/app/src/storage/indexed-db.ts',
-      suggestion: 'Use **IndexedDB** for offline caching.\n```js\nconst db = await open();\n```'
+      suggestion: 'Use **IndexedDB** for offline caching.\n```js\nconst db = await open();\n```',
+      status: 'success' as const
     };
 
     const markup = renderSuggestionCard(suggestion, 'indexed');
