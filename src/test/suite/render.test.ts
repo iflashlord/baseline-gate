@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import * as path from "path";
 import * as vscode from "vscode";
-import { buildFeatureHover } from "../../hover/render";
+import { buildFeatureHover } from "../../hover/render/index";
 import { scoreFeature } from "../../core/scoring";
 import type { BaselineFeature, BrowserKey, SupportMatrix } from "../../core/baselineData";
 

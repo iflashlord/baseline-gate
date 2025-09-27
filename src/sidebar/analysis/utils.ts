@@ -5,39 +5,26 @@ import type { Verdict } from "../../core/scoring";
 import { TARGET_MIN, type Target } from "../../core/targets";
 import { readBrowserDisplaySettings } from "../../extension";
 import type { BaselineFinding } from "../workspaceScanner";
+import { 
+  DESKTOP_BROWSERS, 
+  MOBILE_BROWSERS, 
+  getFilteredBrowsers, 
+  capitalize, 
+  escapeHtml, 
+  generateNonce,
+  extractExtension,
+  extensionToVariant,
+  formatBaselineDates,
+  sameSet
+} from "../../utils";
 
 import type { BaselineAnalysisAssets, SortOrder, Summary } from "./types";
 
 export const DEFAULT_SEVERITIES: Verdict[] = ["blocked", "warning", "safe"];
 export const DEFAULT_SORT_ORDER: SortOrder = "severity";
 
-const DESKTOP_BROWSERS: Array<{ key: BrowserKey; label: string }> = [
-  { key: "chrome", label: "Chrome" },
-  { key: "edge", label: "Edge" },
-  { key: "firefox", label: "Firefox" },
-  { key: "safari", label: "Safari" }
-];
-
-const MOBILE_BROWSERS: Array<{ key: BrowserKey; label: string }> = [
-  { key: "chrome_android", label: "Chrome Android" },
-  { key: "firefox_android", label: "Firefox Android" },
-  { key: "safari_ios", label: "Safari iOS" }
-];
-
-export function getFilteredBrowsers(): Array<{ key: BrowserKey; label: string }> {
-  const settings = readBrowserDisplaySettings();
-  const browsers: Array<{ key: BrowserKey; label: string }> = [];
-
-  if (settings.showDesktop) {
-    browsers.push(...DESKTOP_BROWSERS);
-  }
-
-  if (settings.showMobile) {
-    browsers.push(...MOBILE_BROWSERS);
-  }
-
-  return browsers;
-}
+// Re-export browser utilities for convenience
+export { DESKTOP_BROWSERS, MOBILE_BROWSERS, getFilteredBrowsers };
 
 export function renderSupportTables(feature: BaselineFinding["feature"], target: Target): string {
   const targetMin = TARGET_MIN[target];
@@ -101,17 +88,8 @@ function renderSupportTableHtml(
   `;
 }
 
-export function sameSet<T>(a: Set<T>, b: Set<T>): boolean {
-  if (a.size !== b.size) {
-    return false;
-  }
-  for (const value of a) {
-    if (!b.has(value)) {
-      return false;
-    }
-  }
-  return true;
-}
+// Re-export from shared utils
+export { sameSet } from "../../utils";
 
 export function summarize(findings: BaselineFinding[]): Summary {
   let blocked = 0;
@@ -172,33 +150,8 @@ export function formatVerdict(verdict: Verdict): string {
   }
 }
 
-export function extractExtension(path: string): string {
-  const match = path.match(/\.([^.\\/]+)$/);
-  return match ? match[1] : "";
-}
-
-export function extensionToVariant(extension: string): string {
-  const ext = extension.toLowerCase();
-  if (ext === "js" || ext === "mjs" || ext === "cjs") {
-    return "js";
-  }
-  if (ext === "ts") {
-    return "ts";
-  }
-  if (ext === "tsx") {
-    return "tsx";
-  }
-  if (ext === "jsx") {
-    return "jsx";
-  }
-  if (ext === "css") {
-    return "css";
-  }
-  if (ext === "scss" || ext === "sass") {
-    return "scss";
-  }
-  return "default";
-}
+// Re-export from shared utils
+export { extractExtension, extensionToVariant } from "../../utils";
 
 export function formatSupportValue(statement: SupportStatement | undefined): string {
   if (!statement) {
@@ -236,10 +189,8 @@ export function formatBaselineSummary(feature: BaselineFinding["feature"]): stri
   return "Baseline: Limited availability";
 }
 
-export function formatBaselineDates(feature: BaselineFinding["feature"]): string {
-  const dates = [feature.baselineLowDate, feature.baselineHighDate].filter(Boolean);
-  return dates.length ? ` (${dates.join(" → ")})` : "";
-}
+// Re-export from shared utils
+export { formatBaselineDates } from "../../utils";
 
 export function formatDiscouraged(info: DiscouragedInfo): string {
   const sources = info.accordingTo.join(", ");
@@ -249,40 +200,11 @@ export function formatDiscouraged(info: DiscouragedInfo): string {
   return `According to ${sources}${alternatives}`;
 }
 
-export function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-export function escapeHtml(value: string): string {
-  return value.replace(/[&<>"]|'/g, (match) => {
-    switch (match) {
-      case "&":
-        return "&amp;";
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case '"':
-        return "&quot;";
-      case "'":
-        return "&#39;";
-      default:
-        return match;
-    }
-  });
-}
+// Re-export for compatibility
+export { capitalize, escapeHtml, generateNonce };
 
 export function escapeAttribute(value: string): string {
   return escapeHtml(value);
-}
-
-export function generateNonce(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let nonce = "";
-  for (let i = 0; i < 24; i += 1) {
-    nonce += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return nonce;
 }
 
 export function renderSimpleMarkdown(text: string): string {

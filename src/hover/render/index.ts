@@ -3,6 +3,9 @@ import type { BaselineFeature } from "../../core/baselineData";
 import type { Target } from "../../core/targets";
 import type { Verdict } from "../../core/scoring";
 import type { HoverRenderOptions } from "./types";
+
+// Export types for external use
+export type { HoverRenderOptions };
 import { escapeMarkdown } from "./formatUtils";
 import { buildSupportSection } from "./supportTable";
 import {

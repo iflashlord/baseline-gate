@@ -5,7 +5,7 @@ import { registerJsHover } from './hover/jsHover';
 import { registerCssHover } from './hover/cssHover';
 import { getFeatureById } from './core/baselineData';
 import { BaselineAnalysisViewProvider } from './sidebar/analysisView';
-import { BaselineDetailViewProvider } from './sidebar/detailView';
+import { BaselineDetailViewProvider } from './sidebar/detailView/index';
 import type { BaselineAnalysisAssets } from './sidebar/analysis/types';
 import { computeFindingId } from './sidebar/analysis/dataTransformation';
 import { GeminiViewProvider } from './gemini/geminiViewProvider';

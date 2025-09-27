@@ -1,4 +1,5 @@
 import type { GeminiSuggestion } from "../../gemini/geminiService";
+import { escapeHtml, generateNonce, formatTimestamp, getRelativePath } from "../../utils";
 
 /**
  * Utility functions for the detail view
@@ -9,12 +10,7 @@ export class DetailViewUtils {
    * Escape HTML characters to prevent XSS
    */
   public static escapeHtml(text: string): string {
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    return escapeHtml(text);
   }
 
   /**
@@ -119,29 +115,21 @@ export class DetailViewUtils {
    * Generate a cryptographically secure nonce for CSP
    */
   public static generateNonce(): string {
-    let text = '';
-    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    for (let i = 0; i < 32; i++) {
-      text += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
-    return text;
+    return generateNonce();
   }
 
   /**
    * Get relative path for display
    */
   public static getRelativePath(uri: string, workspaceFolder?: string): string {
-    if (workspaceFolder) {
-      return uri.replace(workspaceFolder, '').replace(/^[\/\\]/, '');
-    }
-    return uri.split('/').pop() || uri;
+    return getRelativePath(uri, workspaceFolder);
   }
 
   /**
    * Format timestamp for display
    */
   public static formatTimestamp(timestamp: Date): string {
-    return timestamp.toLocaleString();
+    return formatTimestamp(timestamp);
   }
 
   /**

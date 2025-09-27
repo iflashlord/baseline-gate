@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { buildFeatureHover, type HoverRenderOptions } from '../../hover/render';
+import { buildFeatureHover, type HoverRenderOptions } from '../../hover/render/index';
 import type { BaselineFeature } from '../../core/baselineData';
 import type { Verdict } from '../../core/scoring';
 import type { Target } from '../../core/targets';

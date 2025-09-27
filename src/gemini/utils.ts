@@ -1,20 +1,8 @@
-export function getNonce(): string {
-  let text = '';
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
-}
+// Import and re-export shared utilities
+import { generateNonce, escapeHtml, normalizeToDate, getFileName, highlightHtml as utilsHighlightHtml, highlightText as utilsHighlightText } from "../utils";
 
-export function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+// Create aliases for consistency with existing code
+export { generateNonce as getNonce, escapeHtml, normalizeToDate, getFileName };
 
 export function escapeRegExp(value: string): string {
   return value.replace(/[-\^$*+?.()|[\]{}]/g, '\\$&');
@@ -61,13 +49,6 @@ export function highlightHtml(html: string, query?: string): string {
   });
 }
 
-export function normalizeToDate(value: Date | string): Date {
-  if (value instanceof Date) {
-    return value;
-  }
-  return new Date(value);
-}
-
 export function formatTimestamp(value: Date | string): { display: string; iso: string } {
   const date = normalizeToDate(value);
 
@@ -79,14 +60,4 @@ export function formatTimestamp(value: Date | string): { display: string; iso: s
     display: date.toLocaleString(),
     iso: date.toISOString(),
   };
-}
-
-export function getFileName(filePath: string): string {
-  if (!filePath) {
-    return '';
-  }
-
-  const normalized = filePath.replace(/\\/g, '/');
-  const segments = normalized.split('/');
-  return segments.pop() || filePath;
 }
