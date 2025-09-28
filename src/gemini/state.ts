@@ -22,6 +22,16 @@ export async function persistSuggestions(context: vscode.ExtensionContext, sugge
 }
 
 export function applySearchFilter(state: GeminiSuggestionState, query: string): GeminiSuggestionState {
+  // Handle null/undefined query gracefully
+  if (!query || typeof query !== 'string') {
+    return {
+      ...state,
+      filteredSuggestions: state.suggestions,
+      searchQuery: '',
+      originalSearchQuery: ''
+    };
+  }
+  
   const normalizedQuery = query.trim().toLowerCase();
   const terms = normalizedQuery.split(/\s+/).filter(Boolean);
 

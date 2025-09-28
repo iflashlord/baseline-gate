@@ -113,6 +113,24 @@
           "type": "string",
           "default": "",
           "description": "Custom prompt to prepend to Gemini suggestions. This will be added before the default prompt asking for fix suggestions."
+        },
+        "baselineGate.blockedBudget": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "Maximum number of blocked findings tolerated before the baseline budget is considered overrun."
+        },
+        "baselineGate.warningBudget": {
+          "type": "number",
+          "default": 5,
+          "minimum": 0,
+          "description": "Maximum number of needs-review findings tolerated before the baseline budget is considered overrun."
+        },
+        "baselineGate.safeGoal": {
+          "type": "number",
+          "default": 10,
+          "minimum": 0,
+          "description": "Target number of safe findings you would like to reach for the current scan."
         }
       }
     },

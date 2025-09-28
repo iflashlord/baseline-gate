@@ -341,6 +341,10 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         stroke: var(--vscode-editorLineNumber-foreground, rgba(150, 150, 150, 0.4));
         stroke-width: 1;
       }
+      .chart-axis-label {
+        fill: var(--vscode-descriptionForeground);
+        font-size: 0.6rem;
+      }
       .chart-dot {
         fill: var(--vscode-errorForeground, #d13438);
         stroke: var(--vscode-editor-background, #1e1e1e);
@@ -383,6 +387,67 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       .bar-fill.warning { background: #f1c40f; }
       .bar-fill.safe { background: var(--vscode-testing-iconPassed, #2e8b57); }
       .bar-meta {
+        font-size: 0.7rem;
+        color: var(--vscode-descriptionForeground);
+      }
+      .budget-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .budget-row {
+        padding: 0.5rem 0.6rem;
+        border: 1px solid var(--vscode-tree-indentGuidesStroke, transparent);
+        border-radius: 6px;
+        background: var(--vscode-editor-background, rgba(0, 0, 0, 0.02));
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem;
+        align-items: center;
+      }
+      .budget-row.over-limit {
+        border-color: rgba(209, 52, 56, 0.5);
+        background: rgba(209, 52, 56, 0.12);
+      }
+      .budget-row.under-goal {
+        border-color: rgba(249, 209, 129, 0.5);
+        background: rgba(249, 209, 129, 0.12);
+      }
+      .budget-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--vscode-foreground);
+      }
+      .budget-status {
+        font-size: 0.7rem;
+        color: var(--vscode-descriptionForeground);
+      }
+      .budget-meter {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+      }
+      .budget-meter-track {
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        background: var(--vscode-editor-inactiveSelection, rgba(128, 128, 128, 0.2));
+      }
+      .budget-meter-fill {
+        display: block;
+        height: 100%;
+      }
+      .budget-meter-fill.blocked {
+        background: var(--vscode-errorForeground, #d13438);
+      }
+      .budget-meter-fill.warning {
+        background: #f1c40f;
+      }
+      .budget-meter-fill.safe {
+        background: var(--vscode-testing-iconPassed, #2e8b57);
+      }
+      .budget-meter-text {
         font-size: 0.7rem;
         color: var(--vscode-descriptionForeground);
       }
@@ -1874,6 +1939,15 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
             </div>
             <p class="chart-caption" data-stats-caption></p>
           </article>
+          <article class="chart-card" data-budget-card>
+            <div class="chart-title">Baseline budgets <span>(targets)</span></div>
+            <div class="chart-body">
+              <div class="budget-grid" data-budget-grid>
+                <p class="chart-empty">No budgets configured.</p>
+              </div>
+            </div>
+            <p class="chart-caption" data-budget-caption></p>
+          </article>
         </section>
       </div>
     </aside>
@@ -1907,6 +1981,9 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       const statsCard = insightsGrid ? insightsGrid.querySelector('[data-stats-card]') : null;
       const statsBars = statsCard ? statsCard.querySelector('[data-stats-bars]') : null;
       const statsCaption = statsCard ? statsCard.querySelector('[data-stats-caption]') : null;
+      const budgetCard = insightsGrid ? insightsGrid.querySelector('[data-budget-card]') : null;
+      const budgetGrid = budgetCard ? budgetCard.querySelector('[data-budget-grid]') : null;
+      const budgetCaption = budgetCard ? budgetCard.querySelector('[data-budget-caption]') : null;
       const SVG_NS = 'http://www.w3.org/2000/svg';
       const MAX_SNIPPET_PREVIEW = 120;
 
@@ -2394,35 +2471,86 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         historyChart.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
         historyChart.setAttribute('aria-label', 'Baseline scan history (blocked vs safe findings)');
 
-        const axis = document.createElementNS(SVG_NS, 'line');
-        axis.setAttribute('x1', String(padX));
-        axis.setAttribute('y1', String(height - padY));
-        axis.setAttribute('x2', String(width - padX));
-        axis.setAttribute('y2', String(height - padY));
-        axis.setAttribute('class', 'chart-axis');
-        historyChart.appendChild(axis);
+        const axisX = document.createElementNS(SVG_NS, 'line');
+        axisX.setAttribute('x1', String(padX));
+        axisX.setAttribute('y1', String(height - padY));
+        axisX.setAttribute('x2', String(width - padX));
+        axisX.setAttribute('y2', String(height - padY));
+        axisX.setAttribute('class', 'chart-axis');
+        historyChart.appendChild(axisX);
+
+        const axisY = document.createElementNS(SVG_NS, 'line');
+        axisY.setAttribute('x1', String(padX));
+        axisY.setAttribute('y1', String(padY));
+        axisY.setAttribute('x2', String(padX));
+        axisY.setAttribute('y2', String(height - padY));
+        axisY.setAttribute('class', 'chart-axis');
+        historyChart.appendChild(axisY);
+
+        const axisMax = document.createElementNS(SVG_NS, 'text');
+        axisMax.setAttribute('x', String(padX + 2));
+        axisMax.setAttribute('y', String(padY - 2));
+        axisMax.setAttribute('class', 'chart-axis-label');
+        axisMax.textContent = String(maxValue);
+        historyChart.appendChild(axisMax);
+
+        const axisZero = document.createElementNS(SVG_NS, 'text');
+        axisZero.setAttribute('x', String(padX + 2));
+        axisZero.setAttribute('y', String(height - padY + 10));
+        axisZero.setAttribute('class', 'chart-axis-label');
+        axisZero.textContent = '0';
+        historyChart.appendChild(axisZero);
+
+        const firstEntry = entries[0];
+        const lastEntry = entries[entries.length - 1];
+        if (firstEntry) {
+          const axisStart = document.createElementNS(SVG_NS, 'text');
+          axisStart.setAttribute('x', String(padX));
+          axisStart.setAttribute('y', String(height - padY + 20));
+          axisStart.setAttribute('class', 'chart-axis-label');
+          axisStart.textContent = new Date(firstEntry.timestamp).toLocaleDateString();
+          historyChart.appendChild(axisStart);
+        }
+        if (lastEntry && entries.length > 1) {
+          const axisEnd = document.createElementNS(SVG_NS, 'text');
+          axisEnd.setAttribute('x', String(width - padX - 30));
+          axisEnd.setAttribute('y', String(height - padY + 20));
+          axisEnd.setAttribute('class', 'chart-axis-label');
+          axisEnd.textContent = new Date(lastEntry.timestamp).toLocaleDateString();
+          historyChart.appendChild(axisEnd);
+        }
 
         if (safeSeries.some((value) => value > 0)) {
           const safePath = document.createElementNS(SVG_NS, 'path');
           safePath.setAttribute('d', buildPath(safePoints));
           safePath.setAttribute('class', 'chart-line-safe');
+          const safeTitle = document.createElementNS(SVG_NS, 'title');
+          safeTitle.textContent = 'Safe findings per scan';
+          safePath.appendChild(safeTitle);
           historyChart.appendChild(safePath);
         }
 
         const blockedPath = document.createElementNS(SVG_NS, 'path');
         blockedPath.setAttribute('d', buildPath(blockedPoints));
         blockedPath.setAttribute('class', 'chart-line-blocked');
+        const blockedTitle = document.createElementNS(SVG_NS, 'title');
+        blockedTitle.textContent = 'Blocked findings per scan';
+        blockedPath.appendChild(blockedTitle);
         historyChart.appendChild(blockedPath);
 
-        const lastPoint = blockedPoints[blockedPoints.length - 1];
-        if (lastPoint) {
+        blockedPoints.forEach((point, index) => {
           const dot = document.createElementNS(SVG_NS, 'circle');
-          dot.setAttribute('cx', String(lastPoint.x));
-          dot.setAttribute('cy', String(lastPoint.y));
-          dot.setAttribute('r', '3');
+          dot.setAttribute('cx', String(point.x));
+          dot.setAttribute('cy', String(point.y));
+          dot.setAttribute('r', String(index === blockedPoints.length - 1 ? 3 : 2));
           dot.setAttribute('class', 'chart-dot');
+          const title = document.createElementNS(SVG_NS, 'title');
+          const entry = entries[index];
+          const dateLabel = new Date(entry.timestamp).toLocaleString();
+          title.textContent = dateLabel + ': ' + entry.summary.blocked + ' blocked, ' + entry.summary.safe + ' safe';
+          dot.appendChild(title);
           historyChart.appendChild(dot);
-        }
+        });
 
         const latest = entries[entries.length - 1];
         const when = new Date(latest.timestamp);
@@ -2502,13 +2630,16 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
 
           const meta = document.createElement('div');
           meta.className = 'bar-meta';
-          meta.textContent =
+          const metaText =
             group.blocked +
             ' blocked · ' +
             group.warning +
             ' review · ' +
             group.safe +
             ' safe';
+          meta.textContent = metaText;
+
+          row.title = metaText;
 
           metrics.appendChild(track);
           metrics.appendChild(meta);
@@ -2518,16 +2649,146 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         });
 
         const remainder = Math.max(0, (stats.groups?.length || 0) - 4);
-        const summaryText =
-          'Totals · ' +
-          stats.blocked +
-          ' blocked · ' +
-          stats.warning +
-          ' needs review · ' +
-          stats.wins +
-          ' wins';
-        statsCaption.textContent =
-          remainder > 0 ? summaryText + ' · +' + remainder + ' more groups' : summaryText;
+      const summaryText =
+        'Totals · ' +
+        stats.blocked +
+        ' blocked · ' +
+        stats.warning +
+        ' needs review · ' +
+        stats.wins +
+        ' wins';
+      statsCaption.textContent =
+        remainder > 0 ? summaryText + ' · +' + remainder + ' more groups' : summaryText;
+    }
+
+      function renderBudgetCard(budget) {
+        if (!budgetCard || !budgetGrid || !budgetCaption) {
+          return;
+        }
+
+        budgetCard.classList.remove('hidden');
+
+        if (!budget) {
+          budgetGrid.innerHTML = '<p class="chart-empty">No budgets configured.</p>';
+          budgetCaption.textContent = 'Set budgets in the Baseline Gate settings to start tracking progress.';
+          return;
+        }
+
+        const rows = [];
+        const statusMessages = [];
+
+        const metrics = [
+          {
+            key: 'blocked',
+            label: 'Blocked',
+            actual: budget.blocked,
+            limit: budget.blockedLimit ?? 0,
+            variant: 'blocked',
+            type: 'max'
+          },
+          {
+            key: 'warning',
+            label: 'Needs review',
+            actual: budget.warning,
+            limit: budget.warningLimit ?? undefined,
+            variant: 'warning',
+            type: 'max'
+          },
+          {
+            key: 'safe',
+            label: 'Wins',
+            actual: budget.safe,
+            limit: budget.safeLimit ?? undefined,
+            variant: 'safe',
+            type: 'min'
+          }
+        ];
+
+        budgetGrid.innerHTML = '';
+
+        metrics.forEach((metric) => {
+          const row = document.createElement('div');
+          row.className = 'budget-row';
+
+          const label = document.createElement('div');
+          label.className = 'budget-label';
+          label.textContent = metric.label;
+
+          const status = document.createElement('div');
+          status.className = 'budget-status';
+
+          let statusText = '';
+          let overBudget = false;
+
+          if (metric.type === 'max') {
+            if (metric.limit === undefined) {
+              statusText = metric.actual + ' findings (no limit)';
+            } else {
+              statusText = metric.actual + ' of ' + metric.limit + ' allowed';
+              if (metric.actual > metric.limit) {
+                overBudget = true;
+                row.classList.add('over-limit');
+                statusMessages.push(metric.label + ' over budget by ' + (metric.actual - metric.limit));
+              }
+            }
+          } else {
+            if (metric.limit === undefined || metric.limit === 0) {
+              statusText = metric.actual + ' safe findings';
+            } else {
+              statusText = metric.actual + ' of ' + metric.limit + ' goal';
+              if (metric.actual < metric.limit) {
+                row.classList.add('under-goal');
+                statusMessages.push('Need ' + (metric.limit - metric.actual) + ' more wins');
+              }
+            }
+          }
+
+          row.title = statusText;
+
+          const meter = document.createElement('div');
+          meter.className = 'budget-meter';
+          const track = document.createElement('div');
+          track.className = 'budget-meter-track';
+
+          let ratio = 0;
+          if (metric.type === 'max') {
+            if (metric.limit !== undefined && metric.limit > 0) {
+              ratio = Math.min(100, (metric.actual / metric.limit) * 100);
+            } else if (metric.actual > 0) {
+              ratio = 100;
+            }
+          } else if (metric.limit && metric.limit > 0) {
+            ratio = Math.min(100, (metric.actual / metric.limit) * 100);
+          } else if (metric.actual > 0) {
+            ratio = 100;
+          }
+
+          const fill = document.createElement('span');
+          fill.className = 'budget-meter-fill ' + metric.variant;
+          fill.style.width = ratio + '%';
+
+          const meterText = document.createElement('div');
+          meterText.className = 'budget-meter-text';
+          meterText.textContent = statusText;
+
+          track.appendChild(fill);
+          meter.appendChild(track);
+          meter.appendChild(meterText);
+
+          status.textContent = overBudget ? 'Over budget' : metric.type === 'min' && metric.limit !== undefined && metric.actual < metric.limit ? 'Below goal' : 'On track';
+
+          row.appendChild(label);
+          row.appendChild(status);
+          row.appendChild(meter);
+
+          budgetGrid.appendChild(row);
+        });
+
+        if (statusMessages.length) {
+          budgetCaption.textContent = statusMessages.join(' · ');
+        } else {
+          budgetCaption.textContent = 'All budgets are on track.';
+        }
       }
 
       function openInsightsPanel() {
@@ -2571,7 +2832,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         // Save scroll position before rendering changes
         saveScrollPosition();
 
-        const { scanning, searchQuery, severityFilter, sortOrder, progressText, filteredSummary, summary, files, severityIconUris, filtersActive, lastScanAt, detail, history, stats } = currentState;
+        const { scanning, searchQuery, severityFilter, sortOrder, progressText, filteredSummary, summary, files, severityIconUris, filtersActive, lastScanAt, detail, history, stats, budget } = currentState;
 
         controls.disabled = Boolean(scanning);
         clearBtn.disabled = !filtersActive;
@@ -2587,6 +2848,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         renderDetail(detail);
         renderHistoryCard(history);
         renderStatsCard(stats);
+        renderBudgetCard(budget);
         
         // Restore scroll position after rendering
         requestAnimationFrame(() => {

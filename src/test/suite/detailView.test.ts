@@ -123,7 +123,7 @@ suite('Detail View SVG Icon Rendering Tests', () => {
       
       assert.ok(html.includes('<strong>Bold</strong>'));
       assert.ok(html.includes('<em>italic</em>'));
-      assert.ok(html.includes('<code>code</code>'));
+      assert.ok(html.includes('<code class="inline-code">code</code>'));
     });
 
     test('should generate secure nonce values', () => {
@@ -158,7 +158,8 @@ suite('Detail View SVG Icon Rendering Tests', () => {
       const finding = createMockFinding();
       const transformed = DetailViewDataTransformer.transformFindingForDisplay(finding);
       
-      assert.strictEqual(transformed.id, finding.id);
+      // The ID is generated using generateFindingId, not the original finding.id
+      assert.strictEqual(transformed.id, `${finding.feature.name}_/test/app.ts_${finding.range.start.line}`);
       assert.strictEqual(transformed.title, finding.feature.name);
       assert.strictEqual(transformed.severity, finding.verdict);
       assert.ok(transformed.location);
@@ -227,9 +228,10 @@ suite('Detail View SVG Icon Rendering Tests', () => {
       const sorted = DetailViewDataTransformer.sortFindings(findings);
       
       assert.strictEqual(sorted.length, 3);
-      // Should be sorted by line number first (position-based sorting)
-      assert.ok(sorted[0].range.start.line <= sorted[1].range.start.line);
-      assert.ok(sorted[1].range.start.line <= sorted[2].range.start.line);
+      // Should be sorted by severity first (blocked, warning, safe)
+      assert.strictEqual(sorted[0].verdict, 'blocked');
+      assert.strictEqual(sorted[1].verdict, 'warning');
+      assert.strictEqual(sorted[2].verdict, 'safe');
     });
   });
 });

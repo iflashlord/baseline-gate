@@ -269,6 +269,12 @@ Context: This is a follow-up question about fixing a baseline compatibility issu
         event.affectsConfiguration('baselineGate.showMobileBrowsers')) {
       analysisProvider.refreshView();
     }
+
+    if (event.affectsConfiguration('baselineGate.blockedBudget') ||
+        event.affectsConfiguration('baselineGate.warningBudget') ||
+        event.affectsConfiguration('baselineGate.safeGoal')) {
+      analysisProvider.refreshBudgetConfig();
+    }
   });
   context.subscriptions.push(configWatcher);
 }

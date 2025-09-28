@@ -5,6 +5,7 @@ import type { Target } from "../core/targets";
 import { scoreFeature, type Verdict } from "../core/scoring";
 import {
   BaselineAnalysisAssets,
+  BaselineBudgetSnapshot,
   ScanHistoryEntry,
   DetailPayload,
   DetailSelection,
@@ -42,6 +43,12 @@ import { BaselineDetailViewProvider } from "./detailView";
 const HISTORY_STORAGE_KEY = "baselineGate.history";
 const HISTORY_LIMIT = 50;
 
+type BudgetConfig = {
+  blockedLimit?: number;
+  warningLimit?: number;
+  safeGoal?: number;
+};
+
 export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
   private findings: BaselineFinding[] = [];
@@ -57,6 +64,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
   private collapsedFileUris = new Set<string>();
   private history: ScanHistoryEntry[] = [];
   private pendingShowInsights = false;
+  private budgetConfig: BudgetConfig = this.readBudgetConfig();
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -65,6 +73,11 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     private readonly geminiProvider?: import('../gemini/geminiViewProvider').GeminiViewProvider
   ) {
     this.history = this.loadHistoryFromStorage();
+  }
+
+  refreshBudgetConfig(): void {
+    this.budgetConfig = this.readBudgetConfig();
+    this.postState();
   }
 
   register(): vscode.Disposable {
@@ -227,6 +240,40 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     const nextHistory = [...this.history, entry].slice(-HISTORY_LIMIT);
     this.history = nextHistory;
     await this.context.workspaceState.update(HISTORY_STORAGE_KEY, nextHistory);
+  }
+
+  private readBudgetConfig(): BudgetConfig {
+    const config = vscode.workspace.getConfiguration('baselineGate');
+    const sanitize = (value: unknown): number | undefined => {
+      if (typeof value !== 'number') {
+        return undefined;
+      }
+      if (!Number.isFinite(value) || value < 0) {
+        return undefined;
+      }
+      return value;
+    };
+    return {
+      blockedLimit: sanitize(config.get<number>('blockedBudget')),
+      warningLimit: sanitize(config.get<number>('warningBudget')),
+      safeGoal: sanitize(config.get<number>('safeGoal'))
+    };
+  }
+
+  private buildBudgetSnapshot(summary: Summary): BaselineBudgetSnapshot | null {
+    const { blockedLimit, warningLimit, safeGoal } = this.budgetConfig;
+    if (blockedLimit === undefined && warningLimit === undefined && safeGoal === undefined) {
+      return null;
+    }
+    return {
+      target: this.target,
+      blockedLimit,
+      warningLimit,
+      safeLimit: safeGoal,
+      blocked: summary.blocked,
+      warning: summary.warning,
+      safe: summary.safe
+    };
   }
 
   getSeverityFilter(): Verdict[] {
@@ -591,6 +638,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
     const grouped = groupFindingsByFile(filtered, this.sortOrder);
     const stats = computeFindingsStatistics(all);
+    const summaryAll = summarize(all);
+    const budgetSnapshot = this.buildBudgetSnapshot(summaryAll);
     const filePayloads = grouped.map((group) =>
       buildFilePayload(
         group,
@@ -622,7 +671,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       files: filePayloads,
       detail,
       history: this.getScanHistory(),
-      stats
+      stats,
+      budget: budgetSnapshot
     });
   }
 

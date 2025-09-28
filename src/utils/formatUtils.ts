@@ -50,12 +50,26 @@ export function formatReleaseDate(date: string): string {
 }
 
 /**
- * Formats a URL hostname for display
+ * Formats a URL hostname for display with friendly names
  */
 export function formatLinkHostname(url: string): string {
   try {
     const parsed = new URL(url);
-    return parsed.hostname.replace(/^www\./, "");
+    const hostname = parsed.hostname.replace(/^www\./, "");
+    
+    // Map common hostnames to friendly names
+    const friendlyNames: Record<string, string> = {
+      'developer.mozilla.org': 'MDN',
+      'caniuse.com': 'Can I Use',
+      'github.com': 'GitHub',
+      'w3c.github.io': 'W3C',
+      'w3.org': 'W3C',
+      'webkit.org': 'WebKit',
+      'chromestatus.com': 'Chrome Status',
+      'bugzilla.mozilla.org': 'Mozilla Bugzilla'
+    };
+    
+    return friendlyNames[hostname] || hostname;
   } catch {
     return url;
   }
