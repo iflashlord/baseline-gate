@@ -75,6 +75,16 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
             overflow-x: hidden;
         }
 
+        /* Global SVG styling */
+        svg {
+            color: var(--vscode-foreground);
+            stroke: currentColor;
+        }
+
+        svg[stroke]:not([stroke="none"]):not([stroke="#22c55e"]):not([stroke="#ef4444"]):not([stroke="#f59e0b"]):not([stroke="#4285f4"]):not([stroke="#f97316"]) {
+            stroke: currentColor;
+        }
+
         .full-view-container {
             display: flex;
             flex-direction: column;
@@ -151,27 +161,31 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
 
         .header-search {
             display: flex;
-            align-items: center;
-            gap: 16px;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
         }
 
         .search-box {
             position: relative;
             min-width: 300px;
+            flex: 1;
+            max-width: 600px;
         }
 
         .search-input {
             width: 100%;
-            padding: 8px 16px 8px 40px;
+            padding: 12px 50px 12px 40px;
             border: 1px solid var(--vscode-input-border);
-            border-radius: 6px;
+            border-radius: 8px;
             background: var(--vscode-input-background);
             color: var(--vscode-input-foreground);
             font-size: 14px;
+            box-sizing: border-box;
         }
 
         .search-input:focus {
-            outline: 1px solid var(--vscode-focusBorder);
+            outline: 2px solid var(--vscode-focusBorder);
             border-color: var(--vscode-focusBorder);
         }
 
@@ -181,21 +195,54 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
             top: 50%;
             transform: translateY(-50%);
             opacity: 0.7;
+            width: 16px;
+            height: 16px;
+            pointer-events: none;
+            color: var(--vscode-input-foreground);
+        }
+
+        .search-button {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            border-radius: 6px;
+            padding: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+            width: 36px;
+            height: 36px;
+        }
+
+        .search-button:hover {
+            background: var(--vscode-button-hoverBackground);
+        }
+
+        .search-button svg {
+            width: 16px;
+            height: 16px;
         }
 
         .search-results-info {
-            margin-top: 8px;
             color: var(--vscode-descriptionForeground);
-            font-size: 12px;
-            text-align: center;
+            font-size: 13px;
+            text-align: left;
+            padding: 4px 0;
         }
 
         .search-results-info small {
             background: var(--vscode-badge-background);
             color: var(--vscode-badge-foreground);
-            padding: 2px 8px;
+            padding: 4px 10px;
             border-radius: 12px;
-            font-size: 11px;
+            font-size: 12px;
+            font-weight: 500;
         }
 
         .primary-button, .secondary-button {
@@ -265,6 +312,41 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
         .stat-label {
             font-size: 12px;
             opacity: 0.8;
+        }
+
+        /* Metrics section */
+        .metrics {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-left: auto;
+        }
+
+        .metric {
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+            background: var(--vscode-badge-background);
+            padding: 2px 6px;
+            border-radius: 8px;
+        }
+
+        /* Tags section */
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 12px 0;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            background: var(--vscode-textCodeBlock-background);
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 12px;
+            font-size: 11px;
+            color: var(--vscode-foreground);
         }
 
         .full-view-content {
@@ -365,9 +447,81 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
             gap: 12px;
         }
 
+        .header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .metadata {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
         .suggestion-meta {
             flex: 1;
             min-width: 0;
+        }
+
+        /* Chip styling */
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .chip-link {
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: 1px solid var(--vscode-button-border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .chip-link:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+            transform: translateY(-1px);
+        }
+
+        .chip svg {
+            width: 14px;
+            height: 14px;
+            color: inherit;
+            stroke: currentColor;
+        }
+
+        /* Link button styling */
+        .link-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: transparent;
+            color: var(--vscode-textLink-foreground);
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            text-decoration: underline;
+            padding: 4px 0;
+        }
+
+        .link-button:hover {
+            color: var(--vscode-textLink-activeForeground);
+        }
+
+        .link-button svg {
+            width: 14px;
+            height: 14px;
+            color: inherit;
+            stroke: currentColor;
         }
 
         .suggestion-issue {
@@ -428,33 +582,211 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
             margin: 16px 0;
         }
 
+        .code-block {
+            position: relative;
+            margin: 16px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: var(--vscode-textCodeBlock-background);
+            border: 1px solid var(--vscode-widget-border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .code-block pre {
+            margin: 0;
+            padding: 16px;
+            background: transparent;
+            overflow-x: auto;
+            font-family: var(--vscode-editor-font-family);
+            font-size: var(--vscode-editor-font-size);
+            line-height: 1.4;
+        }
+
         .code-copy-btn {
             position: absolute;
             top: 8px;
             right: 8px;
-            background: var(--vscode-button-secondaryBackground);
-            border: 1px solid var(--vscode-button-border);
-            border-radius: 4px;
-            padding: 4px 8px;
-            font-size: 11px;
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            border-radius: 6px;
+            padding: 8px;
             cursor: pointer;
-            opacity: 0.7;
-            transition: opacity 0.2s ease;
+            opacity: 0;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
+        .code-block:hover .code-copy-btn,
         .code-block-container:hover .code-copy-btn {
             opacity: 1;
+            transform: translateY(-1px);
         }
 
         .code-copy-btn:hover {
-            background: var(--vscode-button-secondaryHoverBackground);
+            background: var(--vscode-button-hoverBackground);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .code-copy-btn svg {
+            width: 16px;
+            height: 16px;
         }
 
         .suggestion-actions {
             display: flex;
-            gap: 8px;
+            gap: 12px;
             margin-top: 16px;
             flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* Enhanced suggestion item styling */
+        .suggestion-item {
+            background: var(--vscode-sideBar-background);
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .suggestion-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4285f4, #34a853, #fbbc05, #ea4335);
+            opacity: 0.8;
+        }
+
+        .suggestion-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+            border-color: var(--vscode-focusBorder);
+        }
+
+        .suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--vscode-widget-border);
+        }
+
+        .suggestion-content h4 {
+            font-weight: 600;
+            font-size: 16px;
+            margin: 0 0 8px 0;
+            color: var(--vscode-editor-foreground);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .issue-section h4::before {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='12' y1='8' x2='12' y2='12'/%3E%3Cline x1='12' y1='16' x2='12.01' y2='16'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+
+        .suggestion-section h4::before {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234285f4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.663 17h4.673M12 3l1.735 3.013 3.408.494-2.463 2.401.582 3.392L12 10.695 8.738 12.3l.582-3.392-2.463-2.401 3.408-.494L12 3z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+
+        /* Icon button improvements */
+        .icon-btn {
+            background: transparent;
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-btn:hover {
+            background: var(--vscode-toolbar-hoverBackground);
+            transform: translateY(-1px);
+        }
+
+        .icon-btn svg {
+            width: 16px;
+            height: 16px;
+            color: var(--vscode-foreground);
+            stroke: var(--vscode-foreground);
+        }
+
+        /* Action button improvements */
+        .action-btn {
+            background: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: 1px solid var(--vscode-button-border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+        }
+
+        .action-btn:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-btn svg {
+            width: 16px;
+            height: 16px;
+            color: inherit;
+            stroke: currentColor;
+        }
+
+        /* Star rating improvements */
+        .star {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 2px;
+            transition: all 0.2s ease;
+        }
+
+        .star:hover {
+            transform: scale(1.1);
+        }
+
+        .star svg {
+            width: 16px;
+            height: 16px;
+            color: #fbbf24;
+        }
+
+        .star-filled svg {
+            fill: #fbbf24;
         }
 
         .action-button {
@@ -472,10 +804,23 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
             background: var(--vscode-button-secondaryHoverBackground);
         }
 
+        /* Rating section */
+        .rating {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .rating-label {
+            font-size: 13px;
+            color: var(--vscode-descriptionForeground);
+            font-weight: 500;
+        }
+
         .rating-stars {
             display: flex;
             gap: 2px;
-            margin-top: 12px;
         }
 
         .star {
@@ -483,14 +828,28 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
             font-size: 16px;
             color: var(--vscode-descriptionForeground);
             transition: color 0.2s ease;
+            background: none;
+            border: none;
+            padding: 2px;
         }
 
-        .star.filled {
+        .star.filled,
+        .star.star-filled {
             color: #ffd700;
         }
 
         .star:hover {
             color: #ffd700;
+        }
+
+        /* Suggestion footer */
+        .suggestion-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--vscode-widget-border);
         }
 
         /* Follow-up input styles */
@@ -614,15 +973,24 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
             ${totalCount > 0 ? `
             <div class="header-search">
                 <div class="search-box">
-                    <div class="search-icon">🔍</div>
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
                     <input 
                         type="text" 
                         class="search-input" 
                         placeholder="Search by feature, file, issue, tag, status, finding ID..." 
                         title="Enhanced search: searches across all suggestion properties including tags, metadata, and file paths"
                         value="${escapeHtml(searchDisplayValue)}"
-                        data-action="search"
+                        id="searchInput"
                     >
+                    <button class="search-button" data-action="perform-search" title="Search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                    </button>
                 </div>
                 ${searchDisplayValue ? `
                 <div class="search-results-info">
@@ -652,18 +1020,21 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
             // Restore state
             vscode.setState(initialState);
             
-            // Handle search input
-            const searchInput = document.querySelector('[data-action="search"]');
+            // Handle search input - only search on Enter key or button click
+            const searchInput = document.getElementById('searchInput');
             if (searchInput) {
-                let searchTimeout;
-                searchInput.addEventListener('input', (e) => {
-                    clearTimeout(searchTimeout);
-                    searchTimeout = setTimeout(() => {
-                        vscode.postMessage({
-                            type: 'searchSuggestions',
-                            query: e.target.value
-                        });
-                    }, 300);
+                // Search on Enter key
+                searchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const query = e.target.value;
+                        vscode.postMessage({ type: 'searchSuggestions', query });
+                    }
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        e.target.value = '';
+                        vscode.postMessage({ type: 'searchSuggestions', query: '' });
+                    }
                 });
             }
 
@@ -708,9 +1079,12 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
                     return;
                 }
 
-                event.preventDefault();
-
                 const action = actionable.getAttribute('data-action');
+                
+                // Don't prevent default for rating and follow-up actions to avoid scroll issues
+                if (action !== 'rate' && action !== 'follow-up' && action !== 'send-follow-up') {
+                    event.preventDefault();
+                }
                 switch (action) {
                     case 'remove': {
                         const suggestionId = actionable.getAttribute('data-suggestion-id');
@@ -745,14 +1119,29 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
                         break;
                     }
                     case 'copy-code': {
-                        const codeBlock = actionable.closest('[data-code-block]');
+                        const codeBlock = actionable.closest('[data-code-block]') || actionable.closest('.code-block');
                         const codeElement = codeBlock ? codeBlock.querySelector('code') : null;
                         const code = codeElement ? codeElement.textContent ?? '' : '';
                         vscode.postMessage({ type: 'copyCodeSnippet', code });
+                        
+                        // Show visual feedback
+                        const originalSvg = actionable.innerHTML;
+                        actionable.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,6 9,17 4,12"></polyline></svg>';
+                        setTimeout(() => {
+                            actionable.innerHTML = originalSvg;
+                        }, 1000);
                         break;
                     }
                     case 'clear-search': {
                         clearSearchField();
+                        break;
+                    }
+                    case 'perform-search': {
+                        const searchInput = document.getElementById('searchInput');
+                        if (searchInput) {
+                            const query = searchInput.value;
+                            vscode.postMessage({ type: 'searchSuggestions', query });
+                        }
                         break;
                     }
                     case 'rate': {

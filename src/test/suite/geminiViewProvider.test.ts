@@ -159,7 +159,7 @@ suite('Gemini view provider', () => {
     const markup = renderSuggestionCard(suggestion, 'indexed');
 
     assert.ok(markup.includes('<mark>Indexed</mark>'), 'issue metadata should highlight search term');
-    assert.ok(markup.includes('📄'), 'file chip should include icon');
+    assert.ok(markup.includes('<svg'), 'file chip should include SVG icon');
     assert.ok(markup.includes('<strong'), 'markdown should convert bold text');
     assert.ok(markup.includes('data-action="copy-code"'), 'code blocks should render copy buttons');
   });
