@@ -3232,6 +3232,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
           }
         }
       }
+      vscode.postMessage({ type: 'ready' });
     </script>
   </body>
 </html>`;

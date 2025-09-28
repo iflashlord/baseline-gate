@@ -44,6 +44,7 @@ import { readStorageJson, writeStorageJson } from "../utils/storage";
 
 const HISTORY_STORAGE_KEY = "baselineGate.history";
 const HISTORY_STORAGE_FILE = "scan-history.json";
+const LATEST_SCAN_STORAGE_KEY = "baselineGate.latestScan";
 const LATEST_SCAN_FILE = "latest-scan.json";
 const LATEST_SCAN_VERSION = 1;
 const HISTORY_LIMIT = 50;
@@ -82,6 +83,8 @@ type PersistedScanPayload = {
 
 export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
+  private viewReady = false;
+  private pendingState: WebviewState | null = null;
   private findings: BaselineFinding[] = [];
   private searchQuery = "";
   private severityFilter = new Set<Verdict>(DEFAULT_SEVERITIES);
@@ -104,6 +107,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     private readonly geminiProvider?: import('../gemini/geminiViewProvider').GeminiViewProvider
   ) {
     this.history = this.loadHistoryFromMemento();
+    this.restoreLatestScanFromMemento();
     void this.restoreHistoryFromDisk();
     void this.restoreLatestScanFromDisk();
   }
@@ -119,6 +123,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
+    this.viewReady = false;
     const webview = view.webview;
     webview.options = {
       enableScripts: true,
@@ -126,6 +131,13 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     };
     webview.html = renderAnalysisWebviewHtml(webview);
     webview.onDidReceiveMessage((message) => this.handleMessage(message));
+    view.onDidDispose(() => {
+      if (this.view === view) {
+        this.view = undefined;
+      }
+      this.viewReady = false;
+    });
+    void this.restoreLatestScanFromDisk();
     this.postState();
     if (this.pendingShowInsights) {
       const targetView = this.view;
@@ -273,6 +285,22 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     this.history = history;
     await this.context.workspaceState.update(HISTORY_STORAGE_KEY, history);
     this.postState();
+  }
+
+  private restoreLatestScanFromMemento(): void {
+    const stored = this.context.workspaceState.get<unknown>(LATEST_SCAN_STORAGE_KEY);
+    const scan = this.parsePersistedScan(stored);
+    if (!scan || scan.target !== this.target) {
+      return;
+    }
+    const findings = this.deserializePersistedFindings(scan.findings);
+    if (!findings.length && scan.findings.length > 0) {
+      return;
+    }
+
+    this.findings = findings;
+    const parsedTimestamp = new Date(scan.scannedAt);
+    this.lastScanAt = Number.isNaN(parsedTimestamp.getTime()) ? undefined : parsedTimestamp;
   }
 
   private async restoreLatestScanFromDisk(): Promise<void> {
@@ -423,6 +451,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       findings: this.findings.map((finding) => this.serializeFinding(finding))
     };
 
+    await this.context.workspaceState.update(LATEST_SCAN_STORAGE_KEY, payload);
     await writeStorageJson(LATEST_SCAN_FILE, payload);
   }
 
@@ -736,6 +765,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
   private handleMessage(message: MessageFromWebview) {
     processMessage(
       {
+        ready: () => {
+          this.handleWebviewReady();
+        },
         runScan: () => {
           void this.runScan();
         },
@@ -919,11 +951,27 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     }
   }
 
+  private handleWebviewReady(): void {
+    if (!this.view) {
+      this.viewReady = false;
+      return;
+    }
+    this.viewReady = true;
+    const state = this.pendingState ?? this.buildState();
+    this.pendingState = state;
+    void this.view.webview.postMessage({ type: "state", payload: state });
+  }
+
   private postState() {
     if (!this.view) {
+      this.pendingState = null;
       return;
     }
     const state = this.buildState();
+    this.pendingState = state;
+    if (!this.viewReady) {
+      return;
+    }
     void this.view.webview.postMessage({ type: "state", payload: state });
   }
 

@@ -133,6 +133,7 @@ export type WebviewState = {
 };
 
 export type MessageFromWebview =
+  | { type: "ready" }
   | { type: "scan" }
   | { type: "setSearch"; value: string }
   | { type: "setSeverity"; value: Verdict[] }

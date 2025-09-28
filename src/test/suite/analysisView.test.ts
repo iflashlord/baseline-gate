@@ -131,6 +131,9 @@ function attachView(provider: BaselineAnalysisViewProvider): AttachedView {
 
   const view = { webview } as vscode.WebviewView;
   provider.resolveWebviewView(view);
+  for (const listener of listeners) {
+    listener({ type: 'ready' });
+  }
 
   return {
     messages,

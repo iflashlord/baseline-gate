@@ -2,6 +2,7 @@ import type { MessageFromWebview, SortOrder } from "./types";
 import type { Verdict } from "../../core/scoring";
 
 export interface AnalysisMessageHandlers {
+  ready: () => void;
   runScan: () => void;
   setSearch: (value: string) => void;
   setSeverity: (value: Verdict[]) => void;
@@ -38,6 +39,9 @@ export interface AnalysisMessageHandlers {
 
 export function processMessage(handlers: AnalysisMessageHandlers, message: MessageFromWebview): void {
   switch (message.type) {
+    case "ready":
+      handlers.ready();
+      break;
     case "scan":
       handlers.runScan();
       break;
