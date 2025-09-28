@@ -129,7 +129,14 @@ function attachView(provider: BaselineAnalysisViewProvider): AttachedView {
     }
   } as unknown as vscode.Webview;
 
-  const view = { webview } as vscode.WebviewView;
+  const disposeListeners: Array<() => void> = [];
+  const view = {
+    webview,
+    onDidDispose: (listener: () => void) => {
+      disposeListeners.push(listener);
+      return { dispose() {} };
+    }
+  } as unknown as vscode.WebviewView;
   provider.resolveWebviewView(view);
   for (const listener of listeners) {
     listener({ type: 'ready' });
