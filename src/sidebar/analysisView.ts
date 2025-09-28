@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { scanWorkspaceForBaseline, type BaselineFinding } from "./workspaceScanner";
 import type { Target } from "../core/targets";
 import { scoreFeature, type Verdict } from "../core/scoring";
+import { getFeatureById } from "../core/baselineData";
 import {
   BaselineAnalysisAssets,
   BaselineBudgetSnapshot,
@@ -39,14 +40,44 @@ import {
 import { buildWebviewState, filterFindings, syncSelection } from "./analysis/state";
 import { processMessage } from "./analysis/messages";
 import { BaselineDetailViewProvider } from "./detailView";
+import { readStorageJson, writeStorageJson } from "../utils/storage";
 
 const HISTORY_STORAGE_KEY = "baselineGate.history";
+const HISTORY_STORAGE_FILE = "scan-history.json";
+const LATEST_SCAN_FILE = "latest-scan.json";
+const LATEST_SCAN_VERSION = 1;
 const HISTORY_LIMIT = 50;
 
 type BudgetConfig = {
   blockedLimit?: number;
   warningLimit?: number;
   safeGoal?: number;
+};
+
+type PersistedPosition = {
+  line: number;
+  character: number;
+};
+
+type PersistedRange = {
+  start: PersistedPosition;
+  end: PersistedPosition;
+};
+
+type PersistedFinding = {
+  uri: string;
+  featureId: string;
+  verdict: Verdict;
+  token: string;
+  lineText: string;
+  range: PersistedRange;
+};
+
+type PersistedScanPayload = {
+  version: number;
+  target: Target;
+  scannedAt: string;
+  findings: PersistedFinding[];
 };
 
 export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider {
@@ -72,7 +103,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     private readonly assets: BaselineAnalysisAssets,
     private readonly geminiProvider?: import('../gemini/geminiViewProvider').GeminiViewProvider
   ) {
-    this.history = this.loadHistoryFromStorage();
+    this.history = this.loadHistoryFromMemento();
+    void this.restoreHistoryFromDisk();
+    void this.restoreLatestScanFromDisk();
   }
 
   refreshBudgetConfig(): void {
@@ -150,6 +183,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       );
 
       await this.recordScanHistory();
+      await this.persistLatestScan();
     } catch (error) {
       const err = error instanceof Error ? error.message : String(error);
       void vscode.window.showErrorMessage(`Baseline scan failed: ${err}`);
@@ -190,19 +224,24 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     this.postState();
   }
 
-  private loadHistoryFromStorage(): ScanHistoryEntry[] {
-    const stored = this.context.workspaceState.get<ScanHistoryEntry[]>(HISTORY_STORAGE_KEY, []);
-    if (!Array.isArray(stored)) {
+  private loadHistoryFromMemento(): ScanHistoryEntry[] {
+    const stored = this.context.workspaceState.get<unknown>(HISTORY_STORAGE_KEY, []);
+    return this.sanitizeHistoryEntries(stored);
+  }
+
+  private sanitizeHistoryEntries(raw: unknown): ScanHistoryEntry[] {
+    if (!Array.isArray(raw)) {
       return [];
     }
-    return stored
+    return raw
       .filter((entry): entry is ScanHistoryEntry => {
         if (!entry || typeof entry !== "object") {
           return false;
         }
-        const hasTimestamp = typeof entry.timestamp === "string" && entry.timestamp.length > 0;
-        const hasTarget = entry.target === "modern" || entry.target === "enterprise";
-        const summary = entry.summary;
+        const candidate = entry as Partial<ScanHistoryEntry>;
+        const hasTimestamp = typeof candidate.timestamp === "string" && candidate.timestamp.length > 0;
+        const hasTarget = candidate.target === "modern" || candidate.target === "enterprise";
+        const summary = candidate.summary;
         const hasSummary = Boolean(
           summary &&
             typeof summary.blocked === "number" &&
@@ -225,6 +264,168 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       .slice(-HISTORY_LIMIT);
   }
 
+  private async restoreHistoryFromDisk(): Promise<void> {
+    const stored = await readStorageJson<unknown>(HISTORY_STORAGE_FILE);
+    const history = this.sanitizeHistoryEntries(stored);
+    if (!history.length) {
+      return;
+    }
+    this.history = history;
+    await this.context.workspaceState.update(HISTORY_STORAGE_KEY, history);
+    this.postState();
+  }
+
+  private async restoreLatestScanFromDisk(): Promise<void> {
+    const stored = await readStorageJson<unknown>(LATEST_SCAN_FILE);
+    const scan = this.parsePersistedScan(stored);
+    if (!scan || scan.target !== this.target) {
+      return;
+    }
+
+    const findings = this.deserializePersistedFindings(scan.findings);
+    if (!findings.length && scan.findings.length > 0) {
+      return;
+    }
+
+    this.findings = findings;
+    const parsedTimestamp = new Date(scan.scannedAt);
+    this.lastScanAt = Number.isNaN(parsedTimestamp.getTime()) ? undefined : parsedTimestamp;
+    this.postState();
+  }
+
+  private parsePersistedScan(raw: unknown): PersistedScanPayload | null {
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+
+    const candidate = raw as Partial<PersistedScanPayload>;
+    const versionValid = candidate.version === LATEST_SCAN_VERSION;
+    const targetValid = candidate.target === "modern" || candidate.target === "enterprise";
+    const timestampValid = typeof candidate.scannedAt === "string" && candidate.scannedAt.length > 0;
+    const findingsValid = Array.isArray(candidate.findings);
+
+    if (!versionValid || !targetValid || !timestampValid || !findingsValid) {
+      return null;
+    }
+
+    const target = candidate.target as Target;
+    const scannedAt = candidate.scannedAt as string;
+    const findings = candidate.findings as PersistedFinding[];
+
+    return {
+      version: LATEST_SCAN_VERSION,
+      target,
+      scannedAt,
+      findings
+    };
+  }
+
+  private deserializePersistedFindings(entries: PersistedFinding[]): BaselineFinding[] {
+    const findings: BaselineFinding[] = [];
+
+    for (const entry of entries) {
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      const { uri, featureId, verdict, token, lineText, range } = entry;
+      const hasBasicFields =
+        typeof uri === "string" &&
+        typeof featureId === "string" &&
+        (verdict === "blocked" || verdict === "warning" || verdict === "safe") &&
+        typeof token === "string" &&
+        range &&
+        typeof range === "object" &&
+        typeof range.start?.line === "number" &&
+        typeof range.start?.character === "number" &&
+        typeof range.end?.line === "number" &&
+        typeof range.end?.character === "number";
+
+      if (!hasBasicFields) {
+        continue;
+      }
+
+      const feature = getFeatureById(featureId);
+      if (!feature) {
+        continue;
+      }
+
+      let parsedUri: vscode.Uri;
+      try {
+        parsedUri = vscode.Uri.parse(uri);
+      } catch {
+        continue;
+      }
+
+      const startPosition = new vscode.Position(range.start.line, range.start.character);
+      const endPosition = new vscode.Position(range.end.line, range.end.character);
+      const vscodeRange = new vscode.Range(startPosition, endPosition);
+
+      const finding: BaselineFinding = {
+        id: "",
+        uri: parsedUri,
+        range: vscodeRange,
+        feature,
+        verdict,
+        token,
+        lineText: typeof lineText === "string" ? lineText : ""
+      };
+      finding.id = computeFindingId(finding);
+      findings.push(finding);
+    }
+
+    findings.sort((a, b) => {
+      const aPath = a.uri.fsPath;
+      const bPath = b.uri.fsPath;
+      if (aPath !== bPath) {
+        return aPath.localeCompare(bPath);
+      }
+      if (a.range.start.line !== b.range.start.line) {
+        return a.range.start.line - b.range.start.line;
+      }
+      if (a.range.start.character !== b.range.start.character) {
+        return a.range.start.character - b.range.start.character;
+      }
+      return a.feature.name.localeCompare(b.feature.name);
+    });
+
+    return findings;
+  }
+
+  private serializeFinding(finding: BaselineFinding): PersistedFinding {
+    return {
+      uri: finding.uri.toString(),
+      featureId: finding.feature.id,
+      verdict: finding.verdict,
+      token: finding.token,
+      lineText: finding.lineText,
+      range: {
+        start: {
+          line: finding.range.start.line,
+          character: finding.range.start.character
+        },
+        end: {
+          line: finding.range.end.line,
+          character: finding.range.end.character
+        }
+      }
+    };
+  }
+
+  private async persistLatestScan(): Promise<void> {
+    if (!this.lastScanAt) {
+      return;
+    }
+
+    const payload: PersistedScanPayload = {
+      version: LATEST_SCAN_VERSION,
+      target: this.target,
+      scannedAt: this.lastScanAt.toISOString(),
+      findings: this.findings.map((finding) => this.serializeFinding(finding))
+    };
+
+    await writeStorageJson(LATEST_SCAN_FILE, payload);
+  }
+
   private async recordScanHistory(): Promise<void> {
     if (!this.lastScanAt) {
       return;
@@ -240,6 +441,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     const nextHistory = [...this.history, entry].slice(-HISTORY_LIMIT);
     this.history = nextHistory;
     await this.context.workspaceState.update(HISTORY_STORAGE_KEY, nextHistory);
+    await writeStorageJson(HISTORY_STORAGE_FILE, nextHistory);
   }
 
   private readBudgetConfig(): BudgetConfig {

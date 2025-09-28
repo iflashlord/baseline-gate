@@ -2,13 +2,16 @@ import * as vscode from 'vscode';
 import { geminiService, type GeminiSuggestion } from './geminiService';
 import type { GeminiSuggestionState } from './types';
 import {
+  GEMINI_SUGGESTIONS_FILE,
   addSuggestionToState,
   applySearchFilter,
   clearSuggestionsState,
   initializeSuggestionState,
+  parseStoredSuggestions,
   persistSuggestions,
   removeSuggestionFromState,
 } from './state';
+import { readStorageJson } from '../utils/storage';
 
 export class GeminiViewProvider {
   public static readonly viewType = 'baselineGate.geminiView';
@@ -17,6 +20,7 @@ export class GeminiViewProvider {
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this.state = initializeSuggestionState(context);
+    void this.restoreSuggestionsFromDisk();
   }
 
 
@@ -134,6 +138,22 @@ export class GeminiViewProvider {
 
     // Refresh the full view if it's open
     this.refreshFullView();
+  }
+
+  private async restoreSuggestionsFromDisk(): Promise<void> {
+    const stored = await readStorageJson<unknown>(GEMINI_SUGGESTIONS_FILE);
+    const suggestions = parseStoredSuggestions(stored);
+    if (!suggestions.length) {
+      return;
+    }
+
+    const nextState: GeminiSuggestionState = {
+      ...this.state,
+      suggestions,
+    };
+    this.state = applySearchFilter(nextState, this.state.originalSearchQuery);
+    await persistSuggestions(this.context, this.state.suggestions);
+    this.refresh();
   }
 
   private refreshFullView(): void {

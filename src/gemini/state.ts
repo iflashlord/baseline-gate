@@ -2,8 +2,10 @@ import * as vscode from 'vscode';
 import type { GeminiSuggestion } from './geminiService';
 import type { GeminiSuggestionState } from './types';
 import { normalizeToDate } from './utils';
+import { writeStorageJson } from '../utils/storage';
 
 export const GEMINI_SUGGESTIONS_KEY = 'geminiSuggestions';
+export const GEMINI_SUGGESTIONS_FILE = 'gemini-suggestions.json';
 
 export function initializeSuggestionState(context: vscode.ExtensionContext): GeminiSuggestionState {
   const stored = context.workspaceState.get<GeminiSuggestion[]>(GEMINI_SUGGESTIONS_KEY, []);
@@ -19,6 +21,27 @@ export function initializeSuggestionState(context: vscode.ExtensionContext): Gem
 
 export async function persistSuggestions(context: vscode.ExtensionContext, suggestions: GeminiSuggestion[]): Promise<void> {
   await context.workspaceState.update(GEMINI_SUGGESTIONS_KEY, suggestions);
+  await writeStorageJson(GEMINI_SUGGESTIONS_FILE, suggestions);
+}
+
+export function parseStoredSuggestions(raw: unknown): GeminiSuggestion[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  const valid = raw.filter((entry): entry is GeminiSuggestion => {
+    if (!entry || typeof entry !== 'object') {
+      return false;
+    }
+    const candidate = entry as Partial<GeminiSuggestion>;
+    const hasId = typeof candidate.id === 'string' && candidate.id.length > 0;
+    const hasIssue = typeof candidate.issue === 'string' && candidate.issue.length > 0;
+    const hasSuggestion = typeof candidate.suggestion === 'string' && candidate.suggestion.length > 0;
+    const hasTimestamp = candidate.timestamp !== undefined && candidate.timestamp !== null;
+    return hasId && hasIssue && hasSuggestion && hasTimestamp;
+  }) as GeminiSuggestion[];
+
+  return normalizeSuggestionTimestamps(valid);
 }
 
 export function applySearchFilter(state: GeminiSuggestionState, query: string): GeminiSuggestionState {
