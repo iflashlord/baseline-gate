@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 import { geminiService, type GeminiSuggestion } from './geminiService';
-import { buildGeminiWebviewHtml } from './html';
-import { handleGeminiMessage } from './messages';
-import type { GeminiSuggestionState, GeminiWebviewMessage } from './types';
+import type { GeminiSuggestionState } from './types';
 import {
   addSuggestionToState,
   applySearchFilter,
@@ -12,82 +10,16 @@ import {
   removeSuggestionFromState,
 } from './state';
 
-export class GeminiViewProvider implements vscode.WebviewViewProvider {
+export class GeminiViewProvider {
   public static readonly viewType = 'baselineGate.geminiView';
 
-  private view?: vscode.WebviewView;
   private state: GeminiSuggestionState;
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this.state = initializeSuggestionState(context);
   }
 
-  public resolveWebviewView(
-    webviewView: vscode.WebviewView,
-    _context: vscode.WebviewViewResolveContext,
-    _token: vscode.CancellationToken,
-  ): void {
-    this.view = webviewView;
 
-    webviewView.webview.options = {
-      enableScripts: true,
-      localResourceRoots: [this.context.extensionUri],
-    };
-
-    webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
-
-    webviewView.webview.onDidReceiveMessage((data: GeminiWebviewMessage) => {
-      console.log('Gemini webview received message:', data);
-      handleGeminiMessage(data, {
-        removeSuggestion: async (id) => {
-          console.log('Removing suggestion:', id);
-          await this.removeSuggestion(id);
-        },
-        clearAllSuggestions: async () => {
-          console.log('Clearing all suggestions');
-          await this.clearAllSuggestions();
-        },
-        goToFinding: async (findingId) => {
-          await vscode.commands.executeCommand('baseline-gate.goToFinding', findingId);
-        },
-        openFileAtLocation: async (filePath, line, character) => {
-          await this.openFileAtLocation(filePath, line, character);
-        },
-        searchSuggestions: (query) => {
-          console.log('Searching suggestions with query:', query);
-          this.filterSuggestions(query);
-        },
-        copySuggestion: async (id) => {
-          console.log('Copying suggestion to clipboard:', id);
-          await this.copySuggestionToClipboard(id);
-        },
-        copyCodeSnippet: async (code) => {
-          console.log('Copying Gemini code snippet');
-          await this.copyCodeSnippet(code);
-        },
-        rateSuggestion: async (id, rating) => {
-          console.log('Rating suggestion:', id, rating);
-          await this.rateSuggestion(id, rating);
-        },
-        retrySuggestion: async (id) => {
-          console.log('Retrying suggestion:', id);
-          await this.retrySuggestion(id);
-        },
-        sendFollowUp: async (message, parentId) => {
-          console.log('Sending follow-up:', message, parentId);
-          await this.sendFollowUp(message, parentId);
-        },
-        exportConversation: async (format) => {
-          console.log('Exporting conversation:', format);
-          await this.exportConversation(format);
-        },
-        toggleConversationView: (conversationId) => {
-          console.log('Toggling conversation view:', conversationId);
-          // Implementation for conversation threading view
-        },
-      });
-    });
-  }
 
   public async addSuggestion(issue: string, feature?: string, file?: string, findingId?: string): Promise<void> {
     if (!geminiService.isConfigured()) {
@@ -191,12 +123,8 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
   }
 
   public refresh(): void {
-    if (!this.view) {
-      return;
-    }
-
     console.log(
-      'Refreshing Gemini webview. Suggestions:',
+      'Refreshing Gemini state. Suggestions:',
       this.state.suggestions.length,
       'Filtered:',
       this.state.filteredSuggestions.length,
@@ -204,14 +132,7 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
       this.state.searchQuery,
     );
 
-    this.view.webview.html = this.getHtmlForWebview(this.view.webview);
-    
-    // Auto-scroll to the latest suggestion after refresh (with small delay to ensure DOM is ready)
-    setTimeout(() => {
-      this.view?.webview.postMessage({ type: 'scrollToLatest' });
-    }, 100);
-
-    // Also refresh the full view if it's open
+    // Refresh the full view if it's open
     this.refreshFullView();
   }
 
@@ -318,7 +239,17 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
 
   private async openFileAtLocation(filePath: string, line?: number, character?: number): Promise<void> {
     try {
-      const uri = vscode.Uri.file(filePath);
+      let resolvedPath = filePath;
+      
+      // If the path is relative, resolve it relative to the workspace
+      if (!filePath.startsWith('/') && !filePath.match(/^[a-zA-Z]:/)) {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (workspaceFolder) {
+          resolvedPath = vscode.Uri.joinPath(workspaceFolder.uri, filePath).fsPath;
+        }
+      }
+      
+      const uri = vscode.Uri.file(resolvedPath);
       const document = await vscode.workspace.openTextDocument(uri);
       const editor = await vscode.window.showTextDocument(document, { preview: false });
 
@@ -357,15 +288,7 @@ export class GeminiViewProvider implements vscode.WebviewViewProvider {
 
   private filterSuggestions(query: string): void {
     this.state = applySearchFilter(this.state, query);
-    this.refresh();
-  }
-
-  private getHtmlForWebview(webview: vscode.Webview): string {
-    return buildGeminiWebviewHtml({
-      webview,
-      state: this.state,
-      isGeminiConfigured: geminiService.isConfigured(),
-    });
+    // Note: No webview refresh needed since we use full-page view
   }
 
   private async copyCodeSnippet(code: string): Promise<void> {

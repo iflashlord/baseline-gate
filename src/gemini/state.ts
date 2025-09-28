@@ -27,12 +27,32 @@ export function applySearchFilter(state: GeminiSuggestionState, query: string): 
 
   const filteredSuggestions = normalizedQuery
     ? state.suggestions.filter((suggestion) => {
+        // Create comprehensive searchable content
         const haystacks = [
-          suggestion.feature ?? '',
-          suggestion.file ?? '',
+          // Basic content
           suggestion.issue,
           suggestion.suggestion,
-        ].map((value) => value.toLowerCase());
+          suggestion.feature ?? '',
+          suggestion.file ?? '',
+          suggestion.findingId ?? '',
+          suggestion.conversationId ?? '',
+          suggestion.parentId ?? '',
+          
+          // Status and metadata  
+          suggestion.status,
+          suggestion.rating?.toString() ?? '',
+          
+          // Tags array
+          ...(suggestion.tags ?? []),
+          
+          // Extract filename from full path for better matching
+          suggestion.file ? suggestion.file.split('/').pop() ?? '' : '',
+          
+          // Extract feature name parts (handle camelCase, kebab-case, etc.)
+          suggestion.feature ? suggestion.feature.replace(/([A-Z])/g, ' $1').replace(/[-_]/g, ' ') : '',
+          
+        ].map((value) => value.toLowerCase()).filter(Boolean);
+        
         return terms.every((term) => haystacks.some((value) => value.includes(term)));
       })
     : state.suggestions.slice();

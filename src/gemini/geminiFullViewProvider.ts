@@ -74,7 +74,14 @@ export class GeminiFullViewProvider {
           provider.updateContent(panel);
           break;
         case 'goToFinding':
-          await vscode.commands.executeCommand('baseline-gate.goToFinding', data.findingId);
+          console.log('Executing goToFinding command with findingId:', data.findingId);
+          try {
+            await vscode.commands.executeCommand('baseline-gate.goToFinding', data.findingId);
+            console.log('goToFinding command executed successfully');
+          } catch (error) {
+            console.error('Error executing goToFinding command:', error);
+            vscode.window.showErrorMessage(`Failed to go to finding: ${error instanceof Error ? error.message : String(error)}`);
+          }
           break;
         case 'openFileAtLocation':
           await geminiViewProvider.openFileAtLocationPublic(data.filePath, data.line, data.character);

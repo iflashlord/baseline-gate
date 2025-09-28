@@ -17,7 +17,11 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
   const filteredCount = state.filteredSuggestions.length;
   const hasSuggestions = filteredCount > 0;
   const suggestionsMarkup = state.filteredSuggestions
-    .map((suggestion) => renderSuggestionCard(suggestion, searchTerm))
+    .map((suggestion, index) => {
+      const card = renderSuggestionCard(suggestion, searchTerm);
+      const separator = index < state.filteredSuggestions.length - 1 ? '<div class="section-separator"></div>' : '';
+      return card + separator;
+    })
     .join('');
   const emptyStateMarkup = hasSuggestions
     ? ''
@@ -179,6 +183,21 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
             opacity: 0.7;
         }
 
+        .search-results-info {
+            margin-top: 8px;
+            color: var(--vscode-descriptionForeground);
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .search-results-info small {
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+
         .primary-button, .secondary-button {
             padding: 8px 16px;
             border: 1px solid var(--vscode-button-border);
@@ -257,8 +276,28 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
         .suggestions-grid {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 32px;
             max-width: none;
+        }
+
+        /* Section separators */
+        .section-separator {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--vscode-widget-border), transparent);
+            margin: 24px 0;
+            position: relative;
+        }
+
+        .section-separator::after {
+            content: '✨';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--vscode-editor-background);
+            padding: 0 12px;
+            font-size: 12px;
+            opacity: 0.6;
         }
 
         .empty-state-large {
@@ -293,15 +332,29 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
         .suggestion-card {
             background: var(--vscode-editor-background);
             border: 1px solid var(--vscode-widget-border);
-            border-radius: 8px;
-            padding: 20px;
-            transition: all 0.2s ease;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
             position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
         .suggestion-card:hover {
             border-color: var(--vscode-focusBorder);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .suggestion-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--vscode-textLink-foreground), var(--vscode-progressBar-background));
+            border-radius: 12px 12px 0 0;
         }
 
         .suggestion-header {
@@ -334,8 +387,67 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
         }
 
         .suggestion-content {
+            margin: 20px 0;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        /* Enhanced code blocks styling */
+        .suggestion-content pre {
+            background: var(--vscode-textCodeBlock-background);
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 8px;
+            padding: 16px;
             margin: 16px 0;
-            line-height: 1.6;
+            overflow-x: auto;
+            position: relative;
+            font-family: var(--vscode-editor-font-family);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .suggestion-content code {
+            background: var(--vscode-textCodeBlock-background);
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: var(--vscode-editor-font-family);
+            font-size: 12px;
+        }
+
+        .suggestion-content pre code {
+            background: transparent;
+            border: none;
+            padding: 0;
+            border-radius: 0;
+        }
+
+        /* Code block with copy button */
+        .code-block-container {
+            position: relative;
+            margin: 16px 0;
+        }
+
+        .code-copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--vscode-button-secondaryBackground);
+            border: 1px solid var(--vscode-button-border);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+        }
+
+        .code-block-container:hover .code-copy-btn {
+            opacity: 1;
+        }
+
+        .code-copy-btn:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
         }
 
         .suggestion-actions {
@@ -506,11 +618,17 @@ export function buildGeminiFullPageHtml({ webview, state, isGeminiConfigured }: 
                     <input 
                         type="text" 
                         class="search-input" 
-                        placeholder="Search suggestions by feature, file, or content..." 
+                        placeholder="Search by feature, file, issue, tag, status, finding ID..." 
+                        title="Enhanced search: searches across all suggestion properties including tags, metadata, and file paths"
                         value="${escapeHtml(searchDisplayValue)}"
                         data-action="search"
                     >
                 </div>
+                ${searchDisplayValue ? `
+                <div class="search-results-info">
+                    <small>Showing ${state.filteredSuggestions.length} of ${state.suggestions.length} suggestions</small>
+                </div>
+                ` : ''}
             </div>
             ` : ''}
             

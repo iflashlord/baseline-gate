@@ -127,12 +127,6 @@
           "type": "webview",
           "name": "Baseline Analysis",
           "contextualTitle": "Baseline Analysis"
-        },
-        {
-          "id": "baselineGate.geminiView",
-          "type": "webview",
-          "name": "Gemini Suggestions",
-          "contextualTitle": "Gemini AI Suggestions"
         }
       ]
     },

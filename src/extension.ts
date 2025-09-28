@@ -41,11 +41,8 @@ export function activate(context: vscode.ExtensionContext) {
     }
   };
 
-  // Register Gemini view provider first
+  // Create Gemini provider for hover integration and other functionality
   const geminiProvider = new GeminiViewProvider(context);
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(GeminiViewProvider.viewType, geminiProvider)
-  );
 
   // Register hover providers with gemini integration
   registerJsHover(context, target, geminiProvider);
