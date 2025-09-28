@@ -2742,29 +2742,49 @@ export function buildIssueDetailHtml(options: {
   const snippet = `<pre class="detail-code">${escapeHtml(finding.lineText)}</pre>`;
 
   const verdictBadge = `<span class="detail-badge ${finding.verdict}">${escapeHtml(verdictLabel)}</span>`;
-  const severityIcon = `<img class="detail-icon" src="${severityIconUris[finding.verdict]}" alt="${escapeHtml(
-    finding.verdict
-  )}" />`;
+  
+  // Use SVG icon instead of image
+  const getSeverityIconSvg = (verdict: Verdict) => {
+    switch (verdict) {
+      case 'blocked':
+        return `<svg class="detail-icon blocked" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="15" y1="9" x2="9" y2="15"></line>
+          <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>`;
+      case 'warning':
+        return `<svg class="detail-icon warning" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>`;
+      case 'safe':
+        return `<svg class="detail-icon safe" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22,4 12,14.01 9,11.01"></polyline>
+        </svg>`;
+      default:
+        return '';
+    }
+  };
+
+  const severityIcon = getSeverityIconSvg(finding.verdict);
 
   const location = `${escapeHtml(relativePath)} · line ${finding.range.start.line + 1}, column ${
     finding.range.start.character + 1
   }`;
 
-  const geminiIssueContent = buildGeminiIssueContent(finding, target);
-  const hasExistingSuggestion = gemini?.hasExistingSuggestion ?? false;
-  
-  // Only show the Gemini button if there are no existing suggestions (chat interface will handle continuation)
-  const geminiButton = !hasExistingSuggestion 
-    ? `<button class="detail-gemini-button" data-gemini-issue="${escapeAttribute(geminiIssueContent)}" data-feature-name="${escapeAttribute(feature.name)}" data-file-path="${escapeAttribute(relativePath)}" data-finding-id="${escapeAttribute(finding.id)}" data-target="${escapeAttribute(target)}" data-has-existing="${hasExistingSuggestion}">
-        <span class="gemini-icon">✨</span> Fix with Gemini
-      </button>`
-    : "";
-
-  // Build resource links
+  // Build resource links (working implementation)
   const resourceLinks = buildResourceLinks(feature);
   const resourceSection = resourceLinks.length > 0
     ? `<div class="detail-section">
-        <h4>Resources</h4>
+        <h4>
+          <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+          Resources
+        </h4>
         <ul class="resource-links">
           ${resourceLinks.map(link => {
             // Convert markdown links to HTML for webview
@@ -2776,9 +2796,27 @@ export function buildIssueDetailHtml(options: {
 
               // Use data-command for VS Code commands, otherwise normal link
               if (url.startsWith('command:')) {
-                return `<li><a href="#" data-command="${escapeAttribute(url)}" class="resource-link">${escapeHtml(cleanText)}</a></li>`;
+                return `<li>
+                  <a href="#" data-command="${escapeAttribute(url)}" class="resource-link command-link">
+                    <svg class="link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                      <polyline points="15,3 21,3 21,9"></polyline>
+                      <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                    ${escapeHtml(cleanText)}
+                  </a>
+                </li>`;
               } else {
-                return `<li><a href="${escapeAttribute(url)}" target="_blank" class="resource-link">${escapeHtml(cleanText)}</a></li>`;
+                return `<li>
+                  <a href="${escapeAttribute(url)}" target="_blank" class="resource-link external-link">
+                    <svg class="link-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                      <polyline points="15,3 21,3 21,9"></polyline>
+                      <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                    ${escapeHtml(cleanText)}
+                  </a>
+                </li>`;
               }
             }
             return `<li>${escapeHtml(link)}</li>`;
@@ -2787,13 +2825,17 @@ export function buildIssueDetailHtml(options: {
       </div>`
     : "";
 
-  const docButton = feature.docsUrl
-    ? `<button class="detail-doc-link" data-doc-url="${escapeAttribute(feature.docsUrl)}">Open documentation</button>`
-    : "";
+  // Add Open Baseline details button (removed Open Documentation and Fix with Gemini as requested)
+  const baselineDetailsButton = `
+    <button class="detail-baseline-button" data-feature-name="${escapeAttribute(feature.name)}">
+      <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14,2 14,8 20,8"></polyline>
+      </svg>
+      Open Baseline Details
+    </button>`;
 
-  const actionButtons = docButton || geminiButton
-    ? `<div class="detail-section detail-actions">${docButton}${geminiButton}</div>`
-    : "";
+  const actionButtons = `<div class="detail-section detail-actions">${baselineDetailsButton}</div>`;
 
   return `
       <div class="detail-block">
@@ -2805,7 +2847,14 @@ export function buildIssueDetailHtml(options: {
           </div>
         </header>
         <div class="detail-section">
-          <h4>Summary</h4>
+          <h4>
+            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11H1v-1a4 4 0 1 1 8 0v1z"></path>
+              <circle cx="13" cy="17" r="4"></circle>
+              <path d="m21 21-1.5-1.5"></path>
+            </svg>
+            Summary
+          </h4>
           <ul>
             <li>${escapeHtml(verdictLabel)} for ${escapeHtml(capitalize(target))} targets</li>
             <li>${baselineIcon} ${escapeHtml(baselineSummary)}</li>

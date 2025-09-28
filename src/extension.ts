@@ -222,8 +222,8 @@ Context: This is a follow-up question about fixing a baseline compatibility issu
       return;
     }
     
-    // Focus on the Gemini view and filter by the finding ID
-    await vscode.commands.executeCommand('baselineGate.geminiView.focus');
+    // Focus on the analysis view and filter by the finding ID
+    await vscode.commands.executeCommand('baselineGate.analysisView.focus');
     geminiProvider.focusOnFinding(args.findingId);
   });
   context.subscriptions.push(showGeminiSuggestions);

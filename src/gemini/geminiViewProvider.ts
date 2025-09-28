@@ -86,8 +86,8 @@ export class GeminiViewProvider {
           // Notify detail view to refresh if it's showing this finding
           await vscode.commands.executeCommand('baseline-gate.refreshDetailView', findingId);
           
-          // Focus the Gemini view to show the new suggestion
-          await vscode.commands.executeCommand('baselineGate.geminiView.focus');
+          // Focus the analysis view to show the new suggestion
+          await vscode.commands.executeCommand('baselineGate.analysisView.focus');
           
           // Don't show success notification for follow-up questions to reduce spam
           if (!issue.includes('Follow-up question about')) {
