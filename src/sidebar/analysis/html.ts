@@ -3558,16 +3558,24 @@ export function buildIssueDetailHtml(options: {
     : "";
 
   // Add Open Baseline details button (removed Open Documentation and Fix with Gemini as requested)
-  const baselineDetailsButton = `
-    <button class="detail-baseline-button" data-feature-name="${escapeAttribute(feature.name)}">
+  const openDocsCommand = feature.id
+    ? `command:baseline-gate.openDocs?${encodeURIComponent(JSON.stringify({ id: feature.id }))}`
+    : '';
+
+  const baselineDetailsButton = openDocsCommand
+    ? `
+    <button class="detail-baseline-button" type="button" data-command="${escapeAttribute(openDocsCommand)}">
       <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
         <polyline points="14,2 14,8 20,8"></polyline>
       </svg>
       Open Baseline Details
-    </button>`;
+    </button>`
+    : '';
 
-  const actionButtons = `<div class="detail-section detail-actions">${baselineDetailsButton}</div>`;
+  const actionButtons = baselineDetailsButton
+    ? `<div class="detail-section detail-actions">${baselineDetailsButton}</div>`
+    : '';
 
   return `
       <div class="detail-block">

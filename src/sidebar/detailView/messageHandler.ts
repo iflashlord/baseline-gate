@@ -38,6 +38,10 @@ export class DetailViewMessageHandler {
           panel
         );
         break;
+
+      case 'executeCommand':
+        await this.handleExecuteCommand(message.command);
+        break;
       
       case 'copyCodeSnippet':
         await this.handleCopyCodeSnippet(message.code);
@@ -147,6 +151,44 @@ export class DetailViewMessageHandler {
     if (currentFinding) {
       // Trigger a refresh by executing the refresh command
       await vscode.commands.executeCommand('baseline-gate.refreshDetailView');
+    }
+  }
+
+  /**
+   * Execute VS Code command links originating from the webview
+   */
+  private static async handleExecuteCommand(rawCommand?: string): Promise<void> {
+    if (!rawCommand) {
+      return;
+    }
+
+    try {
+      const commandUri = rawCommand.startsWith('command:')
+        ? rawCommand.slice('command:'.length)
+        : rawCommand;
+
+      const [commandId, query] = commandUri.split('?');
+      if (!commandId) {
+        return;
+      }
+
+      let args: unknown[] = [];
+      if (query) {
+        const decoded = decodeURIComponent(query);
+        if (decoded) {
+          try {
+            const parsed = JSON.parse(decoded);
+            args = Array.isArray(parsed) ? parsed : [parsed];
+          } catch {
+            args = [decoded];
+          }
+        }
+      }
+
+      await vscode.commands.executeCommand(commandId, ...args);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`Failed to execute command: ${message}`);
     }
   }
 

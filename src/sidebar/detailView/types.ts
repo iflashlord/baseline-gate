@@ -37,6 +37,7 @@ export type DetailViewMessage =
   | { type: 'askGemini'; issue: string; feature: string; findingId: string }
   | { type: 'askGeminiFollowUp'; question: string; findingId: string; feature: string; filePath: string; target: string }
   | { type: 'copyCodeSnippet'; code: string }
+  | { type: 'executeCommand'; command: string }
   | { type: 'refresh' };
 
 /**

@@ -2,6 +2,8 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { DetailViewUtils } from '../../sidebar/detailView/utils';
 import { DetailViewDataTransformer } from '../../sidebar/detailView/dataTransformer';
+import { DetailViewHtmlGenerator } from '../../sidebar/detailView/htmlGenerator';
+import { DetailViewMessageHandler } from '../../sidebar/detailView/messageHandler';
 import type { BaselineFinding } from '../../sidebar/workspaceScanner';
 import type { BaselineFeature } from '../../core/baselineData';
 import type { BaselineAnalysisAssets } from '../../sidebar/analysis/types';
@@ -68,6 +70,29 @@ function createMockGeminiSuggestion(): GeminiSuggestion {
     tokensUsed: 100,
     responseTime: 1000
   };
+}
+
+function createExtensionContext(): vscode.ExtensionContext {
+  return {
+    subscriptions: [],
+    extensionUri: vscode.Uri.file('/test')
+  } as unknown as vscode.ExtensionContext;
+}
+
+function createMockPanel(): vscode.WebviewPanel {
+  return {
+    viewType: 'baselineDetail',
+    title: 'Detail',
+    webview: createMockWebview(),
+    options: {},
+    active: true,
+    visible: true,
+    viewColumn: vscode.ViewColumn.One,
+    dispose: () => {},
+    reveal: () => {},
+    onDidDispose: () => new vscode.Disposable(() => {}),
+    onDidChangeViewState: () => new vscode.Disposable(() => {})
+  } as unknown as vscode.WebviewPanel;
 }
 
 suite('Detail View SVG Icon Rendering Tests', () => {
@@ -233,5 +258,104 @@ suite('Detail View SVG Icon Rendering Tests', () => {
       assert.strictEqual(sorted[1].verdict, 'warning');
       assert.strictEqual(sorted[2].verdict, 'safe');
     });
+  });
+});
+
+suite('DetailViewHtmlGenerator metadata', () => {
+  test('includes finding metadata attributes on container', () => {
+    const originalAsRelativePath = vscode.workspace.asRelativePath;
+    (vscode.workspace as any).asRelativePath = () => 'test/app.ts';
+
+    try {
+      const finding = createMockFinding();
+      const context = {
+        webview: createMockWebview(),
+        finding,
+        target: 'modern' as const,
+        assets: createMockAssets(),
+        geminiContext: undefined
+      };
+      const html = DetailViewHtmlGenerator.generateWebviewContent(context, '<div>detail</div>');
+      const expectedId = DetailViewDataTransformer.generateFindingId(finding);
+
+      assert.ok(html.includes(`data-finding-id="${expectedId}"`));
+      assert.ok(html.includes('data-target="modern"'));
+      assert.ok(html.includes('data-file-path="test/app.ts"'));
+      assert.ok(html.includes('data-file-uri="file:///test/app.ts"'));
+      assert.ok(html.includes('data-feature-name="Test Feature"'));
+    } finally {
+      (vscode.workspace as any).asRelativePath = originalAsRelativePath;
+    }
+  });
+});
+
+suite('DetailViewMessageHandler command execution', () => {
+  test('executes VS Code commands from command URIs', async () => {
+    const executed: Array<{ command: string; args: unknown[] }> = [];
+    const originalExecuteCommand = vscode.commands.executeCommand;
+    (vscode.commands as any).executeCommand = async (command: string, ...args: unknown[]) => {
+      executed.push({ command, args });
+      return undefined;
+    };
+
+    try {
+      await DetailViewMessageHandler.handleMessage(
+        { type: 'executeCommand', command: 'command:test.command?%7B%22foo%22%3A%22bar%22%7D' },
+        createMockPanel(),
+        createExtensionContext()
+      );
+
+      assert.strictEqual(executed.length, 1);
+      assert.strictEqual(executed[0].command, 'test.command');
+      assert.deepStrictEqual(executed[0].args, [{ foo: 'bar' }]);
+    } finally {
+      vscode.commands.executeCommand = originalExecuteCommand;
+    }
+  });
+
+  test('executes command without payload gracefully', async () => {
+    const executed: Array<{ command: string; args: unknown[] }> = [];
+    const originalExecuteCommand = vscode.commands.executeCommand;
+    (vscode.commands as any).executeCommand = async (command: string, ...args: unknown[]) => {
+      executed.push({ command, args });
+      return undefined;
+    };
+
+    try {
+      await DetailViewMessageHandler.handleMessage(
+        { type: 'executeCommand', command: 'command:test.noArgs' },
+        createMockPanel(),
+        createExtensionContext()
+      );
+
+      assert.strictEqual(executed.length, 1);
+      assert.strictEqual(executed[0].command, 'test.noArgs');
+      assert.deepStrictEqual(executed[0].args, []);
+    } finally {
+      vscode.commands.executeCommand = originalExecuteCommand;
+    }
+  });
+
+  test('falls back to string argument when payload is not JSON', async () => {
+    const executed: Array<{ command: string; args: unknown[] }> = [];
+    const originalExecuteCommand = vscode.commands.executeCommand;
+    (vscode.commands as any).executeCommand = async (command: string, ...args: unknown[]) => {
+      executed.push({ command, args });
+      return undefined;
+    };
+
+    try {
+      await DetailViewMessageHandler.handleMessage(
+        { type: 'executeCommand', command: 'command:test.command?plain%20text' },
+        createMockPanel(),
+        createExtensionContext()
+      );
+
+      assert.strictEqual(executed.length, 1);
+      assert.strictEqual(executed[0].command, 'test.command');
+      assert.deepStrictEqual(executed[0].args, ['plain text']);
+    } finally {
+      vscode.commands.executeCommand = originalExecuteCommand;
+    }
   });
 });

@@ -1,13 +1,13 @@
 import * as vscode from "vscode";
 import type { 
   WebviewRenderContext, 
-  HtmlGenerationOptions,
-  SeverityIconUris 
+  HtmlGenerationOptions
 } from "./types";
 import type { BaselineFinding } from "../workspaceScanner";
 import type { Target } from "../../core/targets";
 import type { GeminiSupportContext } from "../analysis/html";
 import { DetailViewUtils } from "./utils";
+import { DetailViewDataTransformer } from "./dataTransformer";
 
 /**
  * Generates HTML content for detail view webviews
@@ -42,7 +42,7 @@ export class DetailViewHtmlGenerator {
     context: WebviewRenderContext
   ): string {
     const { nonce, relativePath, detailHtml, geminiContext } = options;
-    const { finding, webview } = context;
+    const { finding, target, webview } = context;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -51,7 +51,7 @@ export class DetailViewHtmlGenerator {
     ${this.generateStyles()}
 </head>
 <body>
-    ${this.generateBodyContent(detailHtml, finding, relativePath, geminiContext)}
+    ${this.generateBodyContent(detailHtml, finding, relativePath, target, geminiContext)}
     ${this.generateJavaScript(nonce)}
 </body>
 </html>`;
@@ -77,54 +77,66 @@ export class DetailViewHtmlGenerator {
    */
   private static generateStyles(): string {
     return `<style>
+        :root {
+            color-scheme: var(--vscode-color-scheme);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
         body {
+            margin: 0;
             font-family: var(--vscode-font-family);
             font-size: var(--vscode-font-size);
             color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-            margin: 0;
-            padding: 0;
+            background: var(--vscode-editor-background);
             line-height: 1.6;
         }
 
-        /* Global SVG styling */
+        a {
+            color: var(--vscode-textLink-foreground);
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: var(--vscode-textLink-activeForeground);
+        }
+
         svg {
-            color: var(--vscode-foreground);
             stroke: currentColor;
         }
 
         .detail-view-container {
-            max-width: 1200px;
+            max-width: 960px;
             margin: 0 auto;
-            padding: 24px;
+            padding: 28px 32px 48px;
         }
 
-        /* Search functionality */
         .search-container {
             position: sticky;
             top: 0;
+            padding: 18px 0 12px;
+            margin-bottom: 20px;
             background: var(--vscode-editor-background);
-            z-index: 100;
-            padding: 16px 0;
-            border-bottom: 1px solid var(--vscode-widget-border);
-            margin-bottom: 24px;
+            border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+            z-index: 2;
         }
 
         .search-box {
             position: relative;
-            max-width: 400px;
+            max-width: 420px;
         }
 
         .search-input {
             width: 100%;
-            padding: 12px 16px 12px 40px;
-            border: 2px solid var(--vscode-input-border);
-            border-radius: 8px;
+            padding: 10px 36px;
+            border: 1px solid var(--vscode-input-border, transparent);
+            border-radius: 6px;
             background: var(--vscode-input-background);
             color: var(--vscode-input-foreground);
-            font-size: 14px;
-            box-sizing: border-box;
-            transition: border-color 0.2s;
+            font-size: 0.9rem;
+            transition: border-color 0.15s ease;
         }
 
         .search-input:focus {
@@ -145,15 +157,18 @@ export class DetailViewHtmlGenerator {
 
         .search-clear {
             position: absolute;
-            right: 8px;
+            right: 6px;
             top: 50%;
             transform: translateY(-50%);
-            background: none;
             border: none;
-            cursor: pointer;
+            background: transparent;
             padding: 4px;
             border-radius: 4px;
-            opacity: 0.7;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.6;
         }
 
         .search-clear:hover {
@@ -162,123 +177,50 @@ export class DetailViewHtmlGenerator {
         }
 
         .search-clear svg {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
         }
 
         .detail-view-header {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--vscode-widget-border);
-        }
-
-        .detail-view-title {
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            gap: 16px;
+            align-items: flex-end;
+            margin-bottom: 16px;
         }
 
         .detail-view-title h1 {
             margin: 0;
-            font-size: 24px;
+            font-size: 1.6rem;
+            line-height: 1.2;
             font-weight: 600;
         }
 
         .detail-view-actions {
             display: flex;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
-        .detail-view-button {
+        .detail-view-button,
+        .detail-baseline-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 6px;
+            padding: 8px 14px;
+            border: 1px solid var(--vscode-button-border, transparent);
             background: var(--vscode-button-secondaryBackground);
             color: var(--vscode-button-secondaryForeground);
-            border: 1px solid var(--vscode-button-border);
-            border-radius: 6px;
-            padding: 8px 16px;
+            font-size: 0.85rem;
             cursor: pointer;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s ease;
+            transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
         }
 
-        .detail-view-button:hover {
-            background: var(--vscode-button-secondaryHoverBackground);
-            transform: translateY(-1px);
-        }
-
-        .detail-view-button.primary {
-            background: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-        }
-
-        .detail-view-button.primary:hover {
-            background: var(--vscode-button-hoverBackground);
-        }
-
-        .file-breadcrumb {
-            font-size: 14px;
-            color: var(--vscode-descriptionForeground);
-            margin-bottom: 8px;
-        }
-
-        /* Enhanced section styling */
-        .detail-section h4 {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 0 0 12px 0;
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .section-icon {
+        .detail-view-button svg,
+        .detail-baseline-button svg {
             width: 16px;
             height: 16px;
-            color: var(--vscode-textLink-foreground);
-        }
-
-        /* SVG icon improvements */
-        .detail-icon {
-            width: 24px;
-            height: 24px;
-            flex-shrink: 0;
-        }
-
-        .detail-icon.blocked {
-            color: #ef4444;
-        }
-
-        .detail-icon.warning {
-            color: #f59e0b;
-        }
-
-        .detail-icon.safe {
-            color: #22c55e;
-        }
-
-        /* Enhanced buttons */
-        .detail-baseline-button {
-            background: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            border: none;
-            border-radius: 6px;
-            padding: 12px 16px;
-            cursor: pointer;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s ease;
-        }
-
-        .detail-baseline-button:hover {
-            background: var(--vscode-button-hoverBackground);
-            transform: translateY(-1px);
         }
 
         .button-icon {
@@ -286,66 +228,162 @@ export class DetailViewHtmlGenerator {
             height: 16px;
         }
 
-        /* Enhanced resource links */
-        .resource-links {
-            list-style: none;
-            padding: 0;
-            margin: 0;
+        .detail-view-button:hover,
+        .detail-baseline-button:hover {
+            background: var(--vscode-button-secondaryHoverBackground);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
         }
 
-        .resource-links li {
-            margin-bottom: 8px;
+        .detail-baseline-button {
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
         }
 
-        .resource-link {
-            display: flex;
+        .detail-baseline-button:hover {
+            background: var(--vscode-button-hoverBackground);
+        }
+
+        .file-breadcrumb {
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            color: var(--vscode-textLink-foreground);
-            text-decoration: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 24px;
         }
 
-        .resource-link:hover {
-            background: var(--vscode-list-hoverBackground);
-            color: var(--vscode-textLink-activeForeground);
+        .detail-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
-        .link-icon {
-            width: 14px;
-            height: 14px;
+        .detail-block {
+            background: var(--vscode-editorWidget-background);
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+        }
+
+        .detail-header-block {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .detail-icon {
+            width: 28px;
+            height: 28px;
             flex-shrink: 0;
         }
 
-        /* Enhanced tables */
+        .detail-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .detail-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .detail-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .detail-badge.blocked {
+            background: rgba(239, 68, 68, 0.18);
+            color: #ef5350;
+        }
+
+        .detail-badge.warning {
+            background: rgba(245, 158, 11, 0.18);
+            color: #f5a623;
+        }
+
+        .detail-badge.safe {
+            background: rgba(34, 197, 94, 0.18);
+            color: #2ecc71;
+        }
+
+        .detail-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px 0;
+            border-top: 1px solid var(--vscode-sideBarSectionHeader-border);
+        }
+
+        .detail-section:first-of-type {
+            padding-top: 0;
+            border-top: none;
+        }
+
+        .detail-section h4 {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .section-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        .detail-section ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .detail-context {
+            display: grid;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .detail-code {
+            padding: 12px;
+            background: var(--vscode-textCodeBlock-background);
+            border: 1px solid var(--vscode-widget-border);
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 16px 0;
-            background: var(--vscode-editor-background);
             border: 1px solid var(--vscode-widget-border);
             border-radius: 8px;
             overflow: hidden;
+            background: var(--vscode-editor-background);
         }
 
         th, td {
-            padding: 12px 16px;
+            padding: 10px 14px;
             text-align: left;
             border-bottom: 1px solid var(--vscode-widget-border);
+            font-size: 0.9rem;
         }
 
         th {
             background: var(--vscode-editorWidget-background);
             font-weight: 600;
-            font-size: 13px;
-            color: var(--vscode-foreground);
-            border-bottom: 2px solid var(--vscode-widget-border);
-        }
-
-        td {
-            font-size: 13px;
         }
 
         tr:last-child td {
@@ -356,72 +394,102 @@ export class DetailViewHtmlGenerator {
             background: var(--vscode-list-hoverBackground);
         }
 
-        /* Enhanced Chat Interface Styles */
+        .resource-links {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 8px;
+        }
+
+        .resource-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: var(--vscode-editor-background);
+            border: 1px solid transparent;
+            transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .resource-link .link-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .resource-link:hover {
+            background: var(--vscode-list-hoverBackground);
+            border-color: var(--vscode-widget-border);
+        }
+
+        .detail-actions {
+            display: flex;
+            justify-content: flex-start;
+        }
+
         .chat-interface {
-            background: var(--vscode-editorWidget-background);
+            margin-top: 32px;
             border: 1px solid var(--vscode-widget-border);
             border-radius: 12px;
-            margin-top: 24px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            background: var(--vscode-editorWidget-background);
+            overflow: hidden;
         }
 
         .chat-header {
-            padding: 20px;
+            padding: 18px 20px;
             border-bottom: 1px solid var(--vscode-widget-border);
             background: var(--vscode-editor-background);
-            border-radius: 12px 12px 0 0;
         }
 
         .chat-header h3 {
-            margin: 0 0 8px 0;
-            display: flex;
+            margin: 0 0 6px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            font-size: 18px;
-            font-weight: 600;
+        }
+
+        .chat-header p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--vscode-descriptionForeground);
         }
 
         .chat-icon {
             width: 20px;
             height: 20px;
-            color: var(--vscode-textLink-foreground);
-        }
-
-        .chat-header p {
-            margin: 0;
-            color: var(--vscode-descriptionForeground);
-            font-size: 14px;
         }
 
         .chat-messages {
-            max-height: 500px;
+            max-height: 420px;
             overflow-y: auto;
             padding: 20px;
-            scroll-behavior: smooth;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
         .chat-message {
             display: flex;
             gap: 12px;
-            margin-bottom: 20px;
             align-items: flex-start;
         }
 
         .message-avatar {
             flex-shrink: 0;
-            width: 36px;
-            height: 36px;
         }
 
         .avatar-icon {
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: var(--vscode-badge-background);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
         }
 
         .user-message .avatar-icon {
@@ -431,7 +499,7 @@ export class DetailViewHtmlGenerator {
 
         .ai-message .avatar-icon {
             background: linear-gradient(135deg, #4285f4, #34a853);
-            color: white;
+            color: #fff;
         }
 
         .message-content {
@@ -442,8 +510,8 @@ export class DetailViewHtmlGenerator {
         .message-text {
             background: var(--vscode-input-background);
             border: 1px solid var(--vscode-widget-border);
-            border-radius: 12px;
-            padding: 12px 16px;
+            border-radius: 10px;
+            padding: 12px 14px;
             margin-bottom: 4px;
             line-height: 1.5;
         }
@@ -453,98 +521,40 @@ export class DetailViewHtmlGenerator {
             color: var(--vscode-button-secondaryForeground);
         }
 
-        .ai-message .message-text {
-            background: var(--vscode-editorWidget-background);
-        }
-
         .message-time {
-            font-size: 12px;
+            font-size: 0.75rem;
             color: var(--vscode-descriptionForeground);
-            opacity: 0.8;
         }
 
-        /* Chat history styles */
         .chat-history-empty {
-            padding: 40px 20px;
             text-align: center;
-        }
-
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .empty-state p {
-            margin: 0;
+            padding: 36px 16px;
             color: var(--vscode-descriptionForeground);
-            font-size: 16px;
-            font-weight: 500;
         }
 
-        .empty-state small {
-            color: var(--vscode-descriptionForeground);
-            opacity: 0.7;
-            font-size: 14px;
-        }
-
-        .chat-history-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 0 16px 0;
-            margin-bottom: 16px;
-            border-bottom: 1px solid var(--vscode-widget-border);
-        }
-
-        .chat-history-header h4 {
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--vscode-foreground);
-        }
-
-        .chat-history-header small {
-            color: var(--vscode-descriptionForeground);
-            font-size: 12px;
-            background: var(--vscode-badge-background);
-            color: var(--vscode-badge-foreground);
-            padding: 2px 8px;
-            border-radius: 12px;
-        }
-
-        /* Enhanced input container */
         .chat-input-container {
-            padding: 20px;
+            padding: 18px 20px;
             border-top: 1px solid var(--vscode-widget-border);
             background: var(--vscode-editor-background);
-            border-radius: 0 0 12px 12px;
         }
 
         .chat-input-wrapper {
-            position: relative;
             display: flex;
-            align-items: flex-end;
             gap: 12px;
+            align-items: flex-end;
         }
 
         .chat-input {
             flex: 1;
             min-height: 44px;
-            max-height: 120px;
-            padding: 12px 16px;
-            border: 2px solid var(--vscode-input-border);
-            border-radius: 12px;
+            max-height: 140px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--vscode-input-border, transparent);
             background: var(--vscode-input-background);
             color: var(--vscode-input-foreground);
-            font-size: 14px;
-            font-family: var(--vscode-font-family);
-            resize: none;
-            transition: border-color 0.2s;
+            resize: vertical;
+            font-size: 0.95rem;
         }
 
         .chat-input:focus {
@@ -553,18 +563,17 @@ export class DetailViewHtmlGenerator {
         }
 
         .chat-send-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: none;
             background: var(--vscode-button-background);
             color: var(--vscode-button-foreground);
-            border: none;
-            border-radius: 12px;
-            width: 44px;
-            height: 44px;
-            cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
-            flex-shrink: 0;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease;
         }
 
         .chat-send-button:hover {
@@ -573,184 +582,39 @@ export class DetailViewHtmlGenerator {
         }
 
         .chat-send-button:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
             transform: none;
         }
 
-        .chat-send-button svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        /* Loading and error states */
-        .loading-spinner {
-            width: 16px;
-            height: 16px;
-            border: 2px solid var(--vscode-widget-border);
-            border-top: 2px solid var(--vscode-textLink-foreground);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .error-message {
-            background: var(--vscode-inputValidation-errorBackground);
-            color: var(--vscode-inputValidation-errorForeground);
-            border: 1px solid var(--vscode-inputValidation-errorBorder);
-            border-radius: 8px;
-            padding: 12px;
-            margin: 8px 0;
-        }
-
-        /* Markdown formatting in messages */
-        .message-text h1, .message-text h2, .message-text h3, 
-        .message-text h4, .message-text h5, .message-text h6 {
-            margin: 12px 0 8px 0;
-            font-weight: 600;
-        }
-
-        .message-text p {
-            margin: 8px 0;
-        }
-
-        .message-text ul, .message-text ol {
-            margin: 8px 0;
-            padding-left: 20px;
-        }
-
-        .message-text li {
-            margin: 4px 0;
-        }
-
-        .message-text code {
-            background: var(--vscode-textCodeBlock-background);
-            border: 1px solid var(--vscode-widget-border);
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-family: var(--vscode-editor-font-family);
-            font-size: 12px;
-        }
-
-        .message-text pre {
-            background: var(--vscode-textCodeBlock-background);
-            border: 1px solid var(--vscode-widget-border);
-            border-radius: 8px;
-            padding: 12px;
-            overflow-x: auto;
-            margin: 12px 0;
-            font-family: var(--vscode-editor-font-family);
-            font-size: 13px;
-        }
-
-        .message-text blockquote {
-            border-left: 4px solid var(--vscode-textLink-foreground);
-            padding-left: 12px;
-            margin: 12px 0;
-            font-style: italic;
-            opacity: 0.9;
-        }
-            font-size: 16px;
-        }
-
-        .user-message .avatar-icon {
-            background: var(--vscode-button-background);
-        }
-
-        .ai-message .avatar-icon {
-            background: var(--vscode-textLink-foreground);
-        }
-
-        .message-content {
-            flex: 1;
-            background: var(--vscode-input-background);
-            border-radius: 8px;
-            padding: 12px;
-            border: 1px solid var(--vscode-input-border);
-        }
-
-        .message-text {
-            margin-bottom: 8px;
-        }
-
-        .message-time {
-            font-size: 12px;
-            color: var(--vscode-descriptionForeground);
-        }
-
-        .chat-input-area {
-            padding: 16px;
-            border-top: 1px solid var(--vscode-widget-border);
-            background: var(--vscode-editor-background);
-            border-radius: 0 0 8px 8px;
-        }
-
-        .chat-input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--vscode-input-border);
-            border-radius: 4px;
-            background: var(--vscode-input-background);
-            color: var(--vscode-input-foreground);
-            font-family: inherit;
-            font-size: inherit;
-            resize: vertical;
-            min-height: 40px;
-        }
-
-        .chat-input:focus {
-            outline: none;
-            border-color: var(--vscode-focusBorder);
-        }
-
-        .chat-send-button {
-            margin-top: 8px;
-            background: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            border: none;
-            border-radius: 4px;
-            padding: 8px 16px;
-            cursor: pointer;
-        }
-
-        .chat-send-button:hover {
-            background: var(--vscode-button-hoverBackground);
-        }
-
-        .chat-send-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        /* Code block styles */
         .code-block {
-            background: var(--vscode-textCodeBlock-background);
+            margin: 12px 0;
             border: 1px solid var(--vscode-widget-border);
-            border-radius: 4px;
-            margin: 8px 0;
+            border-radius: 8px;
             overflow: hidden;
+            background: var(--vscode-textCodeBlock-background);
         }
 
         .code-header {
-            background: var(--vscode-editorWidget-background);
-            padding: 8px 12px;
-            border-bottom: 1px solid var(--vscode-widget-border);
             display: flex;
             justify-content: flex-end;
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--vscode-widget-border);
+            background: var(--vscode-editorWidget-background);
         }
 
         .copy-code-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
             background: var(--vscode-button-secondaryBackground);
             color: var(--vscode-button-secondaryForeground);
-            border: none;
             border-radius: 4px;
             padding: 4px 8px;
+            font-size: 0.75rem;
             cursor: pointer;
-            font-size: 12px;
+            transition: background 0.15s ease;
         }
 
         .copy-code-btn:hover {
@@ -759,69 +623,81 @@ export class DetailViewHtmlGenerator {
 
         .code-block pre {
             margin: 0;
-            padding: 12px;
+            padding: 12px 16px;
             overflow-x: auto;
         }
 
-        .code-block code {
+        .code-block code,
+        .inline-code {
             font-family: var(--vscode-editor-font-family);
             font-size: var(--vscode-editor-font-size);
         }
 
         .inline-code {
-            background: var(--vscode-textCodeBlock-background);
             padding: 2px 4px;
-            border-radius: 3px;
-            font-family: var(--vscode-editor-font-family);
+            border-radius: 4px;
+            background: var(--vscode-textCodeBlock-background);
         }
 
-        /* Loading and status styles */
+        .search-highlight {
+            background: var(--vscode-editor-findMatchHighlightBackground);
+            color: var(--vscode-editor-findMatchHighlightForeground);
+            border-radius: 3px;
+        }
+
         .loading-spinner {
-            display: inline-block;
             width: 16px;
             height: 16px;
-            border: 2px solid var(--vscode-descriptionForeground);
             border-radius: 50%;
+            border: 2px solid var(--vscode-descriptionForeground);
             border-top-color: var(--vscode-progressBar-background);
-            animation: spin 1s ease-in-out infinite;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        .error-message {
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            color: var(--vscode-errorForeground);
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
-        .error-message {
-            color: var(--vscode-errorForeground);
-            background: var(--vscode-inputValidation-errorBackground);
-            border: 1px solid var(--vscode-inputValidation-errorBorder);
-            border-radius: 4px;
-            padding: 8px 12px;
-            margin: 8px 0;
-        }
-
-        .success-message {
-            color: var(--vscode-foreground);
-            background: var(--vscode-input-background);
-            border: 1px solid var(--vscode-input-border);
-            border-radius: 4px;
-            padding: 8px 12px;
-            margin: 8px 0;
-        }
-
-        /* Responsive styles */
-        @media (max-width: 768px) {
+        @media (max-width: 720px) {
             .detail-view-container {
-                padding: 16px;
+                padding: 20px 18px 32px;
             }
-            
+
             .detail-view-header {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 12px;
             }
-            
+
             .detail-view-actions {
-                align-self: stretch;
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .chat-input-wrapper {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .chat-send-button {
+                width: 100%;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
             }
         }
     </style>`;
@@ -834,10 +710,22 @@ export class DetailViewHtmlGenerator {
     detailHtml: string,
     finding: BaselineFinding,
     relativePath: string,
+    target: Target,
     geminiContext?: GeminiSupportContext
   ): string {
+    const findingId = DetailViewDataTransformer.generateFindingId(finding);
+    const featureId = finding.feature.id || findingId;
+    const containerAttributes = [
+      `data-finding-id="${DetailViewUtils.sanitizeAttribute(findingId)}"`,
+      `data-feature-id="${DetailViewUtils.sanitizeAttribute(featureId)}"`,
+      `data-feature-name="${DetailViewUtils.sanitizeAttribute(finding.feature.name)}"`,
+      `data-file-path="${DetailViewUtils.sanitizeAttribute(relativePath)}"`,
+      `data-file-uri="${DetailViewUtils.sanitizeAttribute(finding.uri.toString())}"`,
+      `data-target="${DetailViewUtils.sanitizeAttribute(target)}"`
+    ].join(' ');
+
     return `
-    <div class="detail-view-container">
+    <div class="detail-view-container" ${containerAttributes}>
         <!-- Search functionality -->
         <div class="search-container">
             <div class="search-box">
@@ -942,14 +830,34 @@ export class DetailViewHtmlGenerator {
     return `
     <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
-        
+        const detailMetadata = readDetailMetadata();
+
         // Initialize page functionality
         document.addEventListener('DOMContentLoaded', function() {
             initializeSearch();
             initializeChat();
             initializeButtonHandlers();
         });
-        
+
+        function readDetailMetadata() {
+            const container = document.querySelector('.detail-view-container');
+            if (!container) {
+                return {
+                    findingId: '',
+                    featureName: '',
+                    filePath: '',
+                    target: ''
+                };
+            }
+
+            return {
+                findingId: container.getAttribute('data-finding-id') || '',
+                featureName: container.getAttribute('data-feature-name') || '',
+                filePath: container.getAttribute('data-file-path') || '',
+                target: container.getAttribute('data-target') || ''
+            };
+        }
+
         // Search functionality
         function initializeSearch() {
             const searchInput = document.getElementById('searchInput');
@@ -1055,24 +963,22 @@ export class DetailViewHtmlGenerator {
         
         // Button handlers
         function initializeButtonHandlers() {
-            // Resource links
-            document.addEventListener('click', function(e) {
-                if (e.target.matches('[data-command]')) {
-                    e.preventDefault();
-                    const command = e.target.getAttribute('data-command');
-                    vscode.postMessage({
-                        type: 'executeCommand',
-                        command: command
-                    });
+            document.addEventListener('click', function(event) {
+                const target = event.target instanceof Element ? event.target : null;
+                if (!target) {
+                    return;
                 }
-                
-                // Baseline details button
-                if (e.target.matches('.detail-baseline-button')) {
-                    const featureName = e.target.getAttribute('data-feature-name');
-                    vscode.postMessage({
-                        type: 'openBaselineDetails',
-                        feature: featureName
-                    });
+
+                const commandTarget = target.closest('[data-command]');
+                if (commandTarget instanceof HTMLElement) {
+                    event.preventDefault();
+                    const command = commandTarget.getAttribute('data-command');
+                    if (command) {
+                        vscode.postMessage({
+                            type: 'executeCommand',
+                            command
+                        });
+                    }
                 }
             });
         }
@@ -1112,10 +1018,10 @@ export class DetailViewHtmlGenerator {
             vscode.postMessage({
                 type: 'askGeminiFollowUp',
                 question: question,
-                findingId: 'current',
-                feature: '',
-                filePath: '',
-                target: ''
+                findingId: detailMetadata.findingId || 'current',
+                feature: detailMetadata.featureName || '',
+                filePath: detailMetadata.filePath || '',
+                target: detailMetadata.target || ''
             });
             
             // Clear input
