@@ -18,7 +18,13 @@ import {
   sameSet
 } from "../../utils";
 
-import type { BaselineAnalysisAssets, SortOrder, Summary } from "./types";
+import type {
+  BaselineAnalysisAssets,
+  FeatureGroupRollup,
+  FindingsStatistics,
+  SortOrder,
+  Summary
+} from "./types";
 
 export const DEFAULT_SEVERITIES: Verdict[] = ["blocked", "warning", "safe"];
 export const DEFAULT_SORT_ORDER: SortOrder = "severity";
@@ -110,6 +116,74 @@ export function summarize(findings: BaselineFinding[]): Summary {
     safe,
     total: findings.length
   };
+}
+
+export function computeFindingsStatistics(findings: BaselineFinding[]): FindingsStatistics {
+  const totals: FindingsStatistics = {
+    wins: 0,
+    blocked: 0,
+    warning: 0,
+    total: findings.length,
+    groups: []
+  };
+
+  const groupMap = new Map<string, FeatureGroupRollup>();
+
+  const ensureGroup = (id: string, name: string): FeatureGroupRollup => {
+    const existing = groupMap.get(id);
+    if (existing) {
+      return existing;
+    }
+    const created: FeatureGroupRollup = {
+      id,
+      name,
+      blocked: 0,
+      warning: 0,
+      safe: 0,
+      total: 0
+    };
+    groupMap.set(id, created);
+    return created;
+  };
+
+  const addToGroup = (group: FeatureGroupRollup, verdict: Verdict) => {
+    group.total += 1;
+    if (verdict === "blocked") {
+      group.blocked += 1;
+    } else if (verdict === "warning") {
+      group.warning += 1;
+    } else {
+      group.safe += 1;
+    }
+  };
+
+  for (const finding of findings) {
+    if (finding.verdict === "blocked") {
+      totals.blocked += 1;
+    } else if (finding.verdict === "warning") {
+      totals.warning += 1;
+    } else {
+      totals.wins += 1;
+    }
+
+    const groups = finding.feature.groups && finding.feature.groups.length
+      ? finding.feature.groups
+      : [{ id: "__ungrouped__", name: "Ungrouped features" }];
+
+    for (const group of groups) {
+      const rollup = ensureGroup(group.id, group.name ?? group.id);
+      addToGroup(rollup, finding.verdict);
+    }
+  }
+
+  totals.groups = Array.from(groupMap.values()).sort((a, b) => {
+    if (b.blocked !== a.blocked) {
+      return b.blocked - a.blocked;
+    }
+    return b.total - a.total;
+  });
+
+  return totals;
 }
 
 export function matchesSearch(finding: BaselineFinding, query: string): boolean {

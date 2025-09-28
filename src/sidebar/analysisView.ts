@@ -5,6 +5,7 @@ import type { Target } from "../core/targets";
 import { scoreFeature, type Verdict } from "../core/scoring";
 import {
   BaselineAnalysisAssets,
+  ScanHistoryEntry,
   DetailPayload,
   DetailSelection,
   FileGroupPayload,
@@ -17,6 +18,7 @@ import {
 import {
   DEFAULT_SEVERITIES,
   DEFAULT_SORT_ORDER,
+  computeFindingsStatistics,
   escapeHtml,
   formatVerdict,
   sameSet,
@@ -37,6 +39,9 @@ import { buildWebviewState, filterFindings, syncSelection } from "./analysis/sta
 import { processMessage } from "./analysis/messages";
 import { BaselineDetailViewProvider } from "./detailView";
 
+const HISTORY_STORAGE_KEY = "baselineGate.history";
+const HISTORY_LIMIT = 50;
+
 export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
   private findings: BaselineFinding[] = [];
@@ -50,13 +55,17 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
   private selectedFileUri: string | null = null;
   private detailSelection: DetailSelection = null;
   private collapsedFileUris = new Set<string>();
+  private history: ScanHistoryEntry[] = [];
+  private pendingShowInsights = false;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
     private target: Target,
     private readonly assets: BaselineAnalysisAssets,
     private readonly geminiProvider?: import('../gemini/geminiViewProvider').GeminiViewProvider
-  ) {}
+  ) {
+    this.history = this.loadHistoryFromStorage();
+  }
 
   register(): vscode.Disposable {
     return vscode.window.registerWebviewViewProvider("baselineGate.analysisView", this);
@@ -72,6 +81,15 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     webview.html = renderAnalysisWebviewHtml(webview);
     webview.onDidReceiveMessage((message) => this.handleMessage(message));
     this.postState();
+    if (this.pendingShowInsights) {
+      const targetView = this.view;
+      setTimeout(() => {
+        if (targetView) {
+          void targetView.webview.postMessage({ type: 'showInsights' });
+        }
+      }, 50);
+      this.pendingShowInsights = false;
+    }
   }
 
   async runScan(): Promise<void> {
@@ -117,6 +135,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
           this.lastScanAt = new Date();
         }
       );
+
+      await this.recordScanHistory();
     } catch (error) {
       const err = error instanceof Error ? error.message : String(error);
       void vscode.window.showErrorMessage(`Baseline scan failed: ${err}`);
@@ -144,6 +164,10 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     return this.findings;
   }
 
+  getScanHistory(): ScanHistoryEntry[] {
+    return [...this.history];
+  }
+
   setSeverityFilter(verdicts: Verdict[]): void {
     const next = new Set<Verdict>(verdicts.length ? verdicts : DEFAULT_SEVERITIES);
     if (sameSet(this.severityFilter, next)) {
@@ -151,6 +175,58 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     }
     this.severityFilter = next;
     this.postState();
+  }
+
+  private loadHistoryFromStorage(): ScanHistoryEntry[] {
+    const stored = this.context.workspaceState.get<ScanHistoryEntry[]>(HISTORY_STORAGE_KEY, []);
+    if (!Array.isArray(stored)) {
+      return [];
+    }
+    return stored
+      .filter((entry): entry is ScanHistoryEntry => {
+        if (!entry || typeof entry !== "object") {
+          return false;
+        }
+        const hasTimestamp = typeof entry.timestamp === "string" && entry.timestamp.length > 0;
+        const hasTarget = entry.target === "modern" || entry.target === "enterprise";
+        const summary = entry.summary;
+        const hasSummary = Boolean(
+          summary &&
+            typeof summary.blocked === "number" &&
+            typeof summary.warning === "number" &&
+            typeof summary.safe === "number" &&
+            typeof summary.total === "number"
+        );
+        return hasTimestamp && hasTarget && hasSummary;
+      })
+      .map((entry) => ({
+        timestamp: entry.timestamp,
+        target: entry.target,
+        summary: {
+          blocked: entry.summary.blocked,
+          warning: entry.summary.warning,
+          safe: entry.summary.safe,
+          total: entry.summary.total
+        }
+      }))
+      .slice(-HISTORY_LIMIT);
+  }
+
+  private async recordScanHistory(): Promise<void> {
+    if (!this.lastScanAt) {
+      return;
+    }
+
+    const summary = summarize(this.findings);
+    const entry: ScanHistoryEntry = {
+      timestamp: this.lastScanAt.toISOString(),
+      target: this.target,
+      summary
+    };
+
+    const nextHistory = [...this.history, entry].slice(-HISTORY_LIMIT);
+    this.history = nextHistory;
+    await this.context.workspaceState.update(HISTORY_STORAGE_KEY, nextHistory);
   }
 
   getSeverityFilter(): Verdict[] {
@@ -189,6 +265,15 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
   refreshView(): void {
     this.postState();
+  }
+
+  showInsightsPanel(): void {
+    if (this.view) {
+      void this.view.webview.postMessage({ type: 'showInsights' });
+      this.pendingShowInsights = false;
+      return;
+    }
+    this.pendingShowInsights = true;
   }
 
   highlightFinding(findingId: string): void {
@@ -505,6 +590,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     const severityIconUris = this.resolveStatusIconUris();
 
     const grouped = groupFindingsByFile(filtered, this.sortOrder);
+    const stats = computeFindingsStatistics(all);
     const filePayloads = grouped.map((group) =>
       buildFilePayload(
         group,
@@ -534,7 +620,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       filtered,
       severityIconUris,
       files: filePayloads,
-      detail
+      detail,
+      history: this.getScanHistory(),
+      stats
     });
   }
 

@@ -135,6 +135,11 @@ export function activate(context: vscode.ExtensionContext) {
   });
   context.subscriptions.push(openSettings);
 
+  const openInsights = vscode.commands.registerCommand('baseline-gate.openInsights', () => {
+    analysisProvider.showInsightsPanel();
+  });
+  context.subscriptions.push(openInsights);
+
   // Register Gemini commands
   const askGemini = vscode.commands.registerCommand('baseline-gate.askGemini', async (args?: { issue: string; feature?: string; context?: string; findingId?: string }) => {
     if (!args || !args.issue) {

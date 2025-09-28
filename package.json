@@ -57,6 +57,11 @@
         "icon": "$(settings-gear)"
       },
       {
+        "command": "baseline-gate.openInsights",
+        "title": "Baseline Gate: View Insights",
+        "icon": "$(graph)"
+      },
+      {
         "command": "baseline-gate.askGemini",
         "title": "Fix with Gemini",
         "icon": "$(sparkle)"
@@ -141,6 +146,11 @@
           "command": "baseline-gate.openSettings",
           "when": "view == baselineGate.analysisView",
           "group": "navigation@2"
+        },
+        {
+          "command": "baseline-gate.openInsights",
+          "when": "view == baselineGate.analysisView",
+          "group": "navigation@1.5"
         }
       ]
     }

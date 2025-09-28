@@ -22,6 +22,39 @@ export type Summary = {
   total: number;
 };
 
+export type ScanHistoryEntry = {
+  timestamp: string;
+  target: Target;
+  summary: Summary;
+};
+
+export type BaselineBudgetSnapshot = {
+  target: Target;
+  blockedLimit?: number;
+  warningLimit?: number;
+  safeLimit?: number;
+  blocked: number;
+  warning: number;
+  safe: number;
+};
+
+export type FeatureGroupRollup = {
+  id: string;
+  name: string;
+  blocked: number;
+  warning: number;
+  safe: number;
+  total: number;
+};
+
+export type FindingsStatistics = {
+  wins: number;
+  blocked: number;
+  warning: number;
+  total: number;
+  groups: FeatureGroupRollup[];
+};
+
 export type IssuePayload = {
   id: string;
   verdict: Verdict;
@@ -94,6 +127,9 @@ export type WebviewState = {
   files: FileGroupPayload[];
   severityIconUris: Record<Verdict, string>;
   detail?: DetailPayload | null;
+  history?: ScanHistoryEntry[];
+  budget?: BaselineBudgetSnapshot | null;
+  stats?: FindingsStatistics;
 };
 
 export type MessageFromWebview =

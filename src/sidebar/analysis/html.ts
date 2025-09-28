@@ -203,6 +203,189 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
         background: var(--vscode-sideBar-background);
       }
+      .insights-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 150ms ease;
+        z-index: 60;
+      }
+      .insights-backdrop.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .insights-panel {
+        position: fixed;
+        top: 52px;
+        right: 16px;
+        bottom: 16px;
+        width: min(420px, calc(100% - 32px));
+        max-width: 460px;
+        background: var(--vscode-sideBar-background);
+        border: 1px solid var(--vscode-sideBarSectionHeader-border);
+        border-radius: 8px;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+        transform: translateX(120%);
+        transition: transform 180ms ease;
+        display: flex;
+        flex-direction: column;
+        z-index: 70;
+      }
+      .insights-panel.open {
+        transform: translateX(0);
+      }
+      .insights-panel.hidden {
+        display: none;
+      }
+      .insights-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 0.9rem;
+        border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+        background: var(--vscode-sideBarSectionHeader-background, var(--vscode-sideBar-background));
+      }
+      .insights-header h2 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--vscode-foreground);
+      }
+      .insights-close {
+        border: 1px solid var(--vscode-button-border, transparent);
+        border-radius: 4px;
+        background: var(--vscode-button-secondaryBackground);
+        color: var(--vscode-button-secondaryForeground);
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      .insights-close:hover {
+        background: var(--vscode-button-secondaryHoverBackground);
+      }
+      .insights-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.75rem 0.9rem 0.9rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .insights {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.5rem;
+        padding: 0;
+      }
+      .chart-card {
+        border: 1px solid var(--vscode-tree-indentGuidesStroke, transparent);
+        border-radius: 6px;
+        padding: 0.65rem 0.75rem;
+        background: var(--vscode-editor-background, rgba(0, 0, 0, 0.02));
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+      .chart-card.hidden {
+        display: none;
+      }
+      .chart-title {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--vscode-foreground);
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+      .chart-title span {
+        font-size: 0.8em;
+        color: var(--vscode-descriptionForeground);
+      }
+      .chart-body {
+        min-height: 60px;
+      }
+      .chart-caption {
+        font-size: 0.7rem;
+        color: var(--vscode-descriptionForeground);
+        margin: 0;
+      }
+      .chart-empty {
+        font-size: 0.75rem;
+        color: var(--vscode-descriptionForeground);
+        margin: 0;
+      }
+      .chart-svg {
+        width: 100%;
+        height: 64px;
+      }
+      .chart-line-blocked {
+        fill: none;
+        stroke: var(--vscode-errorForeground, #d13438);
+        stroke-width: 2;
+        stroke-linecap: round;
+      }
+      .chart-line-safe {
+        fill: none;
+        stroke: var(--vscode-testing-iconPassed, #2e8b57);
+        stroke-width: 2;
+        stroke-linecap: round;
+        opacity: 0.8;
+      }
+      .chart-axis {
+        stroke: var(--vscode-editorLineNumber-foreground, rgba(150, 150, 150, 0.4));
+        stroke-width: 1;
+      }
+      .chart-dot {
+        fill: var(--vscode-errorForeground, #d13438);
+        stroke: var(--vscode-editor-background, #1e1e1e);
+        stroke-width: 1;
+      }
+      .bar-row {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 0.35rem;
+      }
+      .bar-row:last-child {
+        margin-bottom: 0;
+      }
+      .bar-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--vscode-foreground);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .bar-metrics {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+      }
+      .bar-track {
+        display: flex;
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        background: var(--vscode-editor-inactiveSelection, rgba(128, 128, 128, 0.15));
+      }
+      .bar-fill {
+        height: 100%;
+      }
+      .bar-fill.blocked { background: var(--vscode-errorForeground, #d13438); }
+      .bar-fill.warning { background: #f1c40f; }
+      .bar-fill.safe { background: var(--vscode-testing-iconPassed, #2e8b57); }
+      .bar-meta {
+        font-size: 0.7rem;
+        color: var(--vscode-descriptionForeground);
+      }
       .content {
         flex: 1;
         display: flex;
@@ -1669,6 +1852,31 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         </aside>
       </div>
     </div>
+    <div class="insights-backdrop hidden" data-insights-backdrop></div>
+    <aside class="insights-panel hidden" data-insights-panel aria-hidden="true">
+      <header class="insights-header">
+        <h2>Baseline Insights</h2>
+        <button class="insights-close" type="button" title="Close insights" aria-label="Close insights" data-insights-close>×</button>
+      </header>
+      <div class="insights-content">
+        <section class="insights" data-insights>
+          <article class="chart-card" data-history-card>
+            <div class="chart-title">Trend history <span>(scan baseline)</span></div>
+            <div class="chart-body">
+              <svg class="chart-svg" viewBox="0 0 240 70" role="img" aria-label="Baseline scan history" data-history-chart></svg>
+            </div>
+            <p class="chart-caption" data-history-caption>Run a scan to build history.</p>
+          </article>
+          <article class="chart-card" data-stats-card>
+            <div class="chart-title">Feature group focus <span>(top offenders)</span></div>
+            <div class="chart-body" data-stats-bars>
+              <p class="chart-empty">No findings yet.</p>
+            </div>
+            <p class="chart-caption" data-stats-caption></p>
+          </article>
+        </section>
+      </div>
+    </aside>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();
 
@@ -1689,6 +1897,17 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       const detailBodyNode = document.querySelector('[data-detail-body]');
       const detailCloseBtn = document.querySelector('[data-detail-close]');
       const resizeHandle = document.querySelector('[data-resize-handle]');
+      const insightsBackdrop = document.querySelector('[data-insights-backdrop]');
+      const insightsPanel = document.querySelector('[data-insights-panel]');
+      const insightsCloseBtn = document.querySelector('[data-insights-close]');
+      const insightsGrid = insightsPanel ? insightsPanel.querySelector('[data-insights]') : null;
+      const historyCard = insightsGrid ? insightsGrid.querySelector('[data-history-card]') : null;
+      const historyChart = historyCard ? historyCard.querySelector('[data-history-chart]') : null;
+      const historyCaption = historyCard ? historyCard.querySelector('[data-history-caption]') : null;
+      const statsCard = insightsGrid ? insightsGrid.querySelector('[data-stats-card]') : null;
+      const statsBars = statsCard ? statsCard.querySelector('[data-stats-bars]') : null;
+      const statsCaption = statsCard ? statsCard.querySelector('[data-stats-caption]') : null;
+      const SVG_NS = 'http://www.w3.org/2000/svg';
       const MAX_SNIPPET_PREVIEW = 120;
 
       // Resize functionality
@@ -1760,6 +1979,22 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
           isResizing = false;
           resizeHandle.classList.remove('dragging');
           document.body.style.touchAction = '';
+        }
+      });
+
+      if (insightsCloseBtn) {
+        insightsCloseBtn.addEventListener('click', () => {
+          closeInsightsPanel();
+        });
+      }
+      if (insightsBackdrop) {
+        insightsBackdrop.addEventListener('click', () => {
+          closeInsightsPanel();
+        });
+      }
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeInsightsPanel();
         }
       });
 
@@ -1891,7 +2126,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
               userMessage.className = 'chat-message user-message';
               userMessage.innerHTML = \`
                 <div class="message-avatar">
-                  <div class="avatar-icon">👤</div>
+                  <div class="avatar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M20 21v-2a4 4 0 0 0-3-3.87"/><path d="M4 21v-2a4 4 0 0 1 3-3.87"/><circle cx="12" cy="7" r="4"/></svg></div>
                 </div>
                 <div class="message-content">
                   <div class="message-text">\${followUpQuestion.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
@@ -1914,7 +2149,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
               typingIndicator.className = 'chat-message ai-message typing-indicator';
               typingIndicator.innerHTML = \`
                 <div class="message-avatar">
-                  <div class="avatar-icon">✨</div>
+                  <div class="avatar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
                 </div>
                 <div class="message-content">
                   <div class="message-text">Gemini is thinking...</div>
@@ -1950,6 +2185,10 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         if (type === 'state') {
           currentState = payload;
           applyState();
+        } else if (type === 'showInsights') {
+          openInsightsPanel();
+        } else if (type === 'hideInsights') {
+          closeInsightsPanel();
         }
       });
 
@@ -2095,6 +2334,235 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         }, 200);
       });
 
+      function clearSvg(svg) {
+        if (!svg) {
+          return;
+        }
+        while (svg.firstChild) {
+          svg.removeChild(svg.firstChild);
+        }
+      }
+
+      function buildPath(points) {
+        if (!points.length) {
+          return '';
+        }
+        return points
+          .map((point, index) => (index === 0 ? 'M' : 'L') + point.x + ' ' + point.y)
+          .join(' ');
+      }
+
+      function renderHistoryCard(history) {
+        if (!historyCard || !historyChart || !historyCaption) {
+          return;
+        }
+
+        historyCard.classList.remove('hidden');
+        clearSvg(historyChart);
+
+        if (!Array.isArray(history) || history.length === 0) {
+          historyCaption.textContent = 'Run a scan to build history.';
+          historyChart.setAttribute('aria-label', 'No baseline history yet');
+          return;
+        }
+
+        const entries = history.slice(-10);
+        const width = 240;
+        const height = 70;
+        const padX = 12;
+        const padY = 12;
+        const innerWidth = width - padX * 2;
+        const innerHeight = height - padY * 2;
+        const blockedSeries = entries.map((entry) => entry.summary.blocked);
+        const safeSeries = entries.map((entry) => entry.summary.safe);
+        const maxValue = Math.max(1, ...blockedSeries, ...safeSeries);
+
+        const toPoints = (series) =>
+          entries.map((entry, index) => {
+            const value = series[index];
+            const x =
+              entries.length === 1
+                ? width / 2
+                : padX + (innerWidth * index) / (entries.length - 1);
+            const y = height - padY - (value / maxValue) * innerHeight;
+            return { x: Number(x.toFixed(2)), y: Number(y.toFixed(2)) };
+          });
+
+        const blockedPoints = toPoints(blockedSeries);
+        const safePoints = toPoints(safeSeries);
+
+        historyChart.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+        historyChart.setAttribute('aria-label', 'Baseline scan history (blocked vs safe findings)');
+
+        const axis = document.createElementNS(SVG_NS, 'line');
+        axis.setAttribute('x1', String(padX));
+        axis.setAttribute('y1', String(height - padY));
+        axis.setAttribute('x2', String(width - padX));
+        axis.setAttribute('y2', String(height - padY));
+        axis.setAttribute('class', 'chart-axis');
+        historyChart.appendChild(axis);
+
+        if (safeSeries.some((value) => value > 0)) {
+          const safePath = document.createElementNS(SVG_NS, 'path');
+          safePath.setAttribute('d', buildPath(safePoints));
+          safePath.setAttribute('class', 'chart-line-safe');
+          historyChart.appendChild(safePath);
+        }
+
+        const blockedPath = document.createElementNS(SVG_NS, 'path');
+        blockedPath.setAttribute('d', buildPath(blockedPoints));
+        blockedPath.setAttribute('class', 'chart-line-blocked');
+        historyChart.appendChild(blockedPath);
+
+        const lastPoint = blockedPoints[blockedPoints.length - 1];
+        if (lastPoint) {
+          const dot = document.createElementNS(SVG_NS, 'circle');
+          dot.setAttribute('cx', String(lastPoint.x));
+          dot.setAttribute('cy', String(lastPoint.y));
+          dot.setAttribute('r', '3');
+          dot.setAttribute('class', 'chart-dot');
+          historyChart.appendChild(dot);
+        }
+
+        const latest = entries[entries.length - 1];
+        const when = new Date(latest.timestamp);
+        historyCaption.textContent =
+          'Latest scan · ' +
+          latest.summary.blocked +
+          ' blocked · ' +
+          latest.summary.warning +
+          ' needs review · ' +
+          latest.summary.safe +
+          ' safe (' +
+          when.toLocaleString() +
+          ')';
+      }
+
+      function percent(part, total) {
+        if (!total) {
+          return 0;
+        }
+        return Math.max(0, Math.min(100, (part / total) * 100));
+      }
+
+      function appendFill(track, width, className) {
+        const clamped = Math.max(0, Math.min(100, width));
+        if (clamped <= 0) {
+          return;
+        }
+        const fill = document.createElement('span');
+        fill.className = 'bar-fill ' + className;
+        fill.style.width = clamped + '%';
+        track.appendChild(fill);
+      }
+
+      function renderStatsCard(stats) {
+        if (!statsCard || !statsBars || !statsCaption) {
+          return;
+        }
+
+        statsCard.classList.remove('hidden');
+
+        if (!stats || !stats.total) {
+          statsBars.innerHTML = '<p class="chart-empty">No findings yet.</p>';
+          statsCaption.textContent = 'Scan your project to populate feature groups.';
+          return;
+        }
+
+        const topGroups = stats.groups.slice(0, 4);
+        statsBars.innerHTML = '';
+
+        topGroups.forEach((group) => {
+          if (!group || !group.total) {
+            return;
+          }
+
+          const row = document.createElement('div');
+          row.className = 'bar-row';
+
+          const label = document.createElement('div');
+          label.className = 'bar-label';
+          label.textContent = group.name || 'Ungrouped features';
+          label.title = group.name || 'Ungrouped features';
+          row.appendChild(label);
+
+          const metrics = document.createElement('div');
+          metrics.className = 'bar-metrics';
+
+          const track = document.createElement('div');
+          track.className = 'bar-track';
+
+          const blockedPct = percent(group.blocked, group.total);
+          const warningPct = percent(group.warning, group.total);
+          const safePct = Math.max(0, 100 - blockedPct - warningPct);
+
+          appendFill(track, blockedPct, 'blocked');
+          appendFill(track, warningPct, 'warning');
+          appendFill(track, safePct, 'safe');
+
+          const meta = document.createElement('div');
+          meta.className = 'bar-meta';
+          meta.textContent =
+            group.blocked +
+            ' blocked · ' +
+            group.warning +
+            ' review · ' +
+            group.safe +
+            ' safe';
+
+          metrics.appendChild(track);
+          metrics.appendChild(meta);
+          row.appendChild(metrics);
+
+          statsBars.appendChild(row);
+        });
+
+        const remainder = Math.max(0, (stats.groups?.length || 0) - 4);
+        const summaryText =
+          'Totals · ' +
+          stats.blocked +
+          ' blocked · ' +
+          stats.warning +
+          ' needs review · ' +
+          stats.wins +
+          ' wins';
+        statsCaption.textContent =
+          remainder > 0 ? summaryText + ' · +' + remainder + ' more groups' : summaryText;
+      }
+
+      function openInsightsPanel() {
+        if (!insightsPanel || !insightsBackdrop) {
+          return;
+        }
+        if (!insightsPanel.classList.contains('hidden') && insightsPanel.classList.contains('open')) {
+          return;
+        }
+        insightsPanel.classList.remove('hidden');
+        insightsPanel.setAttribute('aria-hidden', 'false');
+        insightsBackdrop.classList.remove('hidden');
+        requestAnimationFrame(() => {
+          insightsPanel.classList.add('open');
+          insightsBackdrop.classList.add('visible');
+        });
+      }
+
+      function closeInsightsPanel() {
+        if (!insightsPanel || !insightsBackdrop) {
+          return;
+        }
+        if (insightsPanel.classList.contains('hidden')) {
+          return;
+        }
+        insightsPanel.classList.remove('open');
+        insightsPanel.setAttribute('aria-hidden', 'true');
+        insightsBackdrop.classList.remove('visible');
+        const transitionDuration = 200;
+        setTimeout(() => {
+          insightsPanel.classList.add('hidden');
+          insightsBackdrop.classList.add('hidden');
+        }, transitionDuration);
+      }
+
       function applyState() {
         if (!currentState) {
           return;
@@ -2103,7 +2571,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         // Save scroll position before rendering changes
         saveScrollPosition();
 
-        const { scanning, searchQuery, severityFilter, sortOrder, progressText, filteredSummary, summary, files, severityIconUris, filtersActive, lastScanAt, detail } = currentState;
+        const { scanning, searchQuery, severityFilter, sortOrder, progressText, filteredSummary, summary, files, severityIconUris, filtersActive, lastScanAt, detail, history, stats } = currentState;
 
         controls.disabled = Boolean(scanning);
         clearBtn.disabled = !filtersActive;
@@ -2117,6 +2585,8 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         updateSummary(summary, filteredSummary, scanning, progressText, lastScanAt);
         renderResults(files, severityIconUris, scanning, progressText, filteredSummary.total);
         renderDetail(detail);
+        renderHistoryCard(history);
+        renderStatsCard(stats);
         
         // Restore scroll position after rendering
         requestAnimationFrame(() => {
@@ -2253,7 +2723,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
           const detailBtn = document.createElement('button');
           detailBtn.className = 'file-detail-button';
           detailBtn.type = 'button';
-          detailBtn.textContent = '🔍';
+          detailBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
           detailBtn.title = 'View file details';
           detailBtn.setAttribute('aria-label', 'View file details');
           detailBtn.addEventListener('click', (event) => {
@@ -2327,7 +2797,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
             actions.className = 'issue-actions';
 
             const detailBtn = document.createElement('button');
-            detailBtn.textContent = '🔍';
+            detailBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
             detailBtn.title = 'Details';
             detailBtn.setAttribute('aria-label', 'View details');
             detailBtn.addEventListener('click', (event) => {
@@ -2337,7 +2807,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
             actions.appendChild(detailBtn);
 
             const openBtn = document.createElement('button');
-            openBtn.textContent = '📄';
+            openBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>';
             openBtn.title = 'Open file';
             openBtn.setAttribute('aria-label', 'Open file');
             openBtn.addEventListener('click', (event) => {
@@ -2353,7 +2823,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
 
             if (issue.docsUrl) {
               const docsBtn = document.createElement('button');
-              docsBtn.textContent = '📖';
+              docsBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>';
               docsBtn.title = 'Open documentation';
               docsBtn.setAttribute('aria-label', 'Open documentation');
               docsBtn.addEventListener('click', (event) => {
@@ -2364,7 +2834,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
             }
 
             const askAiBtn = document.createElement('button');
-            askAiBtn.textContent = '✨';
+            askAiBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
             askAiBtn.title = 'Ask AI for help';
             askAiBtn.setAttribute('aria-label', 'Ask AI for help');
             askAiBtn.addEventListener('click', (event) => {
@@ -2520,7 +2990,7 @@ export function renderExistingSuggestions(suggestions: GeminiSuggestion[]): stri
       (suggestion) => `
       <div class="existing-suggestion">
         <div class="existing-suggestion-header">
-          <span class="gemini-icon">✨</span>
+          <span class="gemini-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
           <span class="suggestion-timestamp">${suggestion.timestamp.toLocaleString()}</span>
         </div>
         <div class="existing-suggestion-content">${renderSimpleMarkdown(suggestion.suggestion)}</div>
@@ -2547,7 +3017,7 @@ export function renderGeminiChatInterface(finding: BaselineFinding, target: Targ
     <div class="chat-context-section">
       <button class="chat-context-toggle" data-expanded="false">
         <div class="context-header">
-          <span class="context-icon">🎯</span> 
+          <span class="context-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span> 
           <span class="context-title">Context</span>
           <span class="context-toggle-icon">▶</span>
         </div>
@@ -2580,7 +3050,7 @@ export function renderGeminiChatInterface(finding: BaselineFinding, target: Targ
         <div class="typing-indicator" id="typing-indicator" style="display: none;">
           <div class="chat-message ai-message">
             <div class="message-avatar">
-              <div class="avatar-icon">✨</div>
+              <div class="avatar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
             </div>
             <div class="message-content">
               <div class="typing-dots">
@@ -2623,7 +3093,7 @@ export function renderGeminiChatInterface(finding: BaselineFinding, target: Targ
     <div class="detail-section gemini-chat-section">
       <div class="chat-header">
         <div class="chat-title">
-          <div class="title-icon">✨</div>
+          <div class="title-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
           <h4>Gemini</h4>
         </div>
       </div>
@@ -2653,7 +3123,7 @@ function renderAllMessages(suggestions: GeminiSuggestion[]): string {
       allMessages += `
         <div class="chat-message user-message">
           <div class="message-avatar">
-            <div class="avatar-icon">👤</div>
+            <div class="avatar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M20 21v-2a4 4 0 0 0-3-3.87"/><path d="M4 21v-2a4 4 0 0 1 3-3.87"/><circle cx="12" cy="7" r="4"/></svg></div>
           </div>
           <div class="message-content">
             <div class="message-text">${escapeHtml(actualQuestion)}</div>
@@ -2663,7 +3133,7 @@ function renderAllMessages(suggestions: GeminiSuggestion[]): string {
         
         <div class="chat-message ai-message">
           <div class="message-avatar">
-            <div class="avatar-icon">✨</div>
+            <div class="avatar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
           </div>
           <div class="message-content">
             <div class="message-text">${renderSimpleMarkdown(suggestion.suggestion)}</div>
@@ -2676,7 +3146,7 @@ function renderAllMessages(suggestions: GeminiSuggestion[]): string {
       allMessages += `
         <div class="chat-message user-message">
           <div class="message-avatar">
-            <div class="avatar-icon">👤</div>
+            <div class="avatar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M20 21v-2a4 4 0 0 0-3-3.87"/><path d="M4 21v-2a4 4 0 0 1 3-3.87"/><circle cx="12" cy="7" r="4"/></svg></div>
           </div>
           <div class="message-content">
             <div class="message-text">${escapeHtml(suggestion.issue)}</div>
@@ -2686,7 +3156,7 @@ function renderAllMessages(suggestions: GeminiSuggestion[]): string {
         
         <div class="chat-message ai-message">
           <div class="message-avatar">
-            <div class="avatar-icon">✨</div>
+            <div class="avatar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
           </div>
           <div class="message-content">
             <div class="message-text">${renderSimpleMarkdown(suggestion.suggestion)}</div>

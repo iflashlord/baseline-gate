@@ -3,9 +3,12 @@ import type { BaselineFinding } from "../workspaceScanner";
 
 import { computeFindingId } from "./dataTransformation";
 import type {
+  BaselineBudgetSnapshot,
   DetailPayload,
   DetailSelection,
   FileGroupPayload,
+  FindingsStatistics,
+  ScanHistoryEntry,
   WebviewState,
   WebviewStateBuildContext
 } from "./types";
@@ -93,8 +96,11 @@ export function buildWebviewState(args: {
   severityIconUris: Record<Verdict, string>;
   files: FileGroupPayload[];
   detail: DetailPayload | null;
+  history?: ScanHistoryEntry[];
+  budget?: BaselineBudgetSnapshot | null;
+  stats?: FindingsStatistics;
 }): WebviewState {
-  const { context, filtered, severityIconUris, files, detail } = args;
+  const { context, filtered, severityIconUris, files, detail, history, budget, stats } = args;
   return {
     target: context.target,
     searchQuery: context.searchQuery,
@@ -110,6 +116,9 @@ export function buildWebviewState(args: {
     selectedFileUri: context.selectedFileUri,
     files,
     severityIconUris,
-    detail
+    detail,
+    history: history && history.length ? history : undefined,
+    budget: budget ?? undefined,
+    stats: stats ?? undefined
   };
 }
