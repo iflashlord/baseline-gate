@@ -107,21 +107,46 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       }
       .filters {
         display: grid;
-        grid-template-columns: minmax(120px, 1fr);
+        grid-template-columns: minmax(140px, 1fr);
+        grid-template-areas:
+          "search"
+          "severity"
+          "actions";
         gap: 0.375rem;
         padding: 0 0.75rem 0.5rem;
         border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
         background: var(--vscode-sideBar-background);
       }
+      .search-box {
+        grid-area: search;
+      }
+      .severity-filter {
+        grid-area: severity;
+      }
+      .filter-actions {
+        grid-area: actions;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
       @media (min-width: 420px) {
         .filters {
-          grid-template-columns: minmax(160px, 2fr) minmax(120px, 1fr);
+          grid-template-columns: minmax(180px, 1.6fr) minmax(140px, 1fr);
+          grid-template-areas:
+            "search actions"
+            "severity actions";
           align-items: center;
+        }
+        .filter-actions {
+          justify-content: flex-end;
         }
       }
       @media (min-width: 680px) {
         .filters {
-          grid-template-columns: minmax(160px, 2fr) minmax(200px, 1.5fr) auto;
+          grid-template-columns: minmax(220px, 2fr) minmax(220px, 1.5fr) auto;
+          grid-template-areas: "search severity actions";
         }
       }
       .search-box input {
@@ -175,10 +200,12 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         display: none;
       }
       .sort-select {
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.375rem;
-        flex-wrap: wrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.8rem;
+        color: var(--vscode-descriptionForeground);
+        font-weight: 500;
       }
       .sort-select select {
         padding: 0.25rem 0.4rem;
@@ -189,11 +216,11 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         font-size: 0.8rem;
         height: 28px;
         cursor: pointer;
+        min-width: 150px;
       }
-      .sort-select label {
-        font-size: 0.8rem;
-        color: var(--vscode-descriptionForeground);
-        font-weight: 500;
+      .sort-select select:focus-visible {
+        outline: 1px solid var(--vscode-focusBorder);
+        outline-offset: 1px;
       }
       .summary {
         font-size: 0.8rem;
@@ -1020,14 +1047,66 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       }
       
       .grouping-toggle {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 0.25rem;
-        font-size: 0.8rem;
       }
-      
+      .grouping-toggle label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-size: 0.8rem;
+        color: var(--vscode-descriptionForeground);
+        font-weight: 500;
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+      }
       .grouping-toggle input[type="checkbox"] {
-        margin: 0;
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      .grouping-toggle .toggle-visual {
+        position: relative;
+        width: 32px;
+        height: 18px;
+        border-radius: 999px;
+        background: var(--vscode-input-background);
+        border: 1px solid var(--vscode-input-border, rgba(255, 255, 255, 0.08));
+        transition: background-color 120ms ease, border-color 120ms ease;
+        flex-shrink: 0;
+      }
+      .grouping-toggle .toggle-visual::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--vscode-input-foreground);
+        transition: transform 120ms ease, background-color 120ms ease;
+      }
+      .grouping-toggle input[type="checkbox"]:checked + .toggle-visual {
+        background: var(--vscode-button-background);
+        border-color: var(--vscode-button-background);
+      }
+      .grouping-toggle input[type="checkbox"]:checked + .toggle-visual::after {
+        transform: translateX(14px);
+        background: var(--vscode-button-foreground);
+      }
+      .grouping-toggle input[type="checkbox"]:focus-visible + .toggle-visual {
+        outline: 2px solid var(--vscode-focusBorder);
+        outline-offset: 2px;
+      }
+      .grouping-toggle input[type="checkbox"]:disabled + .toggle-visual {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
       .detail {
         flex: 1 1 45%;
@@ -2020,7 +2099,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         .severity-filter {
           justify-content: center;
         }
-        .sort-select {
+        .filter-actions {
           justify-content: center;
         }
       }
@@ -2075,19 +2154,21 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
           <label data-verdict="warning"><input type="checkbox" value="warning" />Needs review</label>
           <label data-verdict="safe"><input type="checkbox" value="safe" />Safe</label>
         </div>
-        <div class="sort-select">
-          <label>
-            Sort by
+        <div class="filter-actions">
+          <label class="sort-select">
+            <span>Sort by</span>
             <select data-sort>
               <option value="severity">Severity (blocked first)</option>
               <option value="file">File path</option>
             </select>
           </label>
-        </div>
-        <div class="grouping-toggle">
-          <label>
-            <input type="checkbox" data-group-similar />Group similar issues
-          </label>
+          <div class="grouping-toggle">
+            <label>
+              <input type="checkbox" data-group-similar />
+              <span class="toggle-visual" aria-hidden="true"></span>
+              <span>Group similar issues</span>
+            </label>
+          </div>
         </div>
       </div>
       <div class="summary" data-summary></div>
