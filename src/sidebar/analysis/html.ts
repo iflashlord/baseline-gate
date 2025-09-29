@@ -71,7 +71,8 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
         background: var(--vscode-sideBar-background);
       }
-      .controls button {
+      .controls button,
+      .filter-actions button {
         display: inline-flex;
         align-items: center;
         gap: 0.3rem;
@@ -86,7 +87,8 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         height: 28px;
         min-width: 28px;
       }
-      .controls button:hover {
+      .controls button:hover,
+      .filter-actions button:hover {
         background: var(--vscode-button-secondaryHoverBackground);
         border-color: var(--vscode-button-border);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -100,10 +102,72 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         background: var(--vscode-button-hoverBackground);
         box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
       }
-      .controls button:disabled {
+      .controls button:disabled,
+      .filter-actions button:disabled {
         opacity: 0.5;
         cursor: default;
         box-shadow: none;
+      }
+      .filter-panel {
+        border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+        background: var(--vscode-sideBar-background);
+      }
+      .filter-panel summary {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--vscode-foreground);
+      }
+      .filter-panel summary::-webkit-details-marker {
+        display: none;
+      }
+      .filter-panel summary:hover {
+        background: var(--vscode-sideBarSectionHeader-background, rgba(255, 255, 255, 0.04));
+      }
+      .filter-panel summary:focus-visible {
+        outline: 2px solid var(--vscode-focusBorder);
+        outline-offset: 2px;
+      }
+      .filter-summary-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+      }
+      .filter-summary-title {
+        font-size: 0.85rem;
+      }
+      .filter-summary-status {
+        font-size: 0.75rem;
+        color: var(--vscode-descriptionForeground);
+      }
+      .filter-summary-status.active {
+        color: var(--vscode-focusBorder);
+        font-weight: 600;
+      }
+      .filter-summary-icon {
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 6px solid var(--vscode-foreground);
+        transition: transform 150ms ease;
+        flex-shrink: 0;
+      }
+      .filter-panel:not([open]) .filter-summary-icon {
+        transform: rotate(-90deg);
+      }
+      .filter-content {
+        padding: 0.5rem 0.75rem 0.75rem;
+        border-top: 1px solid var(--vscode-sideBarSectionHeader-border);
+      }
+      .filter-panel:not([open]) .filter-content {
+        display: none;
       }
       .filters {
         display: grid;
@@ -112,10 +176,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
           "search"
           "severity"
           "actions";
-        gap: 0.375rem;
-        padding: 0 0.75rem 0.5rem;
-        border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
-        background: var(--vscode-sideBar-background);
+        gap: 0.5rem;
       }
       .search-box {
         grid-area: search;
@@ -2139,34 +2200,45 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
     <div class="view">
       <div class="controls">
         <button class="primary" data-action="scan">Scan workspace</button>
-        <button data-action="clear-filters">Clear filters</button>
       </div>
-      <div class="filters">
-        <div class="search-box">
-          <input type="search" placeholder="Search findings" data-search />
-        </div>
-        <div class="severity-filter" data-severity>
-          <label data-verdict="blocked"><input type="checkbox" value="blocked" />Blocked</label>
-          <label data-verdict="warning"><input type="checkbox" value="warning" />Needs review</label>
-          <label data-verdict="safe"><input type="checkbox" value="safe" />Safe</label>
-        </div>
-        <div class="filter-actions">
-          <label class="sort-select">
-            <span>Sort by</span>
-            <select data-sort>
-              <option value="severity">Severity (blocked first)</option>
-              <option value="file">File path</option>
-            </select>
-          </label>
-          <div class="grouping-toggle">
-            <label>
-              <input type="checkbox" data-group-similar />
-              <span class="toggle-visual" aria-hidden="true"></span>
-              <span>Group similar issues</span>
-            </label>
+      <details class="filter-panel" data-filter-panel>
+        <summary aria-controls="filters-content" aria-expanded="false">
+          <span class="filter-summary-content">
+            <span class="filter-summary-title">Filter and sort</span>
+            <span class="filter-summary-status" data-filter-summary aria-live="polite">Default view</span>
+          </span>
+          <span class="filter-summary-icon" aria-hidden="true"></span>
+        </summary>
+        <div class="filter-content" id="filters-content">
+          <div class="filters">
+            <div class="search-box">
+              <input type="search" placeholder="Search findings" data-search />
+            </div>
+            <div class="severity-filter" data-severity>
+              <label data-verdict="blocked"><input type="checkbox" value="blocked" />Blocked</label>
+              <label data-verdict="warning"><input type="checkbox" value="warning" />Needs review</label>
+              <label data-verdict="safe"><input type="checkbox" value="safe" />Safe</label>
+            </div>
+            <div class="filter-actions">
+              <label class="sort-select">
+                <span>Sort by</span>
+                <select data-sort>
+                  <option value="severity">Severity (blocked first)</option>
+                  <option value="file">File path</option>
+                </select>
+              </label>
+              <div class="grouping-toggle">
+                <label>
+                  <input type="checkbox" data-group-similar />
+                  <span class="toggle-visual" aria-hidden="true"></span>
+                  <span>Group similar issues</span>
+                </label>
+              </div>
+              <button type="button" data-action="clear-filters">Clear filters</button>
+            </div>
           </div>
         </div>
-      </div>
+      </details>
       <div class="summary" data-summary></div>
       <div class="content">
         <div class="results" data-results id="main-content"></div>
@@ -2236,6 +2308,9 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       const groupSimilarToggle = document.querySelector('[data-group-similar]');
       const resultsNode = document.querySelector('[data-results]');
       const summaryNode = document.querySelector('[data-summary]');
+      const filterPanel = document.querySelector('[data-filter-panel]');
+      const filterSummaryStatus = document.querySelector('[data-filter-summary]');
+      const filterSummaryToggle = filterPanel ? filterPanel.querySelector('summary') : null;
       const detailNode = document.querySelector('[data-detail]');
       const detailTitleNode = document.querySelector('[data-detail-title]');
       const detailSubtitleNode = document.querySelector('[data-detail-subtitle]');
@@ -2256,8 +2331,25 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       const budgetCard = insightsGrid ? insightsGrid.querySelector('[data-budget-card]') : null;
       const budgetGrid = budgetCard ? budgetCard.querySelector('[data-budget-grid]') : null;
       const budgetCaption = budgetCard ? budgetCard.querySelector('[data-budget-caption]') : null;
+      const allSeverityValues = severityContainer
+        ? Array.from(severityContainer.querySelectorAll('input')).map((input) => input.value)
+        : [];
       const SVG_NS = 'http://www.w3.org/2000/svg';
       const MAX_SNIPPET_PREVIEW = 120;
+      let filterPanelTouched = false;
+
+      if (filterSummaryToggle) {
+        filterSummaryToggle.setAttribute('aria-expanded', filterPanel && filterPanel.open ? 'true' : 'false');
+      }
+
+      if (filterPanel && filterSummaryToggle) {
+        filterPanel.addEventListener('toggle', (event) => {
+          if (event.isTrusted) {
+            filterPanelTouched = true;
+          }
+          filterSummaryToggle.setAttribute('aria-expanded', filterPanel.open ? 'true' : 'false');
+        });
+      }
 
       // Resize functionality
       let isResizing = false;
@@ -3133,6 +3225,35 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
 
         controls.disabled = Boolean(scanning);
         clearBtn.disabled = !filtersActive;
+        clearBtn.setAttribute('aria-disabled', (!filtersActive).toString());
+
+        if (filterSummaryStatus) {
+          const activeParts = [];
+          if (searchQuery && searchQuery.trim()) {
+            activeParts.push('Search');
+          }
+          if (Array.isArray(severityFilter) && severityFilter.length && severityFilter.length !== allSeverityValues.length) {
+            activeParts.push('Severity');
+          }
+          if (sortOrder && sortOrder !== 'severity') {
+            activeParts.push(sortOrder === 'file' ? 'Sort: File path' : 'Sort: ' + sortOrder);
+          }
+          if (groupSimilarToggle && groupSimilarToggle.checked) {
+            activeParts.push('Grouped');
+          }
+          const statusText = filtersActive
+            ? (activeParts.length ? activeParts.join(' | ') : 'Filters applied')
+            : 'Default view';
+          filterSummaryStatus.textContent = statusText;
+          filterSummaryStatus.classList.toggle('active', filtersActive);
+        }
+
+        if (filterPanel && filtersActive && !filterPanel.open && !filterPanelTouched) {
+          filterPanel.open = true;
+          if (filterSummaryToggle) {
+            filterSummaryToggle.setAttribute('aria-expanded', 'true');
+          }
+        }
 
         if (document.activeElement !== searchInput) {
           searchInput.value = searchQuery;
