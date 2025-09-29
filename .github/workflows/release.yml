@@ -17,12 +17,18 @@ jobs:
       contents: write
     env:
       VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref }}
+
+      - name: Validate release tag
+        if: ${{ !startsWith(env.RELEASE_TAG, 'v') }}
+        run: |
+          echo "::error::Release tag must start with 'v' (received '${RELEASE_TAG}')" && exit 1
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -53,7 +59,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           files: baseline-gate.vsix
+          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

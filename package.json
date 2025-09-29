@@ -31,9 +31,9 @@
   },
   "badges": [
     {
-      "url": "https://github.com/iflashlord/baseline-gate/actions/workflows/vsce-release.yml/badge.svg",
-      "href": "https://github.com/iflashlord/baseline-gate/actions/workflows/vsce-release.yml",
-      "description": "VSCE Release"
+      "url": "https://github.com/iflashlord/baseline-gate/actions/workflows/release.yml/badge.svg",
+      "href": "https://github.com/iflashlord/baseline-gate/actions/workflows/release.yml",
+      "description": "Release Pipeline"
     }
   ],
   "screenshots": [
