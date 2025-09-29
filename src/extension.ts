@@ -51,6 +51,18 @@ export function activate(context: vscode.ExtensionContext) {
   const analysisProvider = new BaselineAnalysisViewProvider(context, target, panelAssets, geminiProvider);
   context.subscriptions.push(analysisProvider.register());
 
+  // Check if this is a fresh start (no .baseline-gate directory)
+  if (vscode.workspace.workspaceFolders?.length) {
+    void (async () => {
+      const isStorageMissing = await analysisProvider.isStorageDirectoryMissing();
+      if (isStorageMissing) {
+        // This is a fresh start - show information message
+        const message = 'BaselineGate: Starting fresh. All data will be stored in the .baseline-gate directory in your workspace.';
+        void vscode.window.showInformationMessage(message);
+      }
+    })();
+  }
+
   const scanWorkspace = vscode.commands.registerCommand('baseline-gate.scanWorkspace', async () => {
     if (!vscode.workspace.workspaceFolders?.length) {
       void vscode.window.showWarningMessage('Open a folder or workspace to scan for baseline issues.');
@@ -129,6 +141,21 @@ export function activate(context: vscode.ExtensionContext) {
     void vscode.window.showInformationMessage(`Baseline findings sorted by ${label}.`);
   });
   context.subscriptions.push(toggleSortOrder);
+
+  const clearAllData = vscode.commands.registerCommand('baseline-gate.clearAllData', async () => {
+    const confirmed = await vscode.window.showWarningMessage(
+      'This will clear all BaselineGate data including scan results and Gemini suggestions. This action cannot be undone.',
+      { modal: true },
+      'Clear All Data',
+      'Cancel'
+    );
+
+    if (confirmed === 'Clear All Data') {
+      await analysisProvider.clearAllData();
+      void vscode.window.showInformationMessage('All BaselineGate data has been cleared. You can now start fresh.');
+    }
+  });
+  context.subscriptions.push(clearAllData);
 
   const openSettings = vscode.commands.registerCommand('baseline-gate.openSettings', () => {
     vscode.commands.executeCommand('workbench.action.openSettings', 'baselineGate');

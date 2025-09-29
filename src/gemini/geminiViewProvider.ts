@@ -6,6 +6,7 @@ import {
   addSuggestionToState,
   applySearchFilter,
   clearSuggestionsState,
+  clearSuggestionsFromStorage,
   initializeSuggestionState,
   parseStoredSuggestions,
   persistSuggestions,
@@ -50,7 +51,7 @@ export class GeminiViewProvider {
       {
         location: vscode.ProgressLocation.Notification,
         title: 'Getting suggestion from Gemini...',
-        cancellable: false,
+        cancellable: true,
       },
       async (progress) => {
         try {
@@ -247,8 +248,8 @@ export class GeminiViewProvider {
     );
 
     if (confirmed === 'Clear All') {
+      await clearSuggestionsFromStorage();
       this.state = clearSuggestionsState(this.state);
-      await this.saveSuggestions();
       this.refresh();
     }
   }

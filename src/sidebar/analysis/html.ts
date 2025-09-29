@@ -2975,13 +2975,6 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
           const meta = document.createElement('div');
           meta.className = 'file-meta';
 
-          const counts = document.createElement('span');
-          counts.className = 'file-counts';
-          counts.appendChild(createCountBadge('blocked', file.counts.blocked, severityIconUris.blocked));
-          counts.appendChild(createCountBadge('warning', file.counts.warning, severityIconUris.warning));
-          counts.appendChild(createCountBadge('safe', file.counts.safe, severityIconUris.safe));
-          meta.appendChild(counts);
-
           const detailBtn = document.createElement('button');
           detailBtn.className = 'file-detail-button';
           detailBtn.type = 'button';
@@ -2994,6 +2987,15 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
             vscode.postMessage({ type: 'openFileDetail', uri: file.uri });
           });
           meta.appendChild(detailBtn);
+
+          const counts = document.createElement('span');
+          counts.className = 'file-counts';
+          counts.appendChild(createCountBadge('blocked', file.counts.blocked, severityIconUris.blocked));
+          counts.appendChild(createCountBadge('warning', file.counts.warning, severityIconUris.warning));
+          counts.appendChild(createCountBadge('safe', file.counts.safe, severityIconUris.safe));
+          meta.appendChild(counts);
+
+          
 
           summary.appendChild(meta);
 
@@ -3095,21 +3097,21 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
               actions.appendChild(docsBtn);
             }
 
-            const askAiBtn = document.createElement('button');
-            askAiBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
-            askAiBtn.title = 'Ask AI for help';
-            askAiBtn.setAttribute('aria-label', 'Ask AI for help');
-            askAiBtn.addEventListener('click', (event) => {
-              event.stopPropagation();
-              vscode.postMessage({ 
-                type: 'askGemini', 
-                issue: issue.featureName + ' - ' + issue.verdictLabel,
-                feature: issue.featureName,
-                filePath: file.relativePath,
-                findingId: issue.id
-              });
-            });
-            actions.appendChild(askAiBtn);
+            // const askAiBtn = document.createElement('button');
+            // askAiBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+            // askAiBtn.title = 'Ask AI for help';
+            // askAiBtn.setAttribute('aria-label', 'Ask AI for help');
+            // askAiBtn.addEventListener('click', (event) => {
+            //   event.stopPropagation();
+            //   vscode.postMessage({ 
+            //     type: 'askGemini', 
+            //     issue: issue.featureName + ' - ' + issue.verdictLabel,
+            //     feature: issue.featureName,
+            //     filePath: file.relativePath,
+            //     findingId: issue.id
+            //   });
+            // });
+            // actions.appendChild(askAiBtn);
 
             issueRow.appendChild(actions);
             issueRow.addEventListener('click', (event) => {

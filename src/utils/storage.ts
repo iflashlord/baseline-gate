@@ -52,3 +52,54 @@ export async function writeStorageJson<T>(filename: string, data: T): Promise<vo
     console.warn(`[baseline-gate] Failed to write ${filename}:`, error);
   }
 }
+
+export async function deleteStorageFile(filename: string): Promise<void> {
+  const storageDir = await ensureStorageDirectory();
+  if (!storageDir) {
+    return;
+  }
+
+  const fileUri = vscode.Uri.joinPath(storageDir, filename);
+  try {
+    await vscode.workspace.fs.delete(fileUri);
+  } catch (error) {
+    if (error instanceof vscode.FileSystemError && error.code === 'FileNotFound') {
+      // File doesn't exist, nothing to delete
+      return;
+    }
+    console.warn(`[baseline-gate] Failed to delete ${filename}:`, error);
+  }
+}
+
+export async function storageDirectoryExists(): Promise<boolean> {
+  const [folder] = vscode.workspace.workspaceFolders ?? [];
+  if (!folder) {
+    return false;
+  }
+
+  const storageDir = vscode.Uri.joinPath(folder.uri, STORAGE_DIR_NAME);
+  try {
+    await vscode.workspace.fs.stat(storageDir);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+export async function clearStorageDirectory(): Promise<void> {
+  const [folder] = vscode.workspace.workspaceFolders ?? [];
+  if (!folder) {
+    return;
+  }
+
+  const storageDir = vscode.Uri.joinPath(folder.uri, STORAGE_DIR_NAME);
+  try {
+    await vscode.workspace.fs.delete(storageDir, { recursive: true });
+  } catch (error) {
+    if (error instanceof vscode.FileSystemError && error.code === 'FileNotFound') {
+      // Directory doesn't exist, nothing to delete
+      return;
+    }
+    console.warn('[baseline-gate] Failed to clear storage directory:', error);
+  }
+}

@@ -2,25 +2,23 @@ import * as vscode from 'vscode';
 import type { GeminiSuggestion } from './geminiService';
 import type { GeminiSuggestionState } from './types';
 import { normalizeToDate } from './utils';
-import { writeStorageJson } from '../utils/storage';
+import { writeStorageJson, deleteStorageFile } from '../utils/storage';
 
 export const GEMINI_SUGGESTIONS_KEY = 'geminiSuggestions';
 export const GEMINI_SUGGESTIONS_FILE = 'gemini-suggestions.json';
 
 export function initializeSuggestionState(context: vscode.ExtensionContext): GeminiSuggestionState {
-  const stored = context.workspaceState.get<GeminiSuggestion[]>(GEMINI_SUGGESTIONS_KEY, []);
-  const suggestions = normalizeSuggestionTimestamps(stored ?? []);
-
+  // Initialize with empty state - data will be loaded from disk
   return {
-    suggestions,
-    filteredSuggestions: suggestions.slice(),
+    suggestions: [],
+    filteredSuggestions: [],
     searchQuery: '',
     originalSearchQuery: '',
   };
 }
 
 export async function persistSuggestions(context: vscode.ExtensionContext, suggestions: GeminiSuggestion[]): Promise<void> {
-  await context.workspaceState.update(GEMINI_SUGGESTIONS_KEY, suggestions);
+  // Only persist to file storage - no longer use workspaceState
   await writeStorageJson(GEMINI_SUGGESTIONS_FILE, suggestions);
 }
 
@@ -124,6 +122,10 @@ export function clearSuggestionsState(state: GeminiSuggestionState): GeminiSugge
     searchQuery: '',
     originalSearchQuery: '',
   };
+}
+
+export async function clearSuggestionsFromStorage(): Promise<void> {
+  await deleteStorageFile(GEMINI_SUGGESTIONS_FILE);
 }
 
 export function normalizeSuggestionTimestamps(suggestions: GeminiSuggestion[]): GeminiSuggestion[] {

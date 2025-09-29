@@ -40,7 +40,7 @@ import {
 import { buildWebviewState, filterFindings, syncSelection } from "./analysis/state";
 import { processMessage } from "./analysis/messages";
 import { BaselineDetailViewProvider } from "./detailView";
-import { readStorageJson, writeStorageJson } from "../utils/storage";
+import { readStorageJson, writeStorageJson, clearStorageDirectory, storageDirectoryExists } from "../utils/storage";
 
 const HISTORY_STORAGE_KEY = "baselineGate.history";
 const HISTORY_STORAGE_FILE = "scan-history.json";
@@ -106,8 +106,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     private readonly assets: BaselineAnalysisAssets,
     private readonly geminiProvider?: import('../gemini/geminiViewProvider').GeminiViewProvider
   ) {
-    this.history = this.loadHistoryFromMemento();
-    this.restoreLatestScanFromMemento();
+    // Only restore from disk - no longer use memento (VS Code's internal storage)
     void this.restoreHistoryFromDisk();
     void this.restoreLatestScanFromDisk();
   }
@@ -236,9 +235,36 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     this.postState();
   }
 
+  async clearAllData(): Promise<void> {
+    // Clear all in-memory data
+    this.findings = [];
+    this.history = [];
+    this.lastScanAt = undefined;
+    this.scanning = false;
+    this.progressText = undefined;
+    this.searchQuery = "";
+    this.severityFilter = new Set(DEFAULT_SEVERITIES);
+    this.sortOrder = DEFAULT_SORT_ORDER;
+
+    // Clear file storage
+    await clearStorageDirectory();
+
+    // Clear Gemini data
+    if (this.geminiProvider) {
+      await this.geminiProvider.clearAllSuggestionsPublic();
+    }
+
+    // Update UI
+    this.postState();
+  }
+
+  async isStorageDirectoryMissing(): Promise<boolean> {
+    return !(await storageDirectoryExists());
+  }
+
   private loadHistoryFromMemento(): ScanHistoryEntry[] {
-    const stored = this.context.workspaceState.get<unknown>(HISTORY_STORAGE_KEY, []);
-    return this.sanitizeHistoryEntries(stored);
+    // Legacy method - no longer used since we only load from disk
+    return [];
   }
 
   private sanitizeHistoryEntries(raw: unknown): ScanHistoryEntry[] {
@@ -283,24 +309,12 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       return;
     }
     this.history = history;
-    await this.context.workspaceState.update(HISTORY_STORAGE_KEY, history);
+    // No longer sync to workspaceState - only use file storage
     this.postState();
   }
 
   private restoreLatestScanFromMemento(): void {
-    const stored = this.context.workspaceState.get<unknown>(LATEST_SCAN_STORAGE_KEY);
-    const scan = this.parsePersistedScan(stored);
-    if (!scan || scan.target !== this.target) {
-      return;
-    }
-    const findings = this.deserializePersistedFindings(scan.findings);
-    if (!findings.length && scan.findings.length > 0) {
-      return;
-    }
-
-    this.findings = findings;
-    const parsedTimestamp = new Date(scan.scannedAt);
-    this.lastScanAt = Number.isNaN(parsedTimestamp.getTime()) ? undefined : parsedTimestamp;
+    // Legacy method - no longer used since we only load from disk
   }
 
   private async restoreLatestScanFromDisk(): Promise<void> {
@@ -451,7 +465,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       findings: this.findings.map((finding) => this.serializeFinding(finding))
     };
 
-    await this.context.workspaceState.update(LATEST_SCAN_STORAGE_KEY, payload);
+    // Only persist to file storage - no longer use workspaceState
     await writeStorageJson(LATEST_SCAN_FILE, payload);
   }
 
@@ -469,7 +483,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
     const nextHistory = [...this.history, entry].slice(-HISTORY_LIMIT);
     this.history = nextHistory;
-    await this.context.workspaceState.update(HISTORY_STORAGE_KEY, nextHistory);
+    // Only persist to file storage - no longer use workspaceState
     await writeStorageJson(HISTORY_STORAGE_FILE, nextHistory);
   }
 
