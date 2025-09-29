@@ -158,6 +158,65 @@ export function activate(context: vscode.ExtensionContext) {
   });
   context.subscriptions.push(clearAllData);
 
+  const resetToFactory = vscode.commands.registerCommand('baseline-gate.resetToFactory', async () => {
+    const confirmed = await vscode.window.showWarningMessage(
+      'This will reset BaselineGate to factory settings:\n\n' +
+      '• Remove .baseline-gate directory and all data\n' +
+      '• Reset all configuration settings to defaults\n' +
+      '• Clear all caches and preferences\n\n' +
+      'This action cannot be undone.',
+      { modal: true },
+      'Reset to Factory Settings',
+      'Cancel'
+    );
+
+    if (confirmed === 'Reset to Factory Settings') {
+      try {
+        // Clear all data including .baseline-gate directory
+        await analysisProvider.clearAllData();
+
+        // Reset all configuration settings to their defaults
+        const config = vscode.workspace.getConfiguration('baselineGate');
+
+        // Reset each configuration to its default value
+        await config.update('target', 'enterprise', vscode.ConfigurationTarget.Workspace);
+        await config.update('showDesktopBrowsers', true, vscode.ConfigurationTarget.Workspace);
+        await config.update('showMobileBrowsers', true, vscode.ConfigurationTarget.Workspace);
+        await config.update('geminiApiKey', '', vscode.ConfigurationTarget.Workspace);
+        await config.update('geminiModel', 'gemini-2.0-flash', vscode.ConfigurationTarget.Workspace);
+        await config.update('geminiCustomPrompt', '', vscode.ConfigurationTarget.Workspace);
+        await config.update('blockedBudget', 0, vscode.ConfigurationTarget.Workspace);
+        await config.update('warningBudget', 5, vscode.ConfigurationTarget.Workspace);
+        await config.update('safeGoal', 10, vscode.ConfigurationTarget.Workspace);
+
+        // Also reset user-level and global settings (undefined removes the setting)
+        await config.update('target', undefined, vscode.ConfigurationTarget.Global);
+        await config.update('showDesktopBrowsers', undefined, vscode.ConfigurationTarget.Global);
+        await config.update('showMobileBrowsers', undefined, vscode.ConfigurationTarget.Global);
+        await config.update('geminiApiKey', undefined, vscode.ConfigurationTarget.Global);
+        await config.update('geminiModel', undefined, vscode.ConfigurationTarget.Global);
+        await config.update('geminiCustomPrompt', undefined, vscode.ConfigurationTarget.Global);
+        await config.update('blockedBudget', undefined, vscode.ConfigurationTarget.Global);
+        await config.update('warningBudget', undefined, vscode.ConfigurationTarget.Global);
+        await config.update('safeGoal', undefined, vscode.ConfigurationTarget.Global);
+
+        // Update target to the default and refresh status
+        target = readConfiguredTarget();
+        updateStatus();
+
+        void vscode.window.showInformationMessage(
+          'BaselineGate has been reset to factory settings. All data and configurations have been cleared.'
+        );
+      } catch (error) {
+        console.error('Failed to reset to factory settings:', error);
+        void vscode.window.showErrorMessage(
+          'Failed to reset to factory settings. Some settings may not have been cleared properly.'
+        );
+      }
+    }
+  });
+  context.subscriptions.push(resetToFactory);
+
   const openSettings = vscode.commands.registerCommand('baseline-gate.openSettings', () => {
     vscode.commands.executeCommand('workbench.action.openSettings', 'baselineGate');
   });

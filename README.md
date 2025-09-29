@@ -1,78 +1,131 @@
-BaselineGate (VS Code)
+# BaselineGate for VS Code
 
-Shows Baseline support info for selected JS and CSS features directly in hover tooltips.
+BaselineGate surfaces Baseline browser support data directly inside VS Code so you can catch incompatible JavaScript and CSS features before shipping. Hover tooltips, an insights dashboard, and an AI-assisted detail view keep you informed and help you remediate issues without leaving the editor.
 
-Current Status
-- JS and CSS hover providers resolve to Baseline features and render browser support tables with fallback guidance.
-- Mocha unit suites cover scoring, feature resolution, detectors, and markdown rendering. Run them with `pnpm run compile-tests` (compiles tests to `out/` and executes TypeScript type-checking).
-- A GitHub Actions workflow (`.github/workflows/vsce-release.yml`) builds the webpack bundle, packages the VSIX with `vsce`, uploads it as an artifact, and optionally publishes when a `VSCE_PAT` secret is available.
-- The full `pnpm test` flow runs compilation, linting, and the VS Code integration harness. It passes locally using the bundled configuration.
+## Table of Contents
+- [Key Features](#key-features)
+- [Screenshots](#screenshots)
+- [Getting Started](#getting-started)
+- [Using BaselineGate](#using-baselinegate)
+- [Commands](#commands)
+- [Configuration](#configuration)
+- [Gemini AI Workflow](#gemini-ai-workflow)
+- [Development](#development)
+- [Testing](#testing)
+- [Packaging & Release](#packaging--release)
+- [Project Structure](#project-structure)
+- [Documentation](#documentation)
+- [Troubleshooting](#troubleshooting)
+- [Limitations & Roadmap](#limitations--roadmap)
+- [License](#license)
 
-Quick Start
-- Prereqs: Node 18+, VS Code 1.90+, pnpm recommended.
-- Install deps: `pnpm install` (or `npm install` if you prefer npm)
-- One-click run: Open the Run and Debug view (`View → Run` or `Ctrl/Cmd+Shift+D`), ensure `Run Extension` is selected, then press F5 or click `Run`. VS Code builds in watch mode and launches an Extension Development Host with the extension loaded.
-- Manual build: `pnpm run compile` (webpack bundle)
+## Key Features
+- **Hover intelligence** – Detects Baseline-capable JS/CSS tokens and renders support tables with fallback guidance inline.
+- **Analysis dashboard** – Scans the workspace, summarises findings by severity, and lets you drill into files and features.
+- **Detail view** – Presents rich metadata, support matrices, and remediation steps for each finding.
+- **Gemini integration** – Ask Google Gemini for fixes, capture follow-up questions, and keep conversations grouped by feature.
+- **Storage-aware insights** – Persist scans, AI conversations, and filters inside `.baseline-gate` for project-level history.
+- **Status reminders** – Status bar target indicator and quick actions so teams can align on `enterprise` vs `modern` goals.
 
-- Develop & Test
-- Run the extension: In Run and Debug (`Ctrl/Cmd+Shift+D`), choose `Run Extension`, then press F5 or click `Run`. Watch builds stay active, and breakpoints bind to TypeScript thanks to source maps.
-- Run tests (debug): In the same view pick `Run Extension Tests` and launch it. VS Code spins up an Extension Development Host and executes the suites under `src/test/suite/*`.
-- Run tests (Testing view): Open Testing (`View → Testing` or the beaker icon in the Activity Bar), locate the `baseline-gate` run profile, and start the tests. Results stream in the panel with rich asserts and diffing.
-- Run unit tests (terminal): `pnpm run compile-tests` performs a type-check build of the tests; execute the compiled JavaScript with `pnpm exec node out/test/suite/index.js` if you need ad-hoc runs.
-- `pnpm test` currently stops early because ESLint reports warnings (see Troubleshooting) and `.vscode-test` configuration is not yet committed. Add the config or pass `--config` to `vscode-test` once lint passes.
-- Background compile: `pnpm run watch` and `pnpm run watch-tests` keep extension and tests compiling while you edit.
+## Screenshots
+![Baseline analysis dashboard](media/screenshots/analysis-view.png)
+![Finding detail with Gemini guidance](media/screenshots/detail-view.png)
 
-Try It
-- Open a JS/TS file and type `Promise.any` or `URL.canParse` and hover.
-- Open a CSS/SCSS file and type `:has(...)`, `@container`, or `text-wrap:` and hover.
-- You should see a hover with a Baseline badge and support versions for Chrome/Firefox/Safari.
-- Want ready-made snippets? Open the files under `examples/` and hover the highlighted APIs/selectors.
+## Getting Started
+1. **Prerequisites**
+   - VS Code `^1.90.0`
+   - Node.js 18+
+   - `pnpm` (recommended) or `npm`
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
+3. **Launch the extension**
+   - Open the **Run and Debug** view (`Ctrl`/`Cmd` + `Shift` + `D`).
+   - Choose **Run Extension** and press **F5**. VS Code compiles with webpack watch mode and opens an Extension Development Host.
 
-Configuration
-- Setting: `baselineGate.target` → `"modern" | "enterprise"` (default: `"enterprise"`).
-- Change at: VS Code Settings → Extensions → BaselineGate, or in `settings.json`.
-- The status bar shows the active target: `Baseline: enterprise|modern`.
+## Using BaselineGate
+1. **Hover over APIs/selectors** – Type `Promise.any`, `URL.canParse`, `:has(...)`, or `@container` and hover to see support badges.
+2. **Run a workspace scan** – Execute `Baseline Gate: Scan Workspace` from the command palette. Findings appear in the analysis webview.
+3. **Filter and sort** – Use the webview toolbar to filter by severity, search by token/file, and toggle between severity vs file order.
+4. **Inspect details** – Click any finding to open the detail panel with support matrices, docs, and remediation notes.
+5. **Get AI help** – Trigger **Fix with Gemini** from a hover, the dashboard, or the detail panel to request guided fixes. Follow-ups stay threaded per feature.
 
-Implementing Baseline Features
-- Start with the Baseline overview on web.dev: https://web.dev/articles/baseline-tools-web-features. It explains the Baseline definition, supported tooling, and the structure of the canonical feature dataset.
-- We consume feature metadata directly from the published `web-features` npm package, which mirrors the dataset highlighted in the article. If you need to pin to a custom snapshot, script that export and update references in `src/core/baselineData.ts`.
-- When adding new feature detectors or resolvers, map to the IDs published in the Baseline dataset so the hover badge stays aligned with the Baseline specification.
-- Re-run `pnpm run compile` (or F5) after tweaking feature mappings to ensure the bundle refreshes.
+## Commands
+| Command | Description |
+| --- | --- |
+| `Baseline Gate: Scan Workspace` | Analyse JS/CSS files for unsupported features. |
+| `Baseline Gate: Search Findings` | Filter results by token, feature, or filename. |
+| `Baseline Gate: Filter by Severity` | Choose which verdicts (blocked, needs review, safe) remain visible. |
+| `Baseline Gate: Clear Filters` | Reset search, severity filters, and sort order. |
+| `Baseline Gate: Toggle Sort Order` | Switch between severity weighting and source order. |
+| `Baseline Gate: View Insights` | Reveal the analysis dashboard if hidden. |
+| `Baseline Gate: Open Settings` | Jump straight to the BaselineGate settings page. |
+| `Baseline Gate: Start Gemini Chat` | Open the AI-assisted detail view for a selected finding. |
+| `Baseline Gate: View Existing Suggestions` | Focus the dashboard on AI conversations for a finding. |
+| `Baseline Gate: Open Gemini Suggestions in Full View` | Expand Gemini threads into a dedicated panel. |
+| `Baseline Gate: Clear All BaselineGate Data` | Remove stored findings and Gemini transcripts from `.baseline-gate`. |
 
-How It Works
-- Detection: Naive detectors extract nearby JS symbols and CSS tokens.
-- Resolution: Tokens map to Baseline feature IDs in `src/core/resolver.ts`.
- - Data: Feature metadata is sourced from the `web-features` package (`web-features/data.json`).
-- Scoring: `src/core/scoring.ts` compares support against target mins from `src/core/targets.ts`.
+## Configuration
+All settings live under **Extensions → BaselineGate** or via `settings.json`.
+- `baselineGate.target`: `"enterprise"` (default) or `"modern"`.
+- `baselineGate.showDesktopBrowsers`: Toggle Chrome, Edge, Firefox, Safari columns.
+- `baselineGate.showMobileBrowsers`: Toggle Chrome Android, Firefox Android, Safari iOS.
+- `baselineGate.geminiApiKey`: Google Gemini API key for AI features.
+- `baselineGate.geminiModel`: Override the default `gemini-2.0-flash` model.
+- `baselineGate.geminiCustomPrompt`: Prepend custom guidance to each AI request.
+- `baselineGate.blockedBudget` / `baselineGate.warningBudget` / `baselineGate.safeGoal`: Track progress against internal quality targets.
 
-Common Tasks
-- Develop with auto‑rebuild: `pnpm run watch` (F5 already uses this).
-- Rebuild once: `pnpm run compile`.
-- Add more features: extend maps in `src/core/resolver.ts` and patterns in `src/core/detectors/*`.
+## Gemini AI Workflow
+1. Configure `baselineGate.geminiApiKey` (and optional model/prompt overrides).
+2. Request a suggestion from a hover, the dashboard, or a detail panel.
+3. BaselineGate sends contextual data (feature, file, verdict, severity) to Gemini.
+4. Responses persist per feature, keeping follow-up questions grouped even across sessions.
+5. Use **Open Gemini Suggestions in Full View** for a multi-pane conversation history.
 
-Debugging Tips
-- If breakpoints don’t bind, make sure the `Run Extension` launch is selected; we ship full source maps in dev. Production builds use hidden source maps.
-- For test debugging, set breakpoints in files under `src/test/suite` or the code under test in `src/**`. Use the `Run Extension Tests` launch.
+## Development
+- **Compile once**: `pnpm run compile`
+- **Watch mode**: `pnpm run watch`
+- **Compile TypeScript tests**: `pnpm run compile-tests`
+- **Lint**: `pnpm run lint`
+- **Development host**: use the built-in **Run Extension** launch configuration (ships source maps).
 
-Troubleshooting
-- No hover appears: Ensure you hover exactly over the token (e.g., over `any` in `Promise.any`). The MVP detector is simple and positional.
-- Missing support numbers: The data shape can vary across features. Inspect entries from `web-features/data.json` and adjust property paths in `src/core/baselineData.ts` if needed.
-- Build errors about JSON imports: Ensure `tsconfig.json` has `"resolveJsonModule": true` (already set).
-- Nothing compiles on F5: Ensure the `Run Extension` launch config is selected; it starts watch build.
-- Test pipeline failures: run `pnpm run lint -- --max-warnings=0` to inspect remaining warnings before invoking the VS Code test runner. The bundled `.vscode-test` configuration is already committed.
+## Testing
+- `pnpm test` runs type-checking, webpack build, ESLint, and the VS Code integration harness. It passes with the committed configuration.
+- Run only the compiled test suites via `pnpm exec node out/test/suite/index.js` after `pnpm run compile-tests` if you need quick iterations.
+- The Testing view in VS Code exposes named run profiles for both extension execution and integration tests.
 
-Project Layout
-- `src/extension.ts`: Activation and hover registration.
-- `src/hover/*`: Hover providers for JS and CSS.
-- `src/core/*`: Baseline loader, scoring, resolvers, and detectors.
-- `src/config/defaults.ts`: Default target.
-- `media/icon.png`: Extension icon placeholder.
+## Packaging & Release
+- Create a VSIX locally with:
+  ```bash
+  pnpm exec vsce package --no-dependencies
+  ```
+- CI workflow: `.github/workflows/vsce-release.yml` builds, packages, and (optionally) publishes when the `VSCE_PAT` secret is configured. Trigger via tags (`v*`) or manual dispatch.
 
-Limitations (MVP)
-- Detectors are regex/substring based; switch to TypeScript AST and PostCSS for fidelity.
-- Feature ID maps are small seeds; expand with ~10–20 high‑value items to start.
-- Data shape is normalized heuristically; strengthen once the exact schema subset is finalized.
+## Project Structure
+- `src/extension.ts`: Activation entry point and command registration.
+- `src/hover/`: JavaScript and CSS hover providers.
+- `src/core/`: Baseline data loading, scoring, and resolution.
+- `src/sidebar/analysis/`: Workspace scan dashboard assets.
+- `src/sidebar/detailView/`: Finding detail panel, HTML generator, and state management.
+- `src/gemini/`: Gemini provider, data transforms, and UI assets.
+- `media/`: Icons and webview imagery (including status/baseline SVGs).
+- `docs/`: Historical design notes, implementation summaries, and guides.
 
-Optional: Packaging
-- `@vscode/vsce` is already listed as a dev dependency. Create a package locally with `pnpm exec vsce package --no-dependencies` (outputs a `.vsix`).
-- CI: The `VSCE Package` workflow (`.github/workflows/vsce-release.yml`) runs on tag pushes (`v*`) or manual dispatch, producing a VSIX artifact and, if `VSCE_PAT` is set in repo secrets, publishing to the Marketplace.
+## Documentation
+All supplementary documentation lives in the [`docs/`](docs) directory. Files are grouped by theme (Gemini, storage, UI, testing) and use kebab-case naming for easy discovery.
+
+## Troubleshooting
+- **No hover content**: Hover directly over the token (e.g., the `any` in `Promise.any`). The initial detector is position-sensitive.
+- **Missing support columns**: Inspect `web-features/data.json` to confirm the data shape and adjust `src/core/baselineData.ts` if necessary.
+- **Build errors on JSON imports**: Ensure `resolveJsonModule` remains enabled in `tsconfig.json`.
+- **Extension does not compile during F5**: Confirm the **Run Extension** configuration is selected; it wires webpack watch mode automatically.
+- **Test pipeline failures**: Run `pnpm run lint -- --max-warnings=0` to surface remaining lint issues before re-running `pnpm test`.
+
+## Limitations & Roadmap
+- Hover detectors rely on heuristic string matching; migrating to TypeScript AST/PostCSS parsing will improve accuracy.
+- Baseline feature maps are seeded with high-value APIs/selectors; expand to cover project-specific needs.
+- Data normalisation follows the current `web-features` schema; monitor upstream changes and adjust resolvers when necessary.
+
+## License
+BaselineGate is released under the [MIT License](LICENSE).

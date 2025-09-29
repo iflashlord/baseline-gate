@@ -103,6 +103,11 @@
         "title": "Clear All BaselineGate Data"
       },
       {
+        "command": "baseline-gate.resetToFactory",
+        "title": "Reset BaselineGate to Factory Settings",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "baseline-gate.startGeminiChat",
         "title": "Start Gemini Chat"
       },
@@ -188,7 +193,24 @@
         }
       ]
     },
+    "submenus": [
+      {
+        "id": "baseline-gate.settings",
+        "label": "Settings",
+        "icon": "$(settings-gear)"
+      }
+    ],
     "menus": {
+      "baseline-gate.settings": [
+        {
+          "command": "baseline-gate.openSettings",
+          "group": "1_settings@1"
+        },
+        {
+          "command": "baseline-gate.resetToFactory",
+          "group": "2_reset@1"
+        }
+      ],
       "view/title": [
         {
           "command": "baseline-gate.openGeminiFullView",
@@ -197,7 +219,7 @@
           "icon": "$(history)"
         },
         {
-          "command": "baseline-gate.openSettings",
+          "submenu": "baseline-gate.settings",
           "when": "view == baselineGate.analysisView",
           "group": "navigation@2",
           "icon": "$(settings-gear)"
