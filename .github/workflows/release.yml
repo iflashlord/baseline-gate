@@ -61,7 +61,6 @@ jobs:
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: baseline-gate.vsix
-          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

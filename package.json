@@ -191,6 +191,7 @@
       "baselineGate": [
         {
           "id": "baselineGate.analysisView",
+          "icon": "media/icon.png",
           "type": "webview",
           "name": "Baseline Analysis",
           "contextualTitle": "Baseline Analysis"

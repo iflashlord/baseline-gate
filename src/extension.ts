@@ -175,21 +175,21 @@ export function activate(context: vscode.ExtensionContext) {
         // Clear all data including .baseline-gate directory
         await analysisProvider.clearAllData();
 
-        // Reset all configuration settings to their defaults
+        // Reset all configuration settings by removing them (undefined removes the setting)
         const config = vscode.workspace.getConfiguration('baselineGate');
 
-        // Reset each configuration to its default value
-        await config.update('target', 'enterprise', vscode.ConfigurationTarget.Workspace);
-        await config.update('showDesktopBrowsers', true, vscode.ConfigurationTarget.Workspace);
-        await config.update('showMobileBrowsers', true, vscode.ConfigurationTarget.Workspace);
-        await config.update('geminiApiKey', '', vscode.ConfigurationTarget.Workspace);
-        await config.update('geminiModel', 'gemini-2.0-flash', vscode.ConfigurationTarget.Workspace);
-        await config.update('geminiCustomPrompt', '', vscode.ConfigurationTarget.Workspace);
-        await config.update('blockedBudget', 0, vscode.ConfigurationTarget.Workspace);
-        await config.update('warningBudget', 5, vscode.ConfigurationTarget.Workspace);
-        await config.update('safeGoal', 10, vscode.ConfigurationTarget.Workspace);
+        // Clear workspace-level settings (removes from .vscode/settings.json)
+        await config.update('target', undefined, vscode.ConfigurationTarget.Workspace);
+        await config.update('showDesktopBrowsers', undefined, vscode.ConfigurationTarget.Workspace);
+        await config.update('showMobileBrowsers', undefined, vscode.ConfigurationTarget.Workspace);
+        await config.update('geminiApiKey', undefined, vscode.ConfigurationTarget.Workspace);
+        await config.update('geminiModel', undefined, vscode.ConfigurationTarget.Workspace);
+        await config.update('geminiCustomPrompt', undefined, vscode.ConfigurationTarget.Workspace);
+        await config.update('blockedBudget', undefined, vscode.ConfigurationTarget.Workspace);
+        await config.update('warningBudget', undefined, vscode.ConfigurationTarget.Workspace);
+        await config.update('safeGoal', undefined, vscode.ConfigurationTarget.Workspace);
 
-        // Also reset user-level and global settings (undefined removes the setting)
+        // Clear user-level/global settings
         await config.update('target', undefined, vscode.ConfigurationTarget.Global);
         await config.update('showDesktopBrowsers', undefined, vscode.ConfigurationTarget.Global);
         await config.update('showMobileBrowsers', undefined, vscode.ConfigurationTarget.Global);
