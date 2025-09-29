@@ -11,6 +11,13 @@ export class DetailViewStateManager {
     currentFinding: undefined
   };
 
+  // New state for feature-based views
+  private static featureState: {
+    currentPanel?: vscode.WebviewPanel;
+    currentFeatureId?: string;
+    currentFindings?: BaselineFinding[];
+  } = {};
+
   /**
    * Get the current panel
    */
@@ -70,5 +77,82 @@ export class DetailViewStateManager {
       this.state.currentPanel.dispose();
     }
     this.clearState();
+  }
+
+  // Feature-based view methods
+  
+  /**
+   * Get the current feature panel
+   */
+  public static getCurrentFeaturePanel(): vscode.WebviewPanel | undefined {
+    return this.featureState.currentPanel;
+  }
+
+  /**
+   * Get the current feature ID
+   */
+  public static getCurrentFeatureId(): string | undefined {
+    return this.featureState.currentFeatureId;
+  }
+
+  /**
+   * Get the current feature findings
+   */
+  public static getCurrentFeatureFindings(): BaselineFinding[] | undefined {
+    return this.featureState.currentFindings;
+  }
+
+  /**
+   * Set the current feature panel
+   */
+  public static setCurrentFeaturePanel(panel: vscode.WebviewPanel | undefined): void {
+    this.featureState.currentPanel = panel;
+  }
+
+  /**
+   * Update feature state
+   */
+  public static updateFeatureState(
+    panel: vscode.WebviewPanel | undefined, 
+    featureId: string | undefined, 
+    findings: BaselineFinding[] | undefined
+  ): void {
+    this.featureState.currentPanel = panel;
+    this.featureState.currentFeatureId = featureId;
+    this.featureState.currentFindings = findings;
+  }
+
+  /**
+   * Check if a feature panel is currently active
+   */
+  public static hasActiveFeaturePanel(): boolean {
+    return this.featureState.currentPanel !== undefined;
+  }
+
+  /**
+   * Clear the feature state
+   */
+  public static clearFeatureState(): void {
+    this.featureState.currentPanel = undefined;
+    this.featureState.currentFeatureId = undefined;
+    this.featureState.currentFindings = undefined;
+  }
+
+  /**
+   * Dispose the current feature panel and clear state
+   */
+  public static disposeFeature(): void {
+    if (this.featureState.currentPanel) {
+      this.featureState.currentPanel.dispose();
+    }
+    this.clearFeatureState();
+  }
+
+  /**
+   * Dispose all panels and clear all state
+   */
+  public static disposeAll(): void {
+    this.dispose();
+    this.disposeFeature();
   }
 }

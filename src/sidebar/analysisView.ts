@@ -852,10 +852,15 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       return;
     }
 
-    // Open the detail view in a new panel
-    BaselineDetailViewProvider.createOrShow(
+    // Find all occurrences of the same feature
+    const featureId = finding.feature.id;
+    const featureFindings = this.findings.filter((f) => f.feature.id === featureId);
+
+    // Always use the enhanced single view (which will show occurrences if multiple exist)
+    BaselineDetailViewProvider.createOrShowWithOccurrences(
       this.context,
       finding,
+      featureFindings,
       this.target,
       this.assets,
       this.geminiProvider

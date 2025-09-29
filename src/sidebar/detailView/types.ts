@@ -29,10 +29,23 @@ export interface FileDetailViewConfig {
 }
 
 /**
+ * Configuration for creating feature-based detail views
+ */
+export interface FeatureDetailViewConfig {
+  context: vscode.ExtensionContext;
+  featureId: string;
+  findings: BaselineFinding[];
+  target: Target;
+  assets: BaselineAnalysisAssets;
+  geminiProvider?: import('../../gemini/geminiViewProvider').GeminiViewProvider;
+}
+
+/**
  * Message types that can be received from the webview
  */
 export type DetailViewMessage =
   | { type: 'openFile'; uri: string; start: { line: number; character: number }; end: { line: number; character: number } }
+  | { type: 'openFileAtLine'; uri: string; line: number; character?: number }
   | { type: 'openDocs'; url: string }
   | { type: 'askGemini'; issue: string; feature: string; findingId: string }
   | { type: 'askGeminiFollowUp'; question: string; findingId: string; feature: string; filePath: string; target: string }
@@ -56,6 +69,18 @@ export interface WebviewRenderContext {
  */
 export interface FileWebviewRenderContext {
   webview: vscode.Webview;
+  findings: BaselineFinding[];
+  target: Target;
+  assets: BaselineAnalysisAssets;
+  geminiProvider?: import('../../gemini/geminiViewProvider').GeminiViewProvider;
+}
+
+/**
+ * Context for rendering feature detail content
+ */
+export interface FeatureWebviewRenderContext {
+  webview: vscode.Webview;
+  featureId: string;
   findings: BaselineFinding[];
   target: Target;
   assets: BaselineAnalysisAssets;

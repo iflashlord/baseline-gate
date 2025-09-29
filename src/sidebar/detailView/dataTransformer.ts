@@ -178,6 +178,19 @@ export class DetailViewDataTransformer {
   }
 
   /**
+   * Generate panel title for feature view
+   */
+  public static generateFeaturePanelTitle(featureId: string, findings: BaselineFinding[]): string {
+    if (findings.length === 0) {
+      return `Feature: ${featureId}`;
+    }
+    
+    const featureName = findings[0].feature.name;
+    const occurrenceCount = findings.length;
+    return `Feature: ${featureName} (${occurrenceCount} occurrence${occurrenceCount > 1 ? 's' : ''})`;
+  }
+
+  /**
    * Create view column for panel positioning
    */
   public static getViewColumn(): vscode.ViewColumn {

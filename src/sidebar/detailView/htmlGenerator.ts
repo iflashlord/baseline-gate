@@ -35,6 +35,26 @@ export class DetailViewHtmlGenerator {
   }
 
   /**
+   * Generate complete webview HTML content for feature view
+   */
+  public static generateFeatureWebviewContent(
+    context: import('./types').FeatureWebviewRenderContext,
+    detailHtml: string
+  ): string {
+    const nonce = DetailViewUtils.generateNonce();
+    const featureName = context.findings[0]?.feature?.name || context.featureId;
+
+    const options: HtmlGenerationOptions = {
+      nonce,
+      relativePath: `Feature: ${featureName}`,
+      detailHtml,
+      geminiContext: undefined // Feature view handles context differently
+    };
+
+    return this.buildFeatureHtmlDocument(options, context);
+  }
+
+  /**
    * Build the complete HTML document structure
    */
   private static buildHtmlDocument(
@@ -52,6 +72,33 @@ export class DetailViewHtmlGenerator {
 </head>
 <body>
     ${this.generateBodyContent(detailHtml, finding, relativePath, target, geminiContext)}
+    ${this.generateJavaScript(nonce)}
+</body>
+</html>`;
+  }
+
+  /**
+   * Build the complete HTML document structure for feature view
+   */
+  private static buildFeatureHtmlDocument(
+    options: HtmlGenerationOptions,
+    context: import('./types').FeatureWebviewRenderContext
+  ): string {
+    const { nonce, relativePath, detailHtml } = options;
+    const { findings, target, webview } = context;
+    const firstFinding = findings[0];
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    ${this.generateHtmlHead(nonce, webview, firstFinding)}
+    ${this.generateStyles()}
+    ${this.generateFeatureSpecificStyles()}
+</head>
+<body>
+    <div class="detail-view-container">
+        ${detailHtml}
+    </div>
     ${this.generateJavaScript(nonce)}
 </body>
 </html>`;
@@ -704,6 +751,176 @@ export class DetailViewHtmlGenerator {
   }
 
   /**
+   * Generate feature-specific styles for feature view
+   */
+  private static generateFeatureSpecificStyles(): string {
+    return `<style>
+        .feature-occurrences {
+            margin-top: 24px;
+        }
+
+        .feature-occurrence-item {
+            background: var(--vscode-sideBar-background);
+            border: 1px solid var(--vscode-sideBarSectionHeader-border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .feature-occurrence-item:hover {
+            background: var(--vscode-list-hoverBackground);
+            border-color: var(--vscode-focusBorder);
+        }
+
+        .occurrence-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .occurrence-file-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .occurrence-file-path {
+            font-weight: 600;
+            color: var(--vscode-textLink-foreground);
+            cursor: pointer;
+        }
+
+        .occurrence-file-path:hover {
+            text-decoration: underline;
+        }
+
+        .occurrence-line-info {
+            color: var(--vscode-descriptionForeground);
+            font-size: 0.9em;
+        }
+
+        .occurrence-verdict {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .occurrence-code {
+            background: var(--vscode-textCodeBlock-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-family: var(--vscode-editor-font-family);
+            font-size: 0.9em;
+            color: var(--vscode-editor-foreground);
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .feature-summary {
+            background: var(--vscode-inputOption-hoverBackground);
+            border-left: 4px solid var(--vscode-focusBorder);
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .feature-summary h2 {
+            margin: 0 0 8px 0;
+            color: var(--vscode-foreground);
+        }
+
+        .feature-count {
+            font-size: 0.9em;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        /* Occurrences section styles for enhanced single view */
+        .occurrences-list {
+            margin-top: 12px;
+        }
+
+        .occurrence-item {
+            background: var(--vscode-sideBar-background);
+            border: 1px solid var(--vscode-sideBarSectionHeader-border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .occurrence-item:hover {
+            background: var(--vscode-list-hoverBackground);
+            border-color: var(--vscode-focusBorder);
+        }
+
+        .occurrence-item.current-occurrence {
+            border-color: var(--vscode-focusBorder);
+            background: var(--vscode-inputOption-hoverBackground);
+        }
+
+        .occurrence-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .occurrence-file-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .occurrence-file-path {
+            font-weight: 600;
+            color: var(--vscode-textLink-foreground);
+            cursor: pointer;
+        }
+
+        .occurrence-file-path:hover {
+            text-decoration: underline;
+        }
+
+        .occurrence-line-info {
+            color: var(--vscode-descriptionForeground);
+            font-size: 0.9em;
+        }
+
+        .current-indicator {
+            background: var(--vscode-focusBorder);
+            color: var(--vscode-button-foreground);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .occurrence-verdict {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .occurrence-code {
+            background: var(--vscode-textCodeBlock-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-family: var(--vscode-editor-font-family);
+            font-size: 0.9em;
+            color: var(--vscode-editor-foreground);
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+    </style>`;
+  }
+
+  /**
    * Generate body content
    */
   private static generateBodyContent(
@@ -996,6 +1213,17 @@ export class DetailViewHtmlGenerator {
         function refreshView() {
             vscode.postMessage({
                 type: 'refresh'
+            });
+        }
+        
+        // Open file at specific line - used by feature detail view
+        function openFileAtLine(uri, line, character) {
+            character = character || 0;
+            vscode.postMessage({
+                type: 'openFileAtLine',
+                uri: uri,
+                line: line,
+                character: character
             });
         }
         
