@@ -148,7 +148,7 @@ suite('Detail View SVG Icon Rendering Tests', () => {
       
       assert.ok(html.includes('<strong>Bold</strong>'));
       assert.ok(html.includes('<em>italic</em>'));
-      assert.ok(html.includes('<code class="inline-code">code</code>'));
+      assert.ok(html.includes('<code>code</code>')); // Updated to match new markdown renderer
     });
 
     test('should generate secure nonce values', () => {

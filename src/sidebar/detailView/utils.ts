@@ -1,5 +1,6 @@
 import type { GeminiSuggestion } from "../../gemini/geminiService";
 import { escapeHtml, generateNonce, formatTimestamp, getRelativePath } from "../../utils";
+import { renderSimpleMarkdown as renderSimpleMarkdownUtil } from "../../utils/markdownRenderer";
 
 /**
  * Utility functions for the detail view
@@ -17,34 +18,7 @@ export class DetailViewUtils {
    * Render simple markdown to HTML
    */
   public static renderSimpleMarkdown(text: string): string {
-    // Handle code blocks with copy functionality
-    let formattedText = text.replace(/```([\s\S]*?)```/g, (match, codeContent) => {
-      const escapedCode = this.escapeHtml(codeContent.trim());
-      return `
-        <div class="code-block">
-          <div class="code-header">
-            <button class="copy-code-btn" onclick="copyCodeToClipboard(this)" data-code="${this.escapeHtml(codeContent.trim())}">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; margin-right: 4px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy
-            </button>
-          </div>
-          <pre><code>${escapedCode}</code></pre>
-        </div>
-      `;
-    });
-
-    // Handle inline code
-    formattedText = formattedText.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
-    
-    // Handle bold text
-    formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    
-    // Handle italic text
-    formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    
-    // Handle line breaks
-    formattedText = formattedText.replace(/\n/g, '<br>');
-    
-    return formattedText;
+    return renderSimpleMarkdownUtil(text);
   }
 
   /**

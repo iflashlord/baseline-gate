@@ -1175,16 +1175,21 @@ export class DetailViewHtmlGenerator {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
         
-        // Format markdown for proper display
+        // Format markdown for proper display - enhanced with better formatting
         function formatMarkdown(text) {  
             return text
-                .replace(/\`\`\`([\\s\\S]*?)\`\`\`/g, '<pre><code>$1</code></pre>')
+                .replace(/\`\`\`([\\s\\S]*?)\`\`\`/g, '<div class="code-block" data-code-block><pre><code>$1</code></pre><button type="button" class="code-copy-btn" data-action="copy-code" aria-label="Copy code snippet" title="Copy code snippet">Copy</button></div>')
                 .replace(/\`([^\`]+)\`/g, '<code>$1</code>')
+                .replace(/\\*\\*\\*([^*]+)\\*\\*\\*/g, '<strong><em>$1</em></strong>')
                 .replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>')
                 .replace(/\\*([^*]+)\\*/g, '<em>$1</em>')
                 .replace(/^### (.*$)/gm, '<h3>$1</h3>')
                 .replace(/^## (.*$)/gm, '<h2>$1</h2>')
                 .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                .replace(/^\\* (.+)$/gm, '<li>$1</li>')
+                .replace(/^\\d+\\. (.+)$/gm, '<li>$1</li>')
+                .replace(/(<li>.*<\\/li>)/s, '<ul>$1</ul>')
+                .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
                 .replace(/\\n\\n/g, '</p><p>')
                 .replace(/\\n/g, '<br>');
         }

@@ -15,9 +15,9 @@ import {
   formatVerdict,
   generateNonce,
   getBaselineIconHtml,
-  renderSimpleMarkdown,
   renderSupportTables
 } from "./utils";
+import { renderSimpleMarkdown } from "../../utils/markdownRenderer";
 import { buildResourceLinks } from "../../hover/render/contentBuilder";
 
 export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {

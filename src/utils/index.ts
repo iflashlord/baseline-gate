@@ -36,3 +36,11 @@ export {
   highlightHtml,
   highlightText
 } from './commonUtils';
+
+// Markdown utilities
+export {
+  renderMarkdown,
+  renderSimpleMarkdown,
+  formatMarkdownForWebview,
+  formatGeminiResponse
+} from './markdownRenderer';

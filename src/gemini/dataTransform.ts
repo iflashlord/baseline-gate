@@ -1,5 +1,6 @@
 import type { GeminiSuggestion } from './geminiService';
 import { escapeHtml, formatTimestamp, getFileName, highlightHtml, highlightText } from './utils';
+import { renderMarkdown as renderMarkdownUtil } from '../utils/markdownRenderer';
 
 export function renderSuggestionCard(suggestion: GeminiSuggestion, searchTerm: string): string {
   const suggestionId = escapeHtml(suggestion.id);
@@ -136,61 +137,5 @@ export function renderSuggestionCard(suggestion: GeminiSuggestion, searchTerm: s
 }
 
 export function renderMarkdown(text: string, query?: string): string {
-  // Simple markdown to HTML converter for basic formatting
-  let html = escapeHtml(text);
-
-  // Headers
-  html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
-  html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-  html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
-
-  // Bold and italic
-  html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-  // Code blocks
-  html = html.replace(/```([\s\S]*?)```/g, (_match, codeContent: string) => {
-    return [
-      '<div class="code-block" data-code-block>',
-      '<pre><code>',
-      codeContent,
-      '</code></pre>',
-      '<button type="button" class="code-copy-btn" data-action="copy-code" aria-label="Copy code snippet" title="Copy code snippet">',
-      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">',
-      '<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>',
-      '<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>',
-      '</svg>',
-      '</button>',
-      '</div>'
-    ].join('');
-  });
-  html = html.replace(/`([^`]+?)`/g, '<code>$1</code>');
-
-  // Lists
-  html = html.replace(/^[\s]*[-*+] (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-
-  // Numbered lists
-  html = html.replace(/^[\s]*\d+\. (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>)/s, (match) => {
-    if (match.includes('<ul>')) {
-      return match;
-    }
-    return '<ol>' + match + '</ol>';
-  });
-
-  // Blockquotes
-  html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
-
-  // Line breaks
-  html = html.replace(/\n\n/g, '</p><p>');
-  html = html.replace(/\n/g, '<br>');
-
-  // Wrap in paragraphs
-  if (!html.startsWith('<h') && !html.startsWith('<ul') && !html.startsWith('<ol') && !html.startsWith('<pre')) {
-    html = '<p>' + html + '</p>';
-  }
-
-  return highlightHtml(html, query);
+  return renderMarkdownUtil(text, query);
 }

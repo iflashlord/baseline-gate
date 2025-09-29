@@ -281,39 +281,10 @@ export function escapeAttribute(value: string): string {
   return escapeHtml(value);
 }
 
+import { renderSimpleMarkdown as renderSimpleMarkdownUtil } from '../../utils/markdownRenderer';
+
 export function renderSimpleMarkdown(text: string): string {
-  const codeBlocks: string[] = [];
-  let html = escapeAttribute(text);
-
-  html = html.replace(/```([\s\S]*?)```/g, (_match, codeContent: string) => {
-    const token = `__GEMINI_DETAIL_CODE_BLOCK_${codeBlocks.length}__`;
-    codeBlocks.push(codeContent);
-    return token;
-  });
-
-  // Remove markdown task list checkboxes and convert to plain list items
-  html = html.replace(/^(\s*)- \[[x ]\]\s*/gm, '$1- ');
-  
-  html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  html = html.replace(/`([^`]+?)`/g, '<code>$1</code>');
-  html = html.replace(/\n/g, '<br>');
-
-  codeBlocks.forEach((codeContent, index) => {
-    const trimmed = codeContent.replace(/^\n+|\n+$/g, '');
-    const blockHtml = [
-      '<div class="code-block" data-code-block>',
-      '<pre><code>',
-      trimmed,
-      '</code></pre>',
-      '<button type="button" class="code-copy-btn" data-action="copy-code" aria-label="Copy code snippet" title="Copy code snippet">Copy</button>',
-      '</div>'
-    ].join('');
-    html = html.replace(`__GEMINI_DETAIL_CODE_BLOCK_${index}__`, blockHtml);
-  });
-
-  return html;
+  return renderSimpleMarkdownUtil(text);
 }
 
 export function buildGeminiIssueContent(
