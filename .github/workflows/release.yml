@@ -1,6 +1,11 @@
 name: Release Extension
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Optional existing tag to release (leave empty to rely on push trigger)'
+        required: false
   push:
     tags:
       - 'v*'
@@ -15,6 +20,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3

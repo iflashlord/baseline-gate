@@ -115,7 +115,8 @@ The repository automates releases through GitHub Actions. A typical release look
 
 3. **Release automation**
    - The `Release Extension` workflow (`.github/workflows/release.yml`) triggers automatically on any `v*` tag.
-   - It installs dependencies, runs the full `pnpm test`, packages the extension (`baseline-gate.vsix`), creates a GitHub Release, uploads the VSIX asset, and publishes to the Marketplace when `VSCE_PAT` is available.
+   - You can also run it manually via **Run workflow** and optionally provide an existing tag to rebuild/publish.
+   - It installs dependencies, runs the full `pnpm test` under `xvfb-run`, packages the extension (`baseline-gate.vsix`), creates a GitHub Release, uploads the VSIX asset, and publishes to the Marketplace when `VSCE_PAT` is available.
 
 4. **Manual verification (optional)**
    - Download the VSIX artifact from the GitHub Release and install it locally.
