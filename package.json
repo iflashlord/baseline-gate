@@ -16,13 +16,7 @@
     "onLanguage:javascriptreact",
     "onLanguage:typescriptreact",
     "onLanguage:css",
-    "onLanguage:scss",
-    "onView:baselineGate.analysisView",
-    "onCommand:baseline-gate.scanWorkspace",
-    "onCommand:baseline-gate.searchFindings",
-    "onCommand:baseline-gate.configureSeverityFilter",
-    "onCommand:baseline-gate.clearFilters",
-    "onCommand:baseline-gate.toggleSortOrder"
+    "onLanguage:scss"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -75,6 +69,10 @@
         "command": "baseline-gate.openGeminiFullView",
         "title": "Open Gemini Suggestions in Full View",
         "icon": "$(history)"
+      },
+      {
+        "command": "baseline-gate.clearAllData",
+        "title": "Clear All BaselineGate Data"
       }
     ],
     "configuration": {
@@ -168,7 +166,8 @@
         {
           "command": "baseline-gate.openInsights",
           "when": "view == baselineGate.analysisView",
-          "group": "navigation@1.5"
+          "group": "navigation@1.5",
+          "icon": "$(graph)"
         }
       ]
     }
