@@ -111,7 +111,7 @@ The repository automates releases through GitHub Actions. A typical release look
    - Choose the bump type (`patch`, `minor`, `major`). The workflow commits the new version, tags it (`vX.Y.Z`), and pushes to `main`.
 
 2. **Continuous Integration**
-   - The `CI` workflow (`.github/workflows/ci.yml`) runs on every push/PR to `main` and executes `pnpm run lint -- --max-warnings=0` and `pnpm test`.
+   - The `CI` workflow (`.github/workflows/ci.yml`) runs on every push/PR to `main` and executes `pnpm run lint -- --max-warnings 0` and `pnpm test`.
 
 3. **Release automation**
    - The `Release Extension` workflow (`.github/workflows/release.yml`) triggers automatically on any `v*` tag.
@@ -142,7 +142,7 @@ All supplementary documentation lives in the [`docs/`](docs) directory. Files ar
 - **Missing support columns**: Inspect `web-features/data.json` to confirm the data shape and adjust `src/core/baselineData.ts` if necessary.
 - **Build errors on JSON imports**: Ensure `resolveJsonModule` remains enabled in `tsconfig.json`.
 - **Extension does not compile during F5**: Confirm the **Run Extension** configuration is selected; it wires webpack watch mode automatically.
-- **Test pipeline failures**: Run `pnpm run lint -- --max-warnings=0` to surface remaining lint issues before re-running `pnpm test`.
+- **Test pipeline failures**: Run `pnpm run lint -- --max-warnings 0` to surface remaining lint issues before re-running `pnpm test`.
 
 ## Limitations & Roadmap
 - Hover detectors rely on heuristic string matching; migrating to TypeScript AST/PostCSS parsing will improve accuracy.
