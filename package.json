@@ -2,6 +2,7 @@
   "name": "baseline-gate",
   "displayName": "baseline-gate",
   "description": "BaselineGate tool",
+  "icon": "media/icon.png",
   "version": "0.0.2",
   "publisher": "BehrouzPooladrak",
   "engines": {

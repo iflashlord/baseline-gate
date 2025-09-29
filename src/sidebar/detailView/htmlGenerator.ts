@@ -1199,6 +1199,24 @@ export class DetailViewHtmlGenerator {
                         });
                     }
                 }
+
+                // Handle occurrence file path clicks
+                const occurrenceTarget = target.closest('.occurrence-file-path');
+                if (occurrenceTarget instanceof HTMLElement) {
+                    event.preventDefault();
+                    const uri = occurrenceTarget.getAttribute('data-uri');
+                    const line = occurrenceTarget.getAttribute('data-line');
+                    const character = occurrenceTarget.getAttribute('data-character');
+                    
+                    if (uri && line && character) {
+                        vscode.postMessage({
+                            type: 'openFileAtLine',
+                            uri: uri,
+                            line: parseInt(line, 10),
+                            character: parseInt(character, 10)
+                        });
+                    }
+                }
             });
         }
         
@@ -1217,17 +1235,7 @@ export class DetailViewHtmlGenerator {
                 type: 'refresh'
             });
         }
-        
-        // Open file at specific line - used by feature detail view
-        function openFileAtLine(uri, line, character) {
-            character = character || 0;
-            vscode.postMessage({
-                type: 'openFileAtLine',
-                uri: uri,
-                line: line,
-                character: character
-            });
-        }
+
         
         // Send follow-up question with enhanced functionality
         function sendFollowUpQuestion() {

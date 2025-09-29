@@ -425,7 +425,10 @@ export class BaselineDetailViewProvider {
             <div class="occurrence-header">
               <div class="occurrence-file-info">
                 <span class="occurrence-file-path" 
-                      onclick="openFileAtLine('${finding.uri.toString()}', ${finding.range.start.line}, ${finding.range.start.character})"
+                      data-uri="${DetailViewUtils.escapeHtml(finding.uri.toString())}"
+                      data-line="${finding.range.start.line}"
+                      data-character="${finding.range.start.character}"
+                      style="cursor: pointer; color: var(--vscode-textLink-foreground);"
                       title="Click to open file">
                   ${DetailViewUtils.escapeHtml(relativePath)}
                 </span>
