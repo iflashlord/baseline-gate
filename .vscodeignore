@@ -1,0 +1,28 @@
+# Exclude development and configuration files
+.vscode/
+.github/
+node_modules/
+-**/*.tsbuildinfo
+
+# Exclude source and build artifacts not needed in the VSIX
+src/
+out/
+docs/
+examples/
+
+# Include compiled output explicitly
+!dist/**
+
+# Exclude test and tooling scripts
+**/*.test.ts
+**/*.test.js
+test-*.js
+test-*.ts
+**/__mocks__/**
+
+# Misc tooling
+*.map
+*.log
+*.tmp
+*.DS_Store
+coverage/

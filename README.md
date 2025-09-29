@@ -114,8 +114,8 @@ The repository automates releases through GitHub Actions. A typical release look
    - The `CI` workflow (`.github/workflows/ci.yml`) runs on every push/PR to `main` and executes `pnpm exec eslint src --max-warnings 0` and `pnpm test`.
 
 3. **Release automation**
-   - The `Release Extension` workflow (`.github/workflows/release.yml`) triggers automatically on any `v*` tag.
-   - You can also run it manually via **Run workflow** and optionally provide an existing tag to rebuild/publish.
+   - The `Release Extension` workflow (`.github/workflows/release.yml`) is dispatched automatically by the version bump workflow and also triggers on any `v*` tag you push manually.
+   - You can additionally run it via **Run workflow** and optionally provide an existing tag to rebuild/publish.
    - It installs dependencies, runs the full `pnpm test` under `xvfb-run`, packages the extension (`baseline-gate.vsix`), creates a GitHub Release, uploads the VSIX asset, and publishes to the Marketplace when `VSCE_PAT` is available.
 
 4. **Manual verification (optional)**
