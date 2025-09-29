@@ -73,6 +73,15 @@
       {
         "command": "baseline-gate.clearAllData",
         "title": "Clear All BaselineGate Data"
+      },
+      {
+        "command": "baseline-gate.startGeminiChat",
+        "title": "Start Gemini Chat"
+      },
+      {
+        "command": "baseline-gate.showGeminiSuggestions",
+        "title": "View Existing Suggestions",
+        "icon": "$(eye)"
       }
     ],
     "configuration": {
@@ -156,12 +165,14 @@
         {
           "command": "baseline-gate.openGeminiFullView",
           "when": "view == baselineGate.analysisView",
-          "group": "navigation@1"
+          "group": "navigation@1",
+          "icon": "$(history)"
         },
         {
           "command": "baseline-gate.openSettings",
           "when": "view == baselineGate.analysisView",
-          "group": "navigation@2"
+          "group": "navigation@2",
+          "icon": "$(settings-gear)"
         },
         {
           "command": "baseline-gate.openInsights",

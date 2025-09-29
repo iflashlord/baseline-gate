@@ -66,35 +66,54 @@ export class DetailViewUtils {
     `;
 
     suggestions.forEach((suggestion, index) => {
-      // Add user question
-      allMessages += `
-        <div class="chat-message user-message">
-          <div class="message-avatar">
-            <div class="avatar-icon user-avatar">
-              ${userAvatarSvg}
+      // Check if this is a user-only message (status 'user' with no AI response yet)
+      if ((suggestion as any).status === 'user' && !suggestion.suggestion) {
+        // Only show user message for user-only entries
+        allMessages += `
+          <div class="chat-message user-message">
+            <div class="message-avatar">
+              <div class="avatar-icon user-avatar">
+                ${userAvatarSvg}
+              </div>
+            </div>
+            <div class="message-content">
+              <div class="message-text">${this.escapeHtml(suggestion.issue)}</div>
+              <div class="message-time">${this.formatTimestamp(suggestion.timestamp)}</div>
             </div>
           </div>
-          <div class="message-content">
-            <div class="message-text">${this.escapeHtml(suggestion.issue)}</div>
-            <div class="message-time">${this.formatTimestamp(suggestion.timestamp)}</div>
+        `;
+      } else {
+        // Regular suggestion with both user question and AI response
+        // Add user question
+        allMessages += `
+          <div class="chat-message user-message">
+            <div class="message-avatar">
+              <div class="avatar-icon user-avatar">
+                ${userAvatarSvg}
+              </div>
+            </div>
+            <div class="message-content">
+              <div class="message-text">${this.escapeHtml(suggestion.issue)}</div>
+              <div class="message-time">${this.formatTimestamp(suggestion.timestamp)}</div>
+            </div>
           </div>
-        </div>
-      `;
+        `;
 
-      // Add AI response
-      allMessages += `
-        <div class="chat-message ai-message">
-          <div class="message-avatar">
-            <div class="avatar-icon ai-avatar">
-              ${aiAvatarSvg}
+        // Add AI response
+        allMessages += `
+          <div class="chat-message ai-message">
+            <div class="message-avatar">
+              <div class="avatar-icon ai-avatar">
+                ${aiAvatarSvg}
+              </div>
+            </div>
+            <div class="message-content">
+              <div class="message-text">${this.renderSimpleMarkdown(suggestion.suggestion)}</div>
+              <div class="message-time">${this.formatTimestamp(suggestion.timestamp)}</div>
             </div>
           </div>
-          <div class="message-content">
-            <div class="message-text">${this.renderSimpleMarkdown(suggestion.suggestion)}</div>
-            <div class="message-time">${this.formatTimestamp(suggestion.timestamp)}</div>
-          </div>
-        </div>
-      `;
+        `;
+      }
     });
 
     return allMessages;

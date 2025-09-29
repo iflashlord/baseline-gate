@@ -11,7 +11,7 @@ export interface GeminiSuggestion {
   findingId?: string; // Link to the original finding
   conversationId?: string; // For threading conversations
   parentId?: string; // For reply chains
-  status: 'success' | 'error' | 'pending';
+  status: 'success' | 'error' | 'pending' | 'user';
   tokensUsed?: number;
   responseTime?: number;
   rating?: 1 | 2 | 3 | 4 | 5; // User feedback

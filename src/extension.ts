@@ -12,6 +12,7 @@ import { GeminiViewProvider } from './gemini/geminiViewProvider';
 import { GeminiFullViewProvider } from './gemini/geminiFullViewProvider';
 import type { Target } from './core/targets';
 import type { Verdict } from './core/scoring';
+import { scoreFeature } from './core/scoring';
 
 export function activate(context: vscode.ExtensionContext) {
   let target = readConfiguredTarget();
@@ -177,6 +178,84 @@ export function activate(context: vscode.ExtensionContext) {
     await geminiProvider.addSuggestion(args.issue, args.feature, undefined, args.findingId);
   });
   context.subscriptions.push(askGemini);
+
+  const startGeminiChat = vscode.commands.registerCommand('baseline-gate.startGeminiChat', async (args?: { 
+    initialPrompt: string; 
+    feature?: string; 
+    findingId?: string; 
+    context?: string; 
+    hoverContent?: string 
+  }) => {
+    if (!args || !args.initialPrompt) {
+      void vscode.window.showErrorMessage('No initial prompt provided for Gemini chat.');
+      return;
+    }
+
+    // Try to find the finding from analysisProvider
+    const findings = analysisProvider.getAllFindings();
+    let finding = findings.find(f => computeFindingId(f) === args.findingId);
+    
+    // If we can't find an exact match, check if this is a hover-triggered request
+    // In that case, we can work with the feature information we have
+    if (!finding && args.context === 'hover' && args.feature && args.findingId) {
+      // Parse the findingId to extract file URI and position information
+      const parts = args.findingId.split('::');
+      if (parts.length === 4) {
+        const [uriString, featureId, lineStr, charStr] = parts;
+        const line = parseInt(lineStr, 10);
+        const char = parseInt(charStr, 10);
+        
+        try {
+          const uri = vscode.Uri.parse(uriString);
+          const range = new vscode.Range(line, char, line, char);
+          
+          // Get the feature information
+          const feature = getFeatureById(featureId);
+          if (feature) {
+            // Create a synthetic finding for this hover context
+            const verdict = scoreFeature(feature.support, target);
+            finding = {
+              id: args.findingId,
+              uri,
+              range,
+              feature,
+              verdict,
+              token: args.feature, // Use feature name as token
+              lineText: '' // Will be empty for synthetic findings
+            };
+          }
+        } catch (error) {
+          console.warn('Failed to parse findingId for hover context:', error);
+        }
+      }
+    }
+    
+    if (!finding) {
+      void vscode.window.showErrorMessage('Finding not found for Gemini chat.');
+      return;
+    }
+
+    // Add the user's "Fix with Gemini" message to chat first
+    await geminiProvider.addUserMessage(args.initialPrompt, args.findingId, args.feature);
+    
+    // Then send the actual technical context to Gemini for response
+    const contextualIssue = args.hoverContent || `Fix this baseline compatibility issue: ${args.feature}`;
+    await geminiProvider.addSuggestion(contextualIssue, args.feature, undefined, args.findingId);
+    
+    // Show detail view for this finding
+    BaselineDetailViewProvider.createOrShow(context, finding, target, panelAssets, geminiProvider);
+    
+    // Scroll to AI Assistant section after a brief delay
+    setTimeout(() => {
+      const currentPanel = BaselineDetailViewProvider.getCurrentPanel();
+      if (currentPanel) {
+        currentPanel.webview.postMessage({
+          type: 'scrollToAIAssistant'
+        });
+      }
+    }, 500);
+  });
+  context.subscriptions.push(startGeminiChat);
 
   const askGeminiFollowUp = vscode.commands.registerCommand('baseline-gate.askGeminiFollowUp', async (args?: { question: string; findingId?: string; feature?: string; filePath?: string; target?: string }) => {
     if (!args || !args.question) {

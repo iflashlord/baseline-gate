@@ -26,6 +26,26 @@ export class GeminiViewProvider {
 
 
 
+  public async addUserMessage(userPrompt: string, findingId?: string, feature?: string): Promise<void> {
+    // Add a user message to the chat history without calling Gemini
+    // This is used when we want to show user's input in chat before sending the actual request
+    const userMessage: GeminiSuggestion = {
+      id: `user-${Date.now()}`,
+      timestamp: new Date(),
+      issue: userPrompt,
+      suggestion: '', // Empty for user messages
+      feature,
+      file: undefined,
+      findingId,
+      status: 'user' as any, // Special status for user messages
+      tags: ['user-message'],
+    };
+
+    this.state = addSuggestionToState(this.state, userMessage);
+    await this.saveSuggestions();
+    this.refresh();
+  }
+
   public async addSuggestion(issue: string, feature?: string, file?: string, findingId?: string): Promise<void> {
     if (!geminiService.isConfigured()) {
       const action = await vscode.window.showErrorMessage(
@@ -50,7 +70,7 @@ export class GeminiViewProvider {
     const progressTask = vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: 'Getting suggestion from Gemini...',
+        title: 'Getting suggestion from Gemini',
         cancellable: true,
       },
       async (progress) => {
@@ -79,6 +99,7 @@ export class GeminiViewProvider {
           
           progress.report({ increment: 100, message: 'Complete!' });
 
+          
           // Send response to detail view via command
           await vscode.commands.executeCommand('baseline-gate.sendGeminiResponse', {
             type: 'success',
@@ -96,8 +117,14 @@ export class GeminiViewProvider {
           
           // Don't show success notification for follow-up questions to reduce spam
           if (!issue.includes('Follow-up question about')) {
-            await vscode.window.showInformationMessage('Gemini suggestion added successfully!');
+             await vscode.window.showInformationMessage('Gemini suggestion added successfully!');
           }
+
+          // close progress notification
+          if (progressResolve) {
+            progressResolve();
+          }
+
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           
@@ -122,7 +149,8 @@ export class GeminiViewProvider {
         return progressPromise;
       },
     );
-    
+ 
+
     // Await the progress task to ensure it completes properly
     await progressTask;
   }

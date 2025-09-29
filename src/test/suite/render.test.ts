@@ -134,7 +134,7 @@ suite("rendering hover content", () => {
 
     assert.ok(value.includes("$(sparkle) Fix with Gemini"), "Gemini quick action should be present");
     assert.ok(
-      value.includes("command:baseline-gate.askGemini?"),
+      value.includes("command:baseline-gate.startGeminiChat?"),
       "Gemini command should be encoded in the hover"
     );
   });

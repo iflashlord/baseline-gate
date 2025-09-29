@@ -32,8 +32,8 @@ export function registerJsHover(
 
       const verdict = scoreFeature(feature.support, target);
       
-      // Create a potential finding ID based on file and symbol position
-      const findingId = geminiProvider ? `${doc.uri.toString()}::${id}::${position.line}::${position.character}` : undefined;
+      // Create a potential finding ID based on file and feature position - must match computeFindingId format  
+      const findingId = geminiProvider ? `${doc.uri.toString()}::${feature.id}::${position.line}::${position.character}` : undefined;
       
       const md = buildFeatureHover(feature, verdict, target, { 
         assetsRoot,

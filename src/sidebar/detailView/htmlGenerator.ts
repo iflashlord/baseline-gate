@@ -1105,6 +1105,9 @@ export class DetailViewHtmlGenerator {
                 case 'geminiResponse':
                     handleGeminiResponse(message);
                     break;
+                case 'scrollToAIAssistant':
+                    scrollToAIAssistant();
+                    break;
             }
         });
         
@@ -1192,6 +1195,23 @@ export class DetailViewHtmlGenerator {
                 .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
                 .replace(/\\n\\n/g, '</p><p>')
                 .replace(/\\n/g, '<br>');
+        }
+        
+        // Scroll to AI Assistant section
+        function scrollToAIAssistant() {
+            const aiAssistantSection = document.querySelector('.chat-interface');
+            if (aiAssistantSection) {
+                aiAssistantSection.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+                
+                // Optional: Add a brief highlight effect
+                aiAssistantSection.style.backgroundColor = 'var(--vscode-editor-findMatchBackground)';
+                setTimeout(() => {
+                    aiAssistantSection.style.backgroundColor = '';
+                }, 2000);
+            }
         }
         
         // CSS for search highlights

@@ -1,0 +1,27 @@
+/* Test CSS file to test hover functionality */
+
+.container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  container-type: inline-size; /* Modern CSS feature for container queries */
+}
+
+@container (min-width: 300px) {
+  .card {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.modern-feature {
+  /* Using modern CSS features that might trigger baseline warnings */
+  backdrop-filter: blur(10px);
+  aspect-ratio: 16/9;
+  inset: 0;
+}
+
+.grid-layout {
+  display: subgrid; /* Newer CSS feature */
+  grid-template-rows: subgrid;
+}

@@ -95,12 +95,13 @@ export function buildFeatureHover(
     md.appendMarkdown(`[$(eye) View Existing Suggestions](${viewSuggestionsCommand}) | `);
   }
 
-  // Always show "Fix with Gemini" button
-  const geminiCommand = `command:baseline-gate.askGemini?${encodeURIComponent(JSON.stringify({
-    issue: hoverContent,
+  // Always show "Fix with Gemini" button - now works like chat interface
+  const geminiCommand = `command:baseline-gate.startGeminiChat?${encodeURIComponent(JSON.stringify({
+    initialPrompt: "Fix with Gemini",
     feature: feature.name,
     findingId: options.findingId,
-    context: 'hover'
+    context: 'hover',
+    hoverContent: hoverContent
   }))}`;
   const askGeminiText = hasExistingSuggestions ? "Ask Gemini Again" : "Fix with Gemini";
   md.appendMarkdown(`[$(sparkle) ${askGeminiText}](${geminiCommand})\n\n`);
