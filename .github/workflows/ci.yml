@@ -31,4 +31,4 @@ jobs:
         run: pnpm exec eslint src --max-warnings 0
 
       - name: Test
-        run: pnpm test
+        run: xvfb-run -a pnpm test

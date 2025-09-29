@@ -31,7 +31,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: pnpm test
+        run: xvfb-run -a pnpm test
 
       - name: Package extension
         run: pnpm exec vsce package --no-dependencies --out baseline-gate.vsix
