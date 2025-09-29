@@ -38,7 +38,7 @@ jobs:
       - name: Bump version and create tag
         if: ${{ github.event.inputs.skip_publish != 'true' }}
         id: bump_version
-        uses: phips28/gh-action-bump-version@v9.4.0
+        uses: phips28/gh-action-bump-version@v11.0.7
         with:
           tag-prefix: 'v'
           default: ${{ github.event.inputs.release_type || 'patch' }}
