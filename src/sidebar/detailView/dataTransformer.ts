@@ -26,7 +26,7 @@ export class DetailViewDataTransformer {
   }
 
   /**
-   * Create Gemini context for a specific finding
+   * Create Gemini context for a specific finding (feature-based)
    */
   public static createGeminiContext(
     finding: BaselineFinding,
@@ -36,10 +36,11 @@ export class DetailViewDataTransformer {
       return undefined;
     }
 
-    const findingId = this.generateFindingId(finding);
-    const hasSuggestions = geminiProvider.hasSuggestionForFinding(findingId);
+    // Use feature-based context instead of finding-based
+    const featureId = finding.feature.id;
+    const hasSuggestions = geminiProvider.hasSuggestionForFeature(featureId);
     const suggestions = hasSuggestions ? 
-      geminiProvider.getSuggestionsForFinding(findingId) : [];
+      geminiProvider.getSuggestionsForFeature(featureId) : [];
 
     return {
       hasExistingSuggestion: hasSuggestions,

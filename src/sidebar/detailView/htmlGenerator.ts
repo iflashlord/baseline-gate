@@ -1061,6 +1061,7 @@ export class DetailViewHtmlGenerator {
             if (!container) {
                 return {
                     findingId: '',
+                    featureId: '',
                     featureName: '',
                     filePath: '',
                     target: ''
@@ -1069,6 +1070,7 @@ export class DetailViewHtmlGenerator {
 
             return {
                 findingId: container.getAttribute('data-finding-id') || '',
+                featureId: container.getAttribute('data-feature-id') || '',
                 featureName: container.getAttribute('data-feature-name') || '',
                 filePath: container.getAttribute('data-file-path') || '',
                 target: container.getAttribute('data-target') || ''
@@ -1247,7 +1249,7 @@ export class DetailViewHtmlGenerator {
                 type: 'askGeminiFollowUp',
                 question: question,
                 findingId: detailMetadata.findingId || 'current',
-                feature: detailMetadata.featureName || '',
+                feature: detailMetadata.featureId || detailMetadata.featureName || '', // Use featureId for shared conversations
                 filePath: detailMetadata.filePath || '',
                 target: detailMetadata.target || ''
             });

@@ -2369,7 +2369,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         const geminiButton = event.target.closest('[data-gemini-issue]');
         if (geminiButton) {
           const issue = geminiButton.getAttribute('data-gemini-issue');
-          const feature = geminiButton.getAttribute('data-feature-name');
+          const featureId = geminiButton.getAttribute('data-feature-id') || geminiButton.getAttribute('data-feature-name');
           const filePath = geminiButton.getAttribute('data-file-path');
           const findingId = geminiButton.getAttribute('data-finding-id');
           const hasExisting = geminiButton.getAttribute('data-has-existing') === 'true';
@@ -2381,8 +2381,8 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
               chatSection.style.display = chatSection.style.display === 'none' ? 'block' : 'none';
             }
           } else {
-            // Regular "Fix with Gemini" behavior
-            vscode.postMessage({ type: 'askGemini', issue, feature, filePath, findingId });
+            // Regular "Fix with Gemini" behavior - use featureId for shared conversations
+            vscode.postMessage({ type: 'askGemini', issue, feature: featureId, filePath, findingId });
           }
           return;
         }
@@ -2394,7 +2394,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
           
           if (followUpQuestion) {
             const findingId = chatInput.getAttribute('data-finding-id');
-            const feature = chatInput.getAttribute('data-feature-name');
+            const featureId = chatInput.getAttribute('data-feature-id') || chatInput.getAttribute('data-feature-name');
             const filePath = chatInput.getAttribute('data-file-path');
             const target = chatInput.getAttribute('data-target');
             
@@ -2446,7 +2446,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
               type: 'askGeminiFollowUp', 
               question: followUpQuestion,
               findingId,
-              feature,
+              feature: featureId, // Use featureId for shared conversations
               filePath,
               target
             });
@@ -3675,6 +3675,7 @@ export function renderGeminiChatInterface(finding: BaselineFinding, target: Targ
           placeholder="Message Gemini..."
           rows="1"
           data-finding-id="${escapeAttribute(finding.id)}"
+          data-feature-id="${escapeAttribute(finding.feature.id)}"
           data-feature-name="${escapeAttribute(finding.feature.name)}"
           data-file-path="${escapeAttribute(vscode.workspace.asRelativePath(finding.uri, false))}"
           data-target="${escapeAttribute(target)}"

@@ -175,6 +175,7 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
     
+    // Use feature as the primary grouping for shared conversations across all occurrences
     await geminiProvider.addSuggestion(args.issue, args.feature, undefined, args.findingId);
   });
   context.subscriptions.push(askGemini);

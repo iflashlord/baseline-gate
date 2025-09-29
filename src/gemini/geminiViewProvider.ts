@@ -26,7 +26,7 @@ export class GeminiViewProvider {
 
 
 
-  public async addUserMessage(userPrompt: string, findingId?: string, feature?: string): Promise<void> {
+  public async addUserMessage(userPrompt: string, featureId?: string, findingId?: string): Promise<void> {
     // Add a user message to the chat history without calling Gemini
     // This is used when we want to show user's input in chat before sending the actual request
     const userMessage: GeminiSuggestion = {
@@ -34,7 +34,7 @@ export class GeminiViewProvider {
       timestamp: new Date(),
       issue: userPrompt,
       suggestion: '', // Empty for user messages
-      feature,
+      feature: featureId, // Use featureId as primary grouping
       file: undefined,
       findingId,
       status: 'user' as any, // Special status for user messages
@@ -46,7 +46,7 @@ export class GeminiViewProvider {
     this.refresh();
   }
 
-  public async addSuggestion(issue: string, feature?: string, file?: string, findingId?: string): Promise<void> {
+  public async addSuggestion(issue: string, featureId?: string, file?: string, findingId?: string): Promise<void> {
     if (!geminiService.isConfigured()) {
       const action = await vscode.window.showErrorMessage(
         'Gemini API key is not configured.',
@@ -76,7 +76,7 @@ export class GeminiViewProvider {
       async (progress) => {
         try {
           progress.report({ increment: 30, message: 'Connecting to Gemini...' });
-          const response = await geminiService.getSuggestion(issue, feature, file);
+          const response = await geminiService.getSuggestion(issue, featureId, file);
 
           progress.report({ increment: 70, message: 'Processing response...' });
 
@@ -85,13 +85,13 @@ export class GeminiViewProvider {
             timestamp: new Date(),
             issue,
             suggestion: response.text,
-            feature,
+            feature: featureId, // Use featureId as primary grouping
             file,
             findingId,
             status: 'success',
             tokensUsed: response.tokensUsed,
             responseTime: response.responseTime,
-            tags: this.generateTags(issue, feature, file),
+            tags: this.generateTags(issue, featureId, file),
           };
 
           this.state = addSuggestionToState(this.state, newSuggestion);
@@ -197,6 +197,24 @@ export class GeminiViewProvider {
 
   public getSuggestionsForFinding(findingId: string): GeminiSuggestion[] {
     return this.state.suggestions.filter((suggestion) => suggestion.findingId === findingId);
+  }
+
+  // Feature-based methods for shared conversations
+  public hasSuggestionForFeature(featureId: string): boolean {
+    return this.state.suggestions.some((suggestion) => suggestion.feature === featureId);
+  }
+
+  public getSuggestionsForFeature(featureId: string): GeminiSuggestion[] {
+    return this.state.suggestions.filter((suggestion) => suggestion.feature === featureId);
+  }
+
+  public focusOnFeature(featureId: string): void {
+    // Set search query to filter suggestions by feature ID
+    const suggestions = this.getSuggestionsForFeature(featureId);
+    if (suggestions.length > 0) {
+      this.state = applySearchFilter(this.state, featureId);
+      this.refresh();
+    }
   }
 
   public focusOnFinding(findingId: string): void {
