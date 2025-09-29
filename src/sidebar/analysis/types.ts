@@ -73,6 +73,31 @@ export type IssuePayload = {
   selected: boolean;
 };
 
+export type IssueOccurrence = {
+  id: string;
+  line: number;
+  column: number;
+  snippet: string;
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
+  selected: boolean;
+};
+
+export type GroupedIssuePayload = {
+  id: string;
+  verdict: Verdict;
+  verdictLabel: string;
+  featureName: string;
+  featureId: string;
+  token: string;
+  docsUrl?: string;
+  occurrences: IssueOccurrence[];
+  count: number;
+  selected: boolean;
+};
+
 export type FileGroupPayload = {
   uri: string;
   relativePath: string;
@@ -83,6 +108,7 @@ export type FileGroupPayload = {
   selected: boolean;
   expanded: boolean;
   issues: IssuePayload[];
+  groupedIssues: GroupedIssuePayload[];
 };
 
 export type DetailPayload =

@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 
 import type { BaselineFinding } from "../workspaceScanner";
 
-import type { FileGroupPayload, IssuePayload, SortOrder } from "./types";
+import type { FileGroupPayload, IssuePayload, SortOrder, GroupedIssuePayload, IssueOccurrence } from "./types";
 import { summarize, formatVerdict, extractExtension, extensionToVariant, verdictWeight } from "./utils";
 
 export function groupFindingsByFile(findings: BaselineFinding[], sortOrder: SortOrder) {
@@ -63,7 +63,8 @@ export function buildFilePayload(
     counts: summary,
     selected,
     expanded,
-    issues: sorted.map((finding) => buildIssuePayload(finding, selectedIssueId === computeFindingId(finding)))
+    issues: sorted.map((finding) => buildIssuePayload(finding, selectedIssueId === computeFindingId(finding))),
+    groupedIssues: buildGroupedIssues(group.findings, order, selectedIssueId)
   };
 }
 
@@ -109,4 +110,80 @@ export function sortFindings(findings: BaselineFinding[], order: SortOrder): Bas
 
 export function computeFindingId(finding: BaselineFinding): string {
   return `${finding.uri.toString()}::${finding.feature.id}::${finding.range.start.line}::${finding.range.start.character}`;
+}
+
+export function computeGroupId(featureId: string, token: string, fileUri: string): string {
+  return `group::${fileUri}::${featureId}::${token}`;
+}
+
+export function buildGroupedIssues(
+  findings: BaselineFinding[], 
+  order: SortOrder, 
+  selectedIssueId: string | null
+): GroupedIssuePayload[] {
+  // Group findings by feature + token combination
+  const issueGroups = new Map<string, BaselineFinding[]>();
+  
+  for (const finding of findings) {
+    const groupKey = `${finding.feature.id}::${finding.token}`;
+    const existing = issueGroups.get(groupKey);
+    if (existing) {
+      existing.push(finding);
+    } else {
+      issueGroups.set(groupKey, [finding]);
+    }
+  }
+
+  const groupedIssues: GroupedIssuePayload[] = [];
+  
+  for (const [groupKey, groupFindings] of issueGroups) {
+    // Sort occurrences within the group
+    const sortedFindings = sortFindings(groupFindings, order);
+    
+    // Use the first finding as the representative
+    const representative = sortedFindings[0];
+    
+    // Create occurrences for all findings in this group
+    const occurrences: IssueOccurrence[] = sortedFindings.map((finding) => ({
+      id: computeFindingId(finding),
+      line: finding.range.start.line + 1,
+      column: finding.range.start.character + 1,
+      snippet: finding.lineText,
+      range: {
+        start: { line: finding.range.start.line, character: finding.range.start.character },
+        end: { line: finding.range.end.line, character: finding.range.end.character }
+      },
+      selected: selectedIssueId === computeFindingId(finding)
+    }));
+
+    // Create the grouped issue payload
+    const groupId = computeGroupId(representative.feature.id, representative.token, representative.uri.toString());
+    const selected = occurrences.some(occ => occ.selected);
+    
+    groupedIssues.push({
+      id: groupId,
+      verdict: representative.verdict,
+      verdictLabel: formatVerdict(representative.verdict),
+      featureName: representative.feature.name,
+      featureId: representative.feature.id,
+      token: representative.token,
+      docsUrl: representative.feature.docsUrl,
+      occurrences,
+      count: occurrences.length,
+      selected
+    });
+  }
+
+  // Sort groups by severity and then by feature name
+  groupedIssues.sort((a, b) => {
+    if (order === "severity") {
+      const verdictDiff = verdictWeight(b.verdict) - verdictWeight(a.verdict);
+      if (verdictDiff !== 0) {
+        return verdictDiff;
+      }
+    }
+    return a.featureName.localeCompare(b.featureName);
+  });
+
+  return groupedIssues;
 }

@@ -840,6 +840,195 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         background: var(--vscode-button-secondaryHoverBackground);
         border-color: var(--vscode-button-border);
       }
+      
+      /* Grouped issues styles */
+      .grouped-issue {
+        border: 1px solid var(--vscode-tree-indentGuidesStroke, transparent);
+        border-radius: 6px;
+        padding: 0;
+        background: var(--vscode-editor-inactiveSelection);
+        cursor: pointer;
+        margin-bottom: 0.5rem;
+        overflow: hidden;
+      }
+      
+      .grouped-issue.safe { 
+        background: var(--vscode-editor-inactiveSelection, rgba(16,124,65,0.08)); 
+        border-color: rgba(16,124,65,0.2);
+      }
+      .grouped-issue.warning { 
+        background: rgba(249, 209, 129, 0.12); 
+        border-color: rgba(249, 209, 129, 0.3);
+      }
+      .grouped-issue.blocked { 
+        background: rgba(209, 52, 56, 0.15); 
+        border-color: rgba(209, 52, 56, 0.3);
+      }
+      
+      .grouped-issue-header {
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        gap: 0.375rem;
+        align-items: center;
+        padding: 0.375rem 0.5rem;
+        border-bottom: 1px solid var(--vscode-tree-indentGuidesStroke, transparent);
+        background: rgba(0, 0, 0, 0.05);
+      }
+      
+      .grouped-issue-main {
+        display: flex;
+        flex-direction: column;
+        gap: 0.125rem;
+        min-width: 0;
+      }
+      
+      .grouped-issue-title {
+        font-weight: 500;
+        font-size: 0.85rem;
+        line-height: 1.3;
+        color: var(--vscode-foreground);
+      }
+      
+      .grouped-issue-meta {
+        font-size: 0.75rem;
+        color: var(--vscode-descriptionForeground);
+        opacity: 0.8;
+      }
+      
+      .grouped-issue-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--vscode-badge-background);
+        color: var(--vscode-badge-foreground);
+        border-radius: 12px;
+        padding: 2px 8px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        min-width: 20px;
+        height: 20px;
+      }
+      
+      .grouped-issue-toggle {
+        background: transparent;
+        border: none;
+        color: var(--vscode-foreground);
+        cursor: pointer;
+        padding: 2px;
+        border-radius: 3px;
+        transition: transform 0.15s ease;
+      }
+      
+      .grouped-issue-toggle:hover {
+        background: var(--vscode-button-secondaryHoverBackground);
+      }
+      
+      .grouped-issue.expanded .grouped-issue-toggle {
+        transform: rotate(90deg);
+      }
+      
+      .grouped-issue-occurrences {
+        display: none;
+        padding: 0.25rem;
+        background: var(--vscode-editor-background, rgba(0, 0, 0, 0.02));
+      }
+      
+      .grouped-issue.expanded .grouped-issue-occurrences {
+        display: block;
+      }
+      
+      .occurrence-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.375rem;
+        align-items: center;
+        padding: 0.25rem 0.375rem;
+        margin-bottom: 0.125rem;
+        border-radius: 3px;
+        background: var(--vscode-input-background);
+        border: 1px solid transparent;
+        cursor: pointer;
+        min-height: 32px;
+      }
+      
+      .occurrence-item:hover {
+        background: var(--vscode-list-hoverBackground);
+        border-color: var(--vscode-tree-indentGuidesStroke);
+      }
+      
+      .occurrence-item.selected {
+        background: var(--vscode-list-activeSelectionBackground);
+        color: var(--vscode-list-activeSelectionForeground);
+        outline: 2px solid var(--vscode-focusBorder);
+        outline-offset: 1px;
+      }
+      
+      .occurrence-main {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+        min-width: 0;
+      }
+      
+      .occurrence-location {
+        font-size: 0.75rem;
+        color: var(--vscode-descriptionForeground);
+        font-weight: 500;
+      }
+      
+      .occurrence-snippet {
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 0.7rem;
+        color: var(--vscode-foreground);
+        opacity: 0.8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      
+      .occurrence-actions {
+        display: flex;
+        gap: 0.25rem;
+        opacity: 0;
+        transition: opacity 0.15s ease;
+      }
+      
+      .occurrence-item:hover .occurrence-actions,
+      .occurrence-item.selected .occurrence-actions {
+        opacity: 1;
+      }
+      
+      .occurrence-actions button {
+        border: 1px solid transparent;
+        border-radius: 3px;
+        background: transparent;
+        color: var(--vscode-button-secondaryForeground);
+        cursor: pointer;
+        padding: 0.2rem;
+        font-size: 0.7rem;
+        height: 20px;
+        width: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .occurrence-actions button:hover {
+        color: var(--vscode-button-foreground);
+        background: var(--vscode-button-secondaryHoverBackground);
+        border-color: var(--vscode-button-border);
+      }
+      
+      .grouping-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.8rem;
+      }
+      
+      .grouping-toggle input[type="checkbox"] {
+        margin: 0;
+      }
       .detail {
         flex: 1 1 45%;
         border-left: 1px solid var(--vscode-sideBarSectionHeader-border);
@@ -1895,6 +2084,11 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
             </select>
           </label>
         </div>
+        <div class="grouping-toggle">
+          <label>
+            <input type="checkbox" data-group-similar />Group similar issues
+          </label>
+        </div>
       </div>
       <div class="summary" data-summary></div>
       <div class="content">
@@ -1962,6 +2156,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       const searchInput = document.querySelector('[data-search]');
       const severityContainer = document.querySelector('[data-severity]');
       const sortSelect = document.querySelector('[data-sort]');
+      const groupSimilarToggle = document.querySelector('[data-group-similar]');
       const resultsNode = document.querySelector('[data-results]');
       const summaryNode = document.querySelector('[data-summary]');
       const detailNode = document.querySelector('[data-detail]');
@@ -2108,6 +2303,13 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
 
       sortSelect.addEventListener('change', (event) => {
         vscode.postMessage({ type: 'setSort', value: event.target.value });
+      });
+
+      groupSimilarToggle.addEventListener('change', (event) => {
+        // Re-render results with the new grouping preference
+        if (currentState) {
+          renderResults(currentState.files, currentState.severityIconUris, currentState.scanning, currentState.progressText, currentState.filteredSummary.total);
+        }
       });
 
       detailCloseBtn.addEventListener('click', () => {
@@ -3017,35 +3219,169 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
           issuesList.setAttribute('aria-label', 'Issues in ' + file.relativePath);
           issuesList.id = 'file-issues-' + file.uri.replace(/[^a-zA-Z0-9]/g, '_');
 
-          for (const issue of file.issues) {
-            const issueRow = document.createElement('div');
-            issueRow.className = 'issue ' + issue.verdict;
-            issueRow.setAttribute('role', 'treeitem');
-            issueRow.setAttribute('tabindex', '0');
-            issueRow.setAttribute('aria-label', issue.featureName + ' issue at line ' + issue.line + ', ' + issue.verdictLabel);
-            
-            if (issue.selected) {
-              issueRow.classList.add('selected');
-              issueRow.setAttribute('aria-selected', 'true');
-            } else {
-              issueRow.setAttribute('aria-selected', 'false');
+          // Check if grouping is enabled
+          const shouldGroupIssues = groupSimilarToggle && groupSimilarToggle.checked;
+          
+          if (shouldGroupIssues && file.groupedIssues) {
+            // Render grouped issues
+            for (const groupedIssue of file.groupedIssues) {
+              const groupContainer = document.createElement('div');
+              groupContainer.className = 'grouped-issue ' + groupedIssue.verdict;
+              if (groupedIssue.selected) {
+                groupContainer.classList.add('selected');
+              }
+
+              // Group header
+              const header = document.createElement('div');
+              header.className = 'grouped-issue-header';
+              
+              const toggle = document.createElement('button');
+              toggle.className = 'grouped-issue-toggle';
+              toggle.innerHTML = '▶';
+              toggle.setAttribute('aria-label', 'Toggle group');
+              header.appendChild(toggle);
+
+              const iconImg = document.createElement('img');
+              iconImg.className = 'issue-icon';
+              iconImg.src = severityIconUris[groupedIssue.verdict];
+              iconImg.alt = groupedIssue.verdict;
+              header.appendChild(iconImg);
+
+              const main = document.createElement('div');
+              main.className = 'grouped-issue-main';
+
+              const title = document.createElement('div');
+              title.className = 'grouped-issue-title';
+              title.textContent = groupedIssue.featureName + ' — ' + groupedIssue.verdictLabel;
+              main.appendChild(title);
+
+              const meta = document.createElement('div');
+              meta.className = 'grouped-issue-meta';
+              meta.textContent = groupedIssue.token + ' · ' + groupedIssue.count + ' occurrence' + (groupedIssue.count > 1 ? 's' : '');
+              main.appendChild(meta);
+
+              header.appendChild(main);
+
+              const count = document.createElement('div');
+              count.className = 'grouped-issue-count';
+              count.textContent = groupedIssue.count.toString();
+              header.appendChild(count);
+
+              groupContainer.appendChild(header);
+
+              // Occurrences list
+              const occurrencesList = document.createElement('div');
+              occurrencesList.className = 'grouped-issue-occurrences';
+
+              for (const occurrence of groupedIssue.occurrences) {
+                const occurrenceItem = document.createElement('div');
+                occurrenceItem.className = 'occurrence-item';
+                if (occurrence.selected) {
+                  occurrenceItem.classList.add('selected');
+                }
+
+                const occurrenceMain = document.createElement('div');
+                occurrenceMain.className = 'occurrence-main';
+
+                const location = document.createElement('div');
+                location.className = 'occurrence-location';
+                location.textContent = 'Line ' + occurrence.line + ', column ' + occurrence.column;
+                occurrenceMain.appendChild(location);
+
+                const snippet = document.createElement('div');
+                snippet.className = 'occurrence-snippet';
+                snippet.textContent = formatSnippet(occurrence.snippet);
+                occurrenceMain.appendChild(snippet);
+
+                occurrenceItem.appendChild(occurrenceMain);
+
+                // Occurrence actions
+                const actions = document.createElement('div');
+                actions.className = 'occurrence-actions';
+
+                const detailBtn = document.createElement('button');
+                detailBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 12px; height: 12px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
+                detailBtn.title = 'Details';
+                detailBtn.addEventListener('click', (event) => {
+                  event.stopPropagation();
+                  vscode.postMessage({ type: 'openIssueDetail', id: occurrence.id });
+                });
+                actions.appendChild(detailBtn);
+
+                const openBtn = document.createElement('button');
+                openBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>';
+                openBtn.title = 'Open file';
+                openBtn.addEventListener('click', (event) => {
+                  event.stopPropagation();
+                  vscode.postMessage({
+                    type: 'openFile',
+                    uri: file.uri,
+                    start: occurrence.range.start,
+                    end: occurrence.range.end
+                  });
+                });
+                actions.appendChild(openBtn);
+
+                occurrenceItem.appendChild(actions);
+
+                occurrenceItem.addEventListener('click', () => {
+                  vscode.postMessage({ type: 'selectIssue', id: occurrence.id });
+                });
+
+                occurrencesList.appendChild(occurrenceItem);
+              }
+
+              groupContainer.appendChild(occurrencesList);
+
+              // Toggle functionality
+              toggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                groupContainer.classList.toggle('expanded');
+              });
+
+              // Group header click handler
+              header.addEventListener('click', (e) => {
+                if (e.target !== toggle) {
+                  // Select the first occurrence when clicking the group header
+                  if (groupedIssue.occurrences.length > 0) {
+                    vscode.postMessage({ type: 'selectIssue', id: groupedIssue.occurrences[0].id });
+                  }
+                }
+              });
+
+              issuesList.appendChild(groupContainer);
             }
+          } else {
+            // Render individual issues (existing logic)
+            for (const issue of file.issues) {
+              const issueRow = document.createElement('div');
+              issueRow.className = 'issue ' + issue.verdict;
+              issueRow.setAttribute('role', 'treeitem');
+              issueRow.setAttribute('tabindex', '0');
+              issueRow.setAttribute('aria-label', issue.featureName + ' issue at line ' + issue.line + ', ' + issue.verdictLabel);
+              
+              if (issue.selected) {
+                issueRow.classList.add('selected');
+                issueRow.setAttribute('aria-selected', 'true');
+              } else {
+                issueRow.setAttribute('aria-selected', 'false');
+              }
 
-            const iconImg = document.createElement('img');
-            iconImg.className = 'issue-icon';
-            iconImg.src = severityIconUris[issue.verdict];
-            iconImg.alt = issue.verdict;
-            issueRow.appendChild(iconImg);
+              const iconImg = document.createElement('img');
+              iconImg.className = 'issue-icon';
+              iconImg.src = severityIconUris[issue.verdict];
+              iconImg.alt = issue.verdict;
+              issueRow.appendChild(iconImg);
 
-            const main = document.createElement('div');
-            main.className = 'issue-main';
+              const main = document.createElement('div');
+              main.className = 'issue-main';
 
-            const title = document.createElement('div');
-            title.className = 'issue-title';
-            title.textContent = issue.featureName + ' — ' + issue.verdictLabel;
-            main.appendChild(title);
+              const title = document.createElement('div');
+              title.className = 'issue-title';
+              title.textContent = issue.featureName + ' — ' + issue.verdictLabel;
+              main.appendChild(title);
 
-            const meta = document.createElement('div');
+              const meta = document.createElement('div');
             meta.className = 'issue-meta';
             meta.textContent =
               issue.token +
@@ -3127,7 +3463,8 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
               }
               vscode.postMessage({ type: 'openIssueDetail', id: issue.id });
             });
-            issuesList.appendChild(issueRow);
+              issuesList.appendChild(issueRow);
+            }
           }
 
           details.appendChild(issuesList);

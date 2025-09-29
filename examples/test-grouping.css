@@ -1,0 +1,75 @@
+/* Test CSS file for demonstrating issue grouping functionality */
+/* This file contains multiple instances of the same CSS features */
+
+/* Multiple :has() selector usage */
+.container:has(> .header) {
+  padding-top: 20px;
+}
+
+.sidebar:has(.menu-item) {
+  width: 300px;
+}
+
+.card:has(.image) {
+  border: 2px solid #ccc;
+}
+
+.form:has(input:required) {
+  border-left: 4px solid red;
+}
+
+/* Multiple text-wrap usage */
+.title {
+  text-wrap: balance;
+  font-size: 2rem;
+}
+
+.description {
+  text-wrap: pretty;
+  line-height: 1.5;
+}
+
+.caption {
+  text-wrap: balance;
+  font-style: italic;
+}
+
+/* Multiple container-query usage */
+@container (min-width: 300px) {
+  .item {
+    flex-direction: row;
+  }
+}
+
+@container (max-width: 200px) {
+  .item {
+    flex-direction: column;
+  }
+}
+
+@container (width > 400px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Multiple scroll-timeline usage */
+@scroll-timeline slide-timeline {
+  source: selector(#slider);
+  orientation: horizontal;
+}
+
+@scroll-timeline fade-timeline {
+  source: selector(#fader);
+  orientation: vertical;
+}
+
+.animated {
+  animation: slide 1s ease-in-out;
+  animation-timeline: slide-timeline;
+}
+
+.fade-in {
+  animation: fade 2s ease-in-out;
+  animation-timeline: fade-timeline;
+}
