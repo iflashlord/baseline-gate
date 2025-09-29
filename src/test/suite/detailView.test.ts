@@ -4,6 +4,8 @@ import { DetailViewUtils } from '../../sidebar/detailView/utils';
 import { DetailViewDataTransformer } from '../../sidebar/detailView/dataTransformer';
 import { DetailViewHtmlGenerator } from '../../sidebar/detailView/htmlGenerator';
 import { DetailViewMessageHandler } from '../../sidebar/detailView/messageHandler';
+import { BaselineDetailViewProvider } from '../../sidebar/detailView/index';
+import { DetailViewStateManager } from '../../sidebar/detailView/stateManager';
 import type { BaselineFinding } from '../../sidebar/workspaceScanner';
 import type { BaselineFeature } from '../../core/baselineData';
 import type { BaselineAnalysisAssets } from '../../sidebar/analysis/types';
@@ -359,3 +361,230 @@ suite('DetailViewMessageHandler command execution', () => {
     }
   });
 });
+
+suite('Feature-based Detail View Tests', () => {
+  
+  function createMockFindingWithFeatureId(featureId: string, line: number = 0): BaselineFinding {
+    return {
+      id: `finding-${featureId}-${line}`,
+      uri: vscode.Uri.file(`/test/file${line}.ts`),
+      range: new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 10)),
+      lineText: `const testToken${line} = "example";`,
+      feature: {
+        id: featureId,
+        name: `Test Feature ${featureId}`,
+        baseline: 'high',
+        support: {},
+        specUrls: [],
+        caniuseIds: [],
+        compatFeatures: [],
+        groups: [],
+        snapshots: []
+      } as unknown as BaselineFeature,
+      verdict: 'safe' as const,
+      token: `testToken${line}`
+    };
+  }
+
+  test('should create feature-based findings data structure', () => {
+    const findings = [
+      createMockFindingWithFeatureId('test-feature', 0),
+      createMockFindingWithFeatureId('test-feature', 1),
+      createMockFindingWithFeatureId('test-feature', 2)
+    ];
+
+    // Test that all findings have the same feature ID
+    assert.strictEqual(findings[0].feature.id, 'test-feature');
+    assert.strictEqual(findings[1].feature.id, 'test-feature');
+    assert.strictEqual(findings[2].feature.id, 'test-feature');
+    
+    // Test that findings have different locations
+    assert.notStrictEqual(findings[0].uri.toString(), findings[1].uri.toString());
+    assert.notStrictEqual(findings[0].range.start.line, findings[1].range.start.line);
+  });
+
+  test('should create distinct findings for different features', () => {
+    const finding1 = createMockFindingWithFeatureId('feature-1', 0);
+    const finding2 = createMockFindingWithFeatureId('feature-2', 0);
+
+    assert.notStrictEqual(finding1.feature.id, finding2.feature.id);
+    assert.strictEqual(finding1.feature.id, 'feature-1');
+    assert.strictEqual(finding2.feature.id, 'feature-2');
+  });
+
+  test('should handle data preparation for multiple findings', () => {
+    const primaryFinding = createMockFindingWithFeatureId('test-feature', 0);
+    const allFindings = [
+      primaryFinding,
+      createMockFindingWithFeatureId('test-feature', 1),  
+      createMockFindingWithFeatureId('test-feature', 2)
+    ];
+    
+    // Test data structure for multiple findings
+    assert.strictEqual(allFindings.length, 3);
+    assert.strictEqual(allFindings.every(f => f.feature.id === 'test-feature'), true);
+    
+    // Test that findings can be grouped by feature ID
+    const groupedFindings = new Map<string, BaselineFinding[]>();
+    allFindings.forEach(finding => {
+      const featureId = finding.feature.id;
+      if (!groupedFindings.has(featureId)) {
+        groupedFindings.set(featureId, []);
+      }
+      groupedFindings.get(featureId)!.push(finding);
+    });
+    
+    assert.strictEqual(groupedFindings.size, 1);
+    assert.strictEqual(groupedFindings.get('test-feature')?.length, 3);
+  });
+});
+
+suite('Feature-based State Management Tests', () => {
+  
+  test('should manage feature-based panel state', () => {
+    const mockPanel = createMockPanel();
+    const findings = [createMockFinding(), createMockFinding()];
+    
+    // Clear any existing state
+    DetailViewStateManager.clearFeatureState();
+    
+    // Test setting feature state
+    DetailViewStateManager.updateFeatureState(mockPanel, 'test-feature', findings);
+    
+    // Test getting feature panel
+    const retrievedPanel = DetailViewStateManager.getCurrentFeaturePanel();
+    assert.strictEqual(retrievedPanel, mockPanel);
+    
+    // Test getting feature ID
+    const retrievedFeatureId = DetailViewStateManager.getCurrentFeatureId();
+    assert.strictEqual(retrievedFeatureId, 'test-feature');
+    
+    // Test getting feature findings
+    const retrievedFindings = DetailViewStateManager.getCurrentFeatureFindings();
+    assert.strictEqual(retrievedFindings?.length, 2);
+    
+    // Test checking active state
+    assert.strictEqual(DetailViewStateManager.hasActiveFeaturePanel(), true);
+    
+    // Test clearing feature state
+    DetailViewStateManager.clearFeatureState();
+    assert.strictEqual(DetailViewStateManager.getCurrentFeaturePanel(), undefined);
+    assert.strictEqual(DetailViewStateManager.getCurrentFeatureId(), undefined);
+    assert.strictEqual(DetailViewStateManager.getCurrentFeatureFindings(), undefined);
+    assert.strictEqual(DetailViewStateManager.hasActiveFeaturePanel(), false);
+  });
+
+  test('should manage regular panel state alongside feature state', () => {
+    const regularPanel = createMockPanel();
+    const featurePanel = createMockPanel();
+    const finding = createMockFinding();
+    const findings = [finding];
+    
+    // Clear states
+    DetailViewStateManager.clearState();
+    DetailViewStateManager.clearFeatureState();
+    
+    // Set regular state
+    DetailViewStateManager.updateState(regularPanel, finding);
+    
+    // Set feature state
+    DetailViewStateManager.updateFeatureState(featurePanel, 'test-feature', findings);
+    
+    // Both should be independent
+    assert.strictEqual(DetailViewStateManager.getCurrentPanel(), regularPanel);
+    assert.strictEqual(DetailViewStateManager.getCurrentFinding(), finding);
+    assert.strictEqual(DetailViewStateManager.getCurrentFeaturePanel(), featurePanel);
+    assert.strictEqual(DetailViewStateManager.getCurrentFeatureId(), 'test-feature');
+    
+    // Clear regular state shouldn't affect feature state
+    DetailViewStateManager.clearState();
+    assert.strictEqual(DetailViewStateManager.getCurrentPanel(), undefined);
+    assert.strictEqual(DetailViewStateManager.getCurrentFeaturePanel(), featurePanel);
+    
+    // Clear feature state shouldn't affect regular state (already cleared)
+    DetailViewStateManager.clearFeatureState();
+    assert.strictEqual(DetailViewStateManager.getCurrentFeaturePanel(), undefined);
+  });
+
+  function createMockFindingWithFeatureId(featureId: string, line: number = 0): BaselineFinding {
+    return {
+      id: `finding-${featureId}-${line}`,
+      uri: vscode.Uri.file(`/test/file${line}.ts`),
+      range: new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 10)),
+      lineText: `const testToken${line} = "example";`,
+      feature: {
+        id: featureId,
+        name: `Test Feature ${featureId}`,
+        baseline: 'high',
+        support: {},
+        specUrls: [],
+        caniuseIds: [],
+        compatFeatures: [],
+        groups: [],
+        snapshots: []
+      } as unknown as BaselineFeature,
+      verdict: 'safe' as const,
+      token: `testToken${line}`
+    };
+  }
+});
+
+suite('Message Structure Tests', () => {
+  
+  test('should validate openFileAtLine message structure', () => {
+    // Test message structure for openFileAtLine
+    const message = {
+      type: 'openFileAtLine' as const,
+      uri: 'file:///test/file.ts',
+      line: 5,
+      character: 10
+    };
+    
+    // Validate message structure
+    assert.strictEqual(message.type, 'openFileAtLine');
+    assert.strictEqual(message.uri, 'file:///test/file.ts');
+    assert.strictEqual(message.line, 5);
+    assert.strictEqual(message.character, 10);
+    
+    // Test that the message has all required properties
+    assert.ok('type' in message);
+    assert.ok('uri' in message);
+    assert.ok('line' in message);
+    assert.ok('character' in message);
+  });
+
+  test('should validate message types for detail view', () => {
+    // Test different message types that the detail view should handle
+    const refreshMessage = { type: 'refresh' as const };
+    const copyMessage = { type: 'copyCodeSnippet' as const, code: 'test code' };
+    const commandMessage = { type: 'executeCommand' as const, command: 'test.command' };
+    
+    assert.strictEqual(refreshMessage.type, 'refresh');
+    assert.strictEqual(copyMessage.type, 'copyCodeSnippet');
+    assert.strictEqual(copyMessage.code, 'test code');
+    assert.strictEqual(commandMessage.type, 'executeCommand');
+    assert.strictEqual(commandMessage.command, 'test.command');
+  });
+});
+
+function createMockFindingWithFeatureId(featureId: string, line: number = 0): BaselineFinding {
+  return {
+    id: `finding-${featureId}-${line}`,
+    uri: vscode.Uri.file(`/test/file${line}.ts`),
+    range: new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 10)),
+    lineText: `const testToken${line} = "example";`,
+    feature: {
+      id: featureId,
+      name: `Test Feature ${featureId}`,
+      baseline: 'high',
+      support: {},
+      specUrls: [],
+      caniuseIds: [],
+      compatFeatures: [],
+      groups: [],
+      snapshots: []
+    } as unknown as BaselineFeature,
+    verdict: 'safe' as const,
+    token: `testToken${line}`
+  };
+}

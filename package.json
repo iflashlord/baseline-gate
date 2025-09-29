@@ -23,10 +23,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "baseline-gate.helloWorld",
-        "title": "Hello World"
-      },
-      {
         "command": "baseline-gate.scanWorkspace",
         "title": "Baseline Gate: Scan Workspace"
       },

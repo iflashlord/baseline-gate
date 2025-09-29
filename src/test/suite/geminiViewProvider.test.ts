@@ -179,3 +179,114 @@ suite('Gemini view provider', () => {
     assert.strictEqual(GeminiViewProvider.viewType, 'baselineGate.geminiView');
   });
 });
+
+suite('Feature-based Gemini Integration Tests', () => {
+  
+  function createTestSuggestion(featureId: string, suggestionId: string): GeminiSuggestion {
+    return {
+      id: suggestionId,
+      issue: `Test issue for ${featureId}`,
+      suggestion: `Test response for ${featureId}`,
+      timestamp: new Date('2023-01-01'),
+      rating: 4,
+      tags: ['test', featureId],
+      status: 'success',
+      tokensUsed: 100,
+      responseTime: 1000
+    };
+  }
+
+  test('should handle feature-based suggestions', () => {
+    // Test with pre-existing suggestions rather than adding them through API
+    const initialSuggestions = [
+      { ...createTestSuggestion('feature-1', 'suggestion-1'), feature: 'feature-1' },
+      { ...createTestSuggestion('feature-1', 'suggestion-2'), feature: 'feature-1' },
+      { ...createTestSuggestion('feature-2', 'suggestion-3'), feature: 'feature-2' }
+    ];
+    
+    const context = createContext(initialSuggestions);
+    const provider = new GeminiViewProvider(context);
+
+    // Test feature-based retrieval
+    const hasFeature1 = provider.hasSuggestionForFeature('feature-1');
+    const hasFeature2 = provider.hasSuggestionForFeature('feature-2');
+    const hasFeature3 = provider.hasSuggestionForFeature('feature-3');
+
+    assert.strictEqual(hasFeature1, true);
+    assert.strictEqual(hasFeature2, true);
+    assert.strictEqual(hasFeature3, false);
+
+    // Test getting suggestions by feature
+    const feature1Suggestions = provider.getSuggestionsForFeature('feature-1');
+    const feature2Suggestions = provider.getSuggestionsForFeature('feature-2');
+
+    assert.strictEqual(feature1Suggestions.length, 2);
+    assert.strictEqual(feature2Suggestions.length, 1);
+    assert.strictEqual(feature1Suggestions[0].feature, 'feature-1');
+    assert.strictEqual(feature1Suggestions[1].feature, 'feature-1');
+    assert.strictEqual(feature2Suggestions[0].feature, 'feature-2');
+  });
+
+  test('should maintain feature-based conversation history', () => {
+    const featureId = 'test-feature';
+    const initialSuggestions = [
+      { ...createTestSuggestion(featureId, 'conv-1'), feature: featureId },
+      { ...createTestSuggestion(featureId, 'conv-2'), feature: featureId }
+    ];
+    
+    const context = createContext(initialSuggestions);
+    const provider = new GeminiViewProvider(context);
+
+    // Verify conversation history is maintained per feature
+    const suggestions = provider.getSuggestionsForFeature(featureId);
+    assert.strictEqual(suggestions.length, 2);
+    
+    // Verify all suggestions have the same feature ID
+    suggestions.forEach(suggestion => {
+      assert.strictEqual(suggestion.feature, featureId);
+    });
+    
+    // Verify suggestions are returned in order
+    assert.strictEqual(suggestions[0].id, 'conv-1');
+    assert.strictEqual(suggestions[1].id, 'conv-2');
+  });
+
+  test('should handle empty feature suggestions', () => {
+    const context = createContext();
+    const provider = new GeminiViewProvider(context);
+
+    // Test non-existent feature
+    const hasNonExistent = provider.hasSuggestionForFeature('non-existent');
+    const nonExistentSuggestions = provider.getSuggestionsForFeature('non-existent');
+
+    assert.strictEqual(hasNonExistent, false);
+    assert.strictEqual(Array.isArray(nonExistentSuggestions), true);
+    assert.strictEqual(nonExistentSuggestions.length, 0);
+  });
+
+  test('should preserve feature context across sessions', () => {
+    // Create context with initial suggestions that have feature property
+    const initialSuggestions = [
+      { ...createTestSuggestion('persistent-feature', 'initial-suggestion'), feature: 'persistent-feature' },
+      { ...createTestSuggestion('other-feature', 'other-suggestion'), feature: 'other-feature' }
+    ];
+    
+    const context = createContext(initialSuggestions);
+    const provider = new GeminiViewProvider(context);
+
+    // Verify initial state
+    const hasInitial = provider.hasSuggestionForFeature('persistent-feature');
+    assert.strictEqual(hasInitial, true);
+
+    // Verify feature context is preserved
+    const suggestions = provider.getSuggestionsForFeature('persistent-feature');
+    assert.strictEqual(suggestions.length, 1);
+    assert.strictEqual(suggestions[0].id, 'initial-suggestion');
+    assert.strictEqual(suggestions[0].feature, 'persistent-feature');
+    
+    // Verify other features are separate
+    const otherSuggestions = provider.getSuggestionsForFeature('other-feature');
+    assert.strictEqual(otherSuggestions.length, 1);
+    assert.strictEqual(otherSuggestions[0].feature, 'other-feature');
+  });
+});
