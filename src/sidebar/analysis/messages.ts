@@ -12,6 +12,7 @@ export interface AnalysisMessageHandlers {
   openIssueDetail: (id: string) => void;
   selectFile: (uri: string) => void;
   setFileExpansion: (uri: string, expanded: boolean) => void;
+  setGroupExpansion: (groupId: string, expanded: boolean) => void;
   openFileDetail: (uri: string) => void;
   closeDetail: () => void;
   openFile: (payload: {
@@ -68,6 +69,9 @@ export function processMessage(handlers: AnalysisMessageHandlers, message: Messa
       break;
     case "setFileExpansion":
       handlers.setFileExpansion(message.uri, message.expanded);
+      break;
+    case "setGroupExpansion":
+      handlers.setGroupExpansion(message.groupId, message.expanded);
       break;
     case "openFileDetail":
       handlers.openFileDetail(message.uri);

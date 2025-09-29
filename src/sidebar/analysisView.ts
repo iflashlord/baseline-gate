@@ -123,6 +123,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
   private selectedFileUri: string | null = null;
   private detailSelection: DetailSelection = null;
   private collapsedFileUris = new Set<string>();
+  private expandedGroupIds = new Set<string>();
   private history: ScanHistoryEntry[] = [];
   private pendingShowInsights = false;
   private budgetConfig: BudgetConfig = this.readBudgetConfig();
@@ -190,6 +191,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     this.selectedFileUri = null;
     this.detailSelection = null;
     this.collapsedFileUris.clear();
+    this.expandedGroupIds.clear();
     this.scanning = true;
     this.progressText = "Preparing scan…";
     this.postState();
@@ -765,7 +767,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         selectedIssueId: this.selectedIssueId,
         selectedFileUri: this.selectedFileUri,
         detailSelection: this.detailSelection,
-        collapsedFileUris: this.collapsedFileUris
+        collapsedFileUris: this.collapsedFileUris,
+        expandedGroupIds: this.expandedGroupIds
       },
       filtered
     );
@@ -842,6 +845,22 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         return;
       }
       this.collapsedFileUris.add(uriString);
+    }
+    this.postState();
+  }
+
+  private setGroupExpansion(groupId: string, expanded: boolean): void {
+    const wasExpanded = this.expandedGroupIds.has(groupId);
+    if (expanded) {
+      if (wasExpanded) {
+        return;
+      }
+      this.expandedGroupIds.add(groupId);
+    } else {
+      if (!wasExpanded) {
+        return;
+      }
+      this.expandedGroupIds.delete(groupId);
     }
     this.postState();
   }
@@ -992,6 +1011,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         setFileExpansion: (uri, expanded) => {
           this.setFileExpansion(uri, expanded);
         },
+        setGroupExpansion: (groupId, expanded) => {
+          this.setGroupExpansion(groupId, expanded);
+        },
         openFileDetail: (uri) => {
           this.openFileDetail(uri);
         },
@@ -1077,7 +1099,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         this.sortOrder,
         this.selectedIssueId,
         this.selectedFileUri,
-        this.collapsedFileUris
+        this.collapsedFileUris,
+        this.expandedGroupIds
       )
     );
 
@@ -1095,7 +1118,8 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         selectedIssueId: this.selectedIssueId,
         selectedFileUri: this.selectedFileUri,
         detailSelection: this.detailSelection,
-        collapsedFileUris: this.collapsedFileUris
+        collapsedFileUris: this.collapsedFileUris,
+        expandedGroupIds: this.expandedGroupIds
       },
       filtered,
       severityIconUris,

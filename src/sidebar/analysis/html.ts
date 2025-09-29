@@ -950,10 +950,6 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         background: var(--vscode-button-secondaryHoverBackground);
       }
       
-      .grouped-issue.expanded .grouped-issue-toggle {
-        transform: rotate(90deg);
-      }
-      
       .grouped-issue-occurrences {
         display: none;
         padding: 0.25rem;
@@ -2610,7 +2606,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       }
       
       function updateFocusableElements() {
-        focusableElements = Array.from(resultsNode.querySelectorAll('.file-header, .issue, button, [tabindex="0"]'));
+        focusableElements = Array.from(resultsNode.querySelectorAll('.file-header, .issue, .grouped-issue-header, .occurrence-item, button, [tabindex="0"]'));
       }
       
       function setFocus(index) {
@@ -2657,6 +2653,17 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
                 }
               } else if (focused.classList.contains('issue')) {
                 focused.click();
+              } else if (focused.classList.contains('grouped-issue-header')) {
+                // Toggle the group or select first occurrence
+                const groupContainer = focused.closest('.grouped-issue');
+                if (groupContainer) {
+                  const toggle = focused.querySelector('.grouped-issue-toggle');
+                  if (toggle) {
+                    toggle.click();
+                  }
+                }
+              } else if (focused.classList.contains('occurrence-item')) {
+                focused.click();
               } else if (focused.tagName === 'BUTTON') {
                 focused.click();
               }
@@ -2677,8 +2684,15 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       
       // Handle focus management
       resultsNode.addEventListener('click', (event) => {
+        // Skip focus management if the click is on grouped issue elements that handle their own events
+        if (event.target.closest('.grouped-issue-toggle') || 
+            event.target.closest('.occurrence-item') ||
+            event.target.closest('.grouped-issue-occurrences')) {
+          return;
+        }
+        
         updateFocusableElements();
-        const clickedElement = event.target.closest('.file-header, .issue, button');
+        const clickedElement = event.target.closest('.file-header, .issue, .grouped-issue-header, .occurrence-item, button');
         if (clickedElement) {
           currentFocusIndex = focusableElements.indexOf(clickedElement);
           setFocus(currentFocusIndex);
@@ -3311,6 +3325,9 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
               if (groupedIssue.selected) {
                 groupContainer.classList.add('selected');
               }
+              if (groupedIssue.expanded) {
+                groupContainer.classList.add('expanded');
+              }
 
               // Group header
               const header = document.createElement('div');
@@ -3318,8 +3335,10 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
               
               const toggle = document.createElement('button');
               toggle.className = 'grouped-issue-toggle';
-              toggle.innerHTML = '▶';
+              toggle.innerHTML = groupedIssue.expanded ? '▼' : '▶';
               toggle.setAttribute('aria-label', 'Toggle group');
+              toggle.setAttribute('aria-expanded', groupedIssue.expanded.toString());
+              toggle.setAttribute('type', 'button');
               header.appendChild(toggle);
 
               const iconImg = document.createElement('img');
@@ -3353,6 +3372,12 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
               // Occurrences list
               const occurrencesList = document.createElement('div');
               occurrencesList.className = 'grouped-issue-occurrences';
+              
+              // Prevent any clicks in the occurrences area from bubbling up and causing collapse
+              occurrencesList.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              });
 
               for (const occurrence of groupedIssue.occurrences) {
                 const occurrenceItem = document.createElement('div');
@@ -3405,7 +3430,8 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
 
                 occurrenceItem.appendChild(actions);
 
-                occurrenceItem.addEventListener('click', () => {
+                occurrenceItem.addEventListener('click', (e) => {
+                  e.stopPropagation();
                   vscode.postMessage({ type: 'selectIssue', id: occurrence.id });
                 });
 
@@ -3417,16 +3443,36 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
               // Toggle functionality
               toggle.addEventListener('click', (e) => {
                 e.stopPropagation();
-                groupContainer.classList.toggle('expanded');
+                e.preventDefault();
+                
+                const isExpanded = groupContainer.classList.contains('expanded');
+                const newExpanded = !isExpanded;
+                
+                // Send message to update state
+                vscode.postMessage({ 
+                  type: 'setGroupExpansion', 
+                  groupId: groupedIssue.id, 
+                  expanded: newExpanded 
+                });
               });
 
-              // Group header click handler
+              // Group header click handler (but not for toggle button)
               header.addEventListener('click', (e) => {
-                if (e.target !== toggle) {
+                // Only handle clicks that are NOT on the toggle button
+                if (!e.target.closest('.grouped-issue-toggle')) {
+                  e.stopPropagation();
                   // Select the first occurrence when clicking the group header
                   if (groupedIssue.occurrences.length > 0) {
                     vscode.postMessage({ type: 'selectIssue', id: groupedIssue.occurrences[0].id });
                   }
+                }
+              });
+
+              // Add a container-level handler to manage any remaining bubbling issues
+              groupContainer.addEventListener('click', (e) => {
+                // If the click is within the occurrences area, don't let it bubble further
+                if (e.target.closest('.grouped-issue-occurrences')) {
+                  e.stopPropagation();
                 }
               });
 

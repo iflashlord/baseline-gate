@@ -16,7 +16,7 @@ import { hasActiveFilters, matchesSearch, summarize } from "./utils";
 
 export type SelectionState = Pick<
   WebviewStateBuildContext,
-  "selectedIssueId" | "selectedFileUri" | "detailSelection" | "collapsedFileUris"
+  "selectedIssueId" | "selectedFileUri" | "detailSelection" | "collapsedFileUris" | "expandedGroupIds"
 >;
 
 export function filterFindings(
@@ -41,7 +41,8 @@ export function syncSelection(state: SelectionState, filtered: BaselineFinding[]
     selectedIssueId: state.selectedIssueId,
     selectedFileUri: state.selectedFileUri,
     detailSelection: state.detailSelection,
-    collapsedFileUris: state.collapsedFileUris
+    collapsedFileUris: state.collapsedFileUris,
+    expandedGroupIds: state.expandedGroupIds
   };
 
   const visibleFileUris = new Set(filtered.map((finding) => finding.uri.toString()));

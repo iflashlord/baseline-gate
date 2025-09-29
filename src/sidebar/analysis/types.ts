@@ -96,6 +96,7 @@ export type GroupedIssuePayload = {
   occurrences: IssueOccurrence[];
   count: number;
   selected: boolean;
+  expanded: boolean;
 };
 
 export type FileGroupPayload = {
@@ -175,6 +176,7 @@ export type MessageFromWebview =
   | { type: "openIssueDetail"; id: string }
   | { type: "openFileDetail"; uri: string }
   | { type: "setFileExpansion"; uri: string; expanded: boolean }
+  | { type: "setGroupExpansion"; groupId: string; expanded: boolean }
   | { type: "closeDetail" };
 
 export type WebviewStateBuildContext = {
@@ -190,4 +192,5 @@ export type WebviewStateBuildContext = {
   selectedFileUri: string | null;
   detailSelection: DetailSelection;
   collapsedFileUris: Set<string>;
+  expandedGroupIds: Set<string>;
 };

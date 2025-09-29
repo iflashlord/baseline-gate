@@ -42,7 +42,8 @@ export function buildFilePayload(
   order: SortOrder,
   selectedIssueId: string | null,
   selectedFileUri: string | null,
-  collapsedFileUris: Set<string>
+  collapsedFileUris: Set<string>,
+  expandedGroupIds: Set<string>
 ): FileGroupPayload {
   const summary = summarize(group.findings);
   const sorted = sortFindings(group.findings, order);
@@ -64,7 +65,7 @@ export function buildFilePayload(
     selected,
     expanded,
     issues: sorted.map((finding) => buildIssuePayload(finding, selectedIssueId === computeFindingId(finding))),
-    groupedIssues: buildGroupedIssues(group.findings, order, selectedIssueId)
+    groupedIssues: buildGroupedIssues(group.findings, order, selectedIssueId, expandedGroupIds)
   };
 }
 
@@ -152,7 +153,8 @@ export function computeGroupId(featureId: string, token: string, fileUri: string
 export function buildGroupedIssues(
   findings: BaselineFinding[], 
   order: SortOrder, 
-  selectedIssueId: string | null
+  selectedIssueId: string | null,
+  expandedGroupIds: Set<string>
 ): GroupedIssuePayload[] {
   // Group findings by feature + token combination
   const issueGroups = new Map<string, BaselineFinding[]>();
@@ -192,6 +194,7 @@ export function buildGroupedIssues(
     // Create the grouped issue payload
     const groupId = computeGroupId(representative.feature.id, representative.token, representative.uri.toString());
     const selected = occurrences.some(occ => occ.selected);
+    const expanded = expandedGroupIds.has(groupId);
     
     groupedIssues.push({
       id: groupId,
@@ -203,7 +206,8 @@ export function buildGroupedIssues(
       docsUrl: representative.feature.docsUrl,
       occurrences,
       count: occurrences.length,
-      selected
+      selected,
+      expanded
     });
   }
 
