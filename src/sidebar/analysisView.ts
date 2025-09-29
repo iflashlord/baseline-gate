@@ -46,7 +46,7 @@ const HISTORY_STORAGE_KEY = "baselineGate.history";
 const HISTORY_STORAGE_FILE = "scan-history.json";
 const LATEST_SCAN_STORAGE_KEY = "baselineGate.latestScan";
 const LATEST_SCAN_FILE = "latest-scan.json";
-const LATEST_SCAN_VERSION = 1;
+const LATEST_SCAN_VERSION = 2; // Updated to use new StoredIssuePayload format
 const HISTORY_LIMIT = 50;
 
 type BudgetConfig = {
@@ -55,6 +55,33 @@ type BudgetConfig = {
   safeGoal?: number;
 };
 
+// Storage types that align with IssuePayload to reduce transformation
+type StoredIssuePayload = {
+  id: string;
+  verdict: Verdict;
+  verdictLabel: string;
+  featureName: string;
+  featureId: string;
+  token: string;
+  line: number;
+  column: number;
+  docsUrl?: string;
+  snippet: string;
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
+  uri: string; // Added to store file URI
+};
+
+type StoredScanPayload = {
+  version: number;
+  target: Target;
+  scannedAt: string;
+  issues: StoredIssuePayload[];
+};
+
+// Legacy types for backward compatibility
 type PersistedPosition = {
   line: number;
   character: number;
@@ -319,20 +346,62 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
 
   private async restoreLatestScanFromDisk(): Promise<void> {
     const stored = await readStorageJson<unknown>(LATEST_SCAN_FILE);
-    const scan = this.parsePersistedScan(stored);
-    if (!scan || scan.target !== this.target) {
+    
+    // Try to parse as new format first
+    const newScan = this.parseStoredScan(stored);
+    if (newScan && newScan.target === this.target) {
+      const findings = this.deserializeStoredIssues(newScan.issues);
+      if (findings.length > 0 || newScan.issues.length === 0) {
+        this.findings = findings;
+        const parsedTimestamp = new Date(newScan.scannedAt);
+        this.lastScanAt = Number.isNaN(parsedTimestamp.getTime()) ? undefined : parsedTimestamp;
+        this.postState();
+        return;
+      }
+    }
+
+    // Fallback to legacy format
+    const legacyScan = this.parsePersistedScan(stored);
+    if (!legacyScan || legacyScan.target !== this.target) {
       return;
     }
 
-    const findings = this.deserializePersistedFindings(scan.findings);
-    if (!findings.length && scan.findings.length > 0) {
+    const findings = this.deserializePersistedFindings(legacyScan.findings);
+    if (!findings.length && legacyScan.findings.length > 0) {
       return;
     }
 
     this.findings = findings;
-    const parsedTimestamp = new Date(scan.scannedAt);
+    const parsedTimestamp = new Date(legacyScan.scannedAt);
     this.lastScanAt = Number.isNaN(parsedTimestamp.getTime()) ? undefined : parsedTimestamp;
     this.postState();
+  }
+
+  private parseStoredScan(raw: unknown): StoredScanPayload | null {
+    if (!raw || typeof raw !== "object") {
+      return null;
+    }
+
+    const candidate = raw as Partial<StoredScanPayload>;
+    const versionValid = candidate.version === LATEST_SCAN_VERSION;
+    const targetValid = candidate.target === "modern" || candidate.target === "enterprise";
+    const timestampValid = typeof candidate.scannedAt === "string" && candidate.scannedAt.length > 0;
+    const issuesValid = Array.isArray(candidate.issues);
+
+    if (!versionValid || !targetValid || !timestampValid || !issuesValid) {
+      return null;
+    }
+
+    const target = candidate.target as Target;
+    const scannedAt = candidate.scannedAt as string;
+    const issues = candidate.issues as StoredIssuePayload[];
+
+    return {
+      version: LATEST_SCAN_VERSION,
+      target,
+      scannedAt,
+      issues
+    };
   }
 
   private parsePersistedScan(raw: unknown): PersistedScanPayload | null {
@@ -341,7 +410,7 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     }
 
     const candidate = raw as Partial<PersistedScanPayload>;
-    const versionValid = candidate.version === LATEST_SCAN_VERSION;
+    const versionValid = candidate.version === 1; // Legacy version
     const targetValid = candidate.target === "modern" || candidate.target === "enterprise";
     const timestampValid = typeof candidate.scannedAt === "string" && candidate.scannedAt.length > 0;
     const findingsValid = Array.isArray(candidate.findings);
@@ -355,11 +424,94 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     const findings = candidate.findings as PersistedFinding[];
 
     return {
-      version: LATEST_SCAN_VERSION,
+      version: 1,
       target,
       scannedAt,
       findings
     };
+  }
+
+  private deserializeStoredIssues(entries: StoredIssuePayload[]): BaselineFinding[] {
+    const findings: BaselineFinding[] = [];
+
+    for (const entry of entries) {
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+
+      const { 
+        uri, 
+        featureId, 
+        verdict, 
+        token, 
+        snippet,
+        range 
+      } = entry;
+
+      // Validate required fields
+      const hasBasicFields =
+        typeof uri === "string" &&
+        typeof featureId === "string" &&
+        (verdict === "blocked" || verdict === "warning" || verdict === "safe") &&
+        typeof token === "string" &&
+        typeof snippet === "string" &&
+        range &&
+        typeof range === "object" &&
+        typeof range.start?.line === "number" &&
+        typeof range.start?.character === "number" &&
+        typeof range.end?.line === "number" &&
+        typeof range.end?.character === "number";
+
+      if (!hasBasicFields) {
+        continue;
+      }
+
+      const feature = getFeatureById(featureId);
+      if (!feature) {
+        continue;
+      }
+
+      let parsedUri: vscode.Uri;
+      try {
+        parsedUri = vscode.Uri.parse(uri);
+      } catch {
+        continue;
+      }
+
+      const startPosition = new vscode.Position(range.start.line, range.start.character);
+      const endPosition = new vscode.Position(range.end.line, range.end.character);
+      const vscodeRange = new vscode.Range(startPosition, endPosition);
+
+      const finding: BaselineFinding = {
+        id: entry.id, // Use the stored id directly
+        uri: parsedUri,
+        range: vscodeRange,
+        feature,
+        verdict,
+        token,
+        lineText: snippet
+      };
+
+      findings.push(finding);
+    }
+
+    // Sort findings consistently
+    findings.sort((a, b) => {
+      const aPath = a.uri.fsPath;
+      const bPath = b.uri.fsPath;
+      if (aPath !== bPath) {
+        return aPath.localeCompare(bPath);
+      }
+      if (a.range.start.line !== b.range.start.line) {
+        return a.range.start.line - b.range.start.line;
+      }
+      if (a.range.start.character !== b.range.start.character) {
+        return a.range.start.character - b.range.start.character;
+      }
+      return a.feature.name.localeCompare(b.feature.name);
+    });
+
+    return findings;
   }
 
   private deserializePersistedFindings(entries: PersistedFinding[]): BaselineFinding[] {
@@ -433,6 +585,32 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     return findings;
   }
 
+  private serializeFindingToStoredIssue(finding: BaselineFinding): StoredIssuePayload {
+    return {
+      id: computeFindingId(finding),
+      verdict: finding.verdict,
+      verdictLabel: formatVerdict(finding.verdict),
+      featureName: finding.feature.name,
+      featureId: finding.feature.id,
+      token: finding.token,
+      line: finding.range.start.line + 1,
+      column: finding.range.start.character + 1,
+      docsUrl: finding.feature.docsUrl,
+      snippet: finding.lineText,
+      range: {
+        start: { 
+          line: finding.range.start.line, 
+          character: finding.range.start.character 
+        },
+        end: { 
+          line: finding.range.end.line, 
+          character: finding.range.end.character 
+        }
+      },
+      uri: finding.uri.toString()
+    };
+  }
+
   private serializeFinding(finding: BaselineFinding): PersistedFinding {
     return {
       uri: finding.uri.toString(),
@@ -458,11 +636,11 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       return;
     }
 
-    const payload: PersistedScanPayload = {
+    const payload: StoredScanPayload = {
       version: LATEST_SCAN_VERSION,
       target: this.target,
       scannedAt: this.lastScanAt.toISOString(),
-      findings: this.findings.map((finding) => this.serializeFinding(finding))
+      issues: this.findings.map((finding) => this.serializeFindingToStoredIssue(finding))
     };
 
     // Only persist to file storage - no longer use workspaceState
@@ -932,6 +1110,13 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
       hasExistingSuggestion: this.geminiProvider.hasSuggestionForFinding(finding.id),
       suggestions: this.geminiProvider.getSuggestionsForFinding(finding.id)
     };
+  }
+
+  // Method to get findings in a format that's already optimized for IssuePayload creation
+  getOptimizedFindings(): BaselineFinding[] {
+    // In the future, we could cache the StoredIssuePayload format in memory
+    // and only transform when findings actually change, but for now return findings as-is
+    return this.findings;
   }
 
   private resolveStatusIconUris(): Record<Verdict, string> {

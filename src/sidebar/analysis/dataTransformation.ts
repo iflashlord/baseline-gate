@@ -88,6 +88,39 @@ export function buildIssuePayload(finding: BaselineFinding, selected: boolean): 
   };
 }
 
+// New method to build IssuePayload from stored data with minimal transformation
+export function buildIssuePayloadFromStored(stored: {
+  id: string;
+  verdict: import("../../core/scoring").Verdict;
+  verdictLabel: string;
+  featureName: string;
+  featureId: string;
+  token: string;
+  line: number;
+  column: number;
+  docsUrl?: string;
+  snippet: string;
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
+}, selected: boolean): IssuePayload {
+  return {
+    id: stored.id,
+    verdict: stored.verdict,
+    verdictLabel: stored.verdictLabel,
+    featureName: stored.featureName,
+    featureId: stored.featureId,
+    token: stored.token,
+    line: stored.line,
+    column: stored.column,
+    docsUrl: stored.docsUrl,
+    snippet: stored.snippet,
+    range: stored.range,
+    selected
+  };
+}
+
 export function sortFindings(findings: BaselineFinding[], order: SortOrder): BaselineFinding[] {
   return findings
     .slice()
