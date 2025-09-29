@@ -33,7 +33,7 @@ BaselineGate surfaces Baseline browser support data directly inside VS Code so y
 
 ## Getting Started
 1. **Prerequisites**
-   - VS Code `^1.90.0`
+   - VS Code `^1.104.0`
    - Node.js 18+
    - `pnpm` (recommended) or `npm`
 2. **Install dependencies**

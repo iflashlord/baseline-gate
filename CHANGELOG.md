@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive test suite covering detectors, resolvers, scoring, webview messaging, Gemini flows, and SVG-based UI rendering.
 
 ### Changed
-- Set minimum VS Code engine requirement to `^1.90.0` and adopted MIT licensing.
+- Set minimum VS Code engine requirement to `^1.104.0` and adopted MIT licensing.
 
 ### Fixed
 - Ensured `pnpm test` runs linting, compilation, and the VS Code integration harness without warnings.
