@@ -1,0 +1,51 @@
+name: Bump Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Version bump type (patch, minor, major)'
+        required: false
+        default: patch
+      skip_publish:
+        description: 'Set true to skip tagging/pushing (dry run)'
+        required: false
+        default: 'false'
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Dry run notice
+        if: ${{ github.event.inputs.skip_publish == 'true' }}
+        run: echo "Dry run requested; repository state will not be modified."
+
+      - name: Checkout repository
+        if: ${{ github.event.inputs.skip_publish != 'true' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git author
+        if: ${{ github.event.inputs.skip_publish != 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version and create tag
+        if: ${{ github.event.inputs.skip_publish != 'true' }}
+        id: bump_version
+        uses: phips28/gh-action-bump-version@v9.4.0
+        with:
+          tag-prefix: 'v'
+          default: ${{ github.event.inputs.release_type || 'patch' }}
+          commit-message: 'chore(release): bump version to {{version}}'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Output new version
+        if: ${{ github.event.inputs.skip_publish != 'true' }}
+        run: echo "New version ${{ steps.bump_version.outputs.newTag }}"

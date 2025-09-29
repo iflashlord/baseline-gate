@@ -1,14 +1,15 @@
-name: VSCE Package
+name: Release Extension
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - 'v*'
 
 jobs:
-  package:
+  build-and-publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       VSCE_PAT: ${{ secrets.VSCE_PAT }}
     steps:
@@ -29,13 +30,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type-check tests
-        run: pnpm run compile-tests
+      - name: Run tests
+        run: pnpm test
 
-      - name: Build extension bundle
-        run: pnpm run compile
-
-      - name: Create VSIX artifact
+      - name: Package extension
         run: pnpm exec vsce package --no-dependencies --out baseline-gate.vsix
 
       - name: Upload VSIX artifact
@@ -43,6 +41,13 @@ jobs:
         with:
           name: baseline-gate-vsix
           path: baseline-gate.vsix
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: baseline-gate.vsix
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to Visual Studio Marketplace
         if: ${{ env.VSCE_PAT != '' }}

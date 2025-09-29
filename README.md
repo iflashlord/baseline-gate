@@ -13,6 +13,7 @@ BaselineGate surfaces Baseline browser support data directly inside VS Code so y
 - [Development](#development)
 - [Testing](#testing)
 - [Packaging & Release](#packaging--release)
+- [Release Workflow](#release-workflow)
 - [Project Structure](#project-structure)
 - [Documentation](#documentation)
 - [Troubleshooting](#troubleshooting)
@@ -100,7 +101,28 @@ All settings live under **Extensions → BaselineGate** or via `settings.json`.
   ```bash
   pnpm exec vsce package --no-dependencies
   ```
-- CI workflow: `.github/workflows/vsce-release.yml` builds, packages, and (optionally) publishes when the `VSCE_PAT` secret is configured. Trigger via tags (`v*`) or manual dispatch.
+- Release automation: see the [Release Workflow](#release-workflow) section for the CI pipelines that handle tagging, packaging, and publishing.
+
+## Release Workflow
+The repository automates releases through GitHub Actions. A typical release looks like this:
+
+1. **Bump the version**
+   - Open the **Actions** tab and run the **Bump Version** workflow.
+   - Choose the bump type (`patch`, `minor`, `major`). The workflow commits the new version, tags it (`vX.Y.Z`), and pushes to `main`.
+
+2. **Continuous Integration**
+   - The `CI` workflow (`.github/workflows/ci.yml`) runs on every push/PR to `main` and executes `pnpm run lint -- --max-warnings=0` and `pnpm test`.
+
+3. **Release automation**
+   - The `Release Extension` workflow (`.github/workflows/release.yml`) triggers automatically on any `v*` tag.
+   - It installs dependencies, runs the full `pnpm test`, packages the extension (`baseline-gate.vsix`), creates a GitHub Release, uploads the VSIX asset, and publishes to the Marketplace when `VSCE_PAT` is available.
+
+4. **Manual verification (optional)**
+   - Download the VSIX artifact from the GitHub Release and install it locally.
+   - Confirm the Marketplace listing updates if publishing was enabled.
+
+Secrets used by automation:
+- `VSCE_PAT`: Visual Studio Marketplace Personal Access Token for publishing.
 
 ## Project Structure
 - `src/extension.ts`: Activation entry point and command registration.
