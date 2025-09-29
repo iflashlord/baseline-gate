@@ -6,7 +6,7 @@ Current Status
 - JS and CSS hover providers resolve to Baseline features and render browser support tables with fallback guidance.
 - Mocha unit suites cover scoring, feature resolution, detectors, and markdown rendering. Run them with `pnpm run compile-tests` (compiles tests to `out/` and executes TypeScript type-checking).
 - A GitHub Actions workflow (`.github/workflows/vsce-release.yml`) builds the webpack bundle, packages the VSIX with `vsce`, uploads it as an artifact, and optionally publishes when a `VSCE_PAT` secret is available.
-- The bundled `pnpm test` flow still exits early because of open ESLint warnings and a missing `.vscode-test` config file; fix those before wiring the VS Code integration test harness.
+- The full `pnpm test` flow runs compilation, linting, and the VS Code integration harness. It passes locally using the bundled configuration.
 
 Quick Start
 - Prereqs: Node 18+, VS Code 1.90+, pnpm recommended.
@@ -59,7 +59,7 @@ Troubleshooting
 - Missing support numbers: The data shape can vary across features. Inspect entries from `web-features/data.json` and adjust property paths in `src/core/baselineData.ts` if needed.
 - Build errors about JSON imports: Ensure `tsconfig.json` has `"resolveJsonModule": true` (already set).
 - Nothing compiles on F5: Ensure the `Run Extension` launch config is selected; it starts watch build.
-- `pnpm test` fails after lint: run `pnpm run lint -- --max-warnings=0` to inspect remaining warnings or adopt `eslint --fix` before invoking the VS Code test runner. Create a `.vscode-test` manifest (see `@vscode/test-cli` docs) when ready.
+- Test pipeline failures: run `pnpm run lint -- --max-warnings=0` to inspect remaining warnings before invoking the VS Code test runner. The bundled `.vscode-test` configuration is already committed.
 
 Project Layout
 - `src/extension.ts`: Activation and hover registration.

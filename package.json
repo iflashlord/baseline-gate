@@ -4,12 +4,43 @@
   "description": "BaselineGate tool",
   "icon": "media/icon.png",
   "version": "0.0.2",
+  "license": "MIT",
   "publisher": "BehrouzPooladrak",
   "engines": {
-    "vscode": "^1.104.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
-    "Other"
+    "Linters",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "baseline",
+    "browser support",
+    "compatibility",
+    "css",
+    "javascript",
+    "gemini"
+  ],
+  "galleryBanner": {
+    "color": "#1f2937",
+    "theme": "dark"
+  },
+  "badges": [
+    {
+      "url": "https://github.com/BehrouzPooladrak/baseline-gate/actions/workflows/vsce-release.yml/badge.svg",
+      "href": "https://github.com/BehrouzPooladrak/baseline-gate/actions/workflows/vsce-release.yml",
+      "description": "VSCE Release"
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "media/screenshots/analysis-view.png",
+      "caption": "Baseline analysis dashboard summarising findings and quick Gemini actions"
+    },
+    {
+      "path": "media/screenshots/detail-view.png",
+      "caption": "Detailed finding view with support matrix and Gemini remediation guidance"
+    }
   ],
   "activationEvents": [
     "onLanguage:javascript",
