@@ -32,6 +32,13 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
     <style>
       :root {
         color-scheme: var(--vscode-color-scheme);
+        --baseline-color-error: var(--vscode-editorError-foreground, var(--vscode-errorForeground, #d13438));
+        --baseline-color-warning: var(--vscode-editorWarning-foreground, #f1c40f);
+        --baseline-color-safe: var(--vscode-testing-iconPassed, #2e8b57);
+        --baseline-color-unknown: var(--vscode-descriptionForeground, #888888);
+        --baseline-color-error-surface: color-mix(in srgb, var(--baseline-color-error) 16%, transparent);
+        --baseline-color-warning-surface: color-mix(in srgb, var(--baseline-color-warning) 18%, transparent);
+        --baseline-color-safe-surface: color-mix(in srgb, var(--baseline-color-safe) 14%, transparent);
       }
       html, body {
         height: 100%;
@@ -471,9 +478,9 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       .bar-fill {
         height: 100%;
       }
-      .bar-fill.blocked { background: var(--vscode-errorForeground, #d13438); }
-      .bar-fill.warning { background: #f1c40f; }
-      .bar-fill.safe { background: var(--vscode-testing-iconPassed, #2e8b57); }
+      .bar-fill.blocked { background: var(--baseline-color-error); }
+      .bar-fill.warning { background: var(--baseline-color-warning); }
+      .bar-fill.safe { background: var(--baseline-color-safe); }
       .bar-meta {
         font-size: 0.7rem;
         color: var(--vscode-descriptionForeground);
@@ -494,12 +501,14 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         align-items: center;
       }
       .budget-row.over-limit {
-        border-color: rgba(209, 52, 56, 0.5);
+        border-color: var(--baseline-color-error);
         background: rgba(209, 52, 56, 0.12);
+        background: var(--baseline-color-error-surface);
       }
       .budget-row.under-goal {
-        border-color: rgba(249, 209, 129, 0.5);
+        border-color: var(--baseline-color-warning);
         background: rgba(249, 209, 129, 0.12);
+        background: var(--baseline-color-warning-surface);
       }
       .budget-label {
         font-size: 0.8rem;
@@ -527,13 +536,13 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         height: 100%;
       }
       .budget-meter-fill.blocked {
-        background: var(--vscode-errorForeground, #d13438);
+        background: var(--baseline-color-error);
       }
       .budget-meter-fill.warning {
-        background: #f1c40f;
+        background: var(--baseline-color-warning);
       }
       .budget-meter-fill.safe {
-        background: var(--vscode-testing-iconPassed, #2e8b57);
+        background: var(--baseline-color-safe);
       }
       .budget-meter-text {
         font-size: 0.7rem;
@@ -671,7 +680,27 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         background: var(--vscode-editor-selectionBackground, rgba(128, 128, 128, 0.15));
         border-left: 3px solid var(--vscode-focusBorder);
       }
-      
+
+      .file-group.selected .file-header,
+      .file-group.selected .file-header :is(.file-path, .file-counts, .file-counts span, .file-meta, .file-meta span, .file-detail-button, .file-toggle, .file-counts strong, svg) {
+        color: var(--vscode-list-activeSelectionForeground);
+        fill: currentColor;
+      }
+
+      .file-group.selected .file-header .file-detail-button {
+        background: transparent;
+        border-color: color-mix(in srgb, var(--vscode-list-activeSelectionForeground) 35%, transparent);
+      }
+
+      .file-group.selected .file-header .file-detail-button:hover {
+        background: color-mix(in srgb, var(--vscode-list-activeSelectionBackground) 65%, transparent);
+        border-color: var(--vscode-list-activeSelectionForeground);
+      }
+
+      .file-group.selected .file-header .file-icon {
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--vscode-sideBar-background) 50%, transparent);
+      }
+
       details[open] .file-header {
         border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
         background: var(--vscode-list-activeSelectionBackground, rgba(128, 128, 128, 0.1));
@@ -687,6 +716,11 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         font-size: 0.65rem;
         color: #fff;
         text-transform: uppercase;
+        text-shadow: 0 0 2px rgba(0, 0, 0, 0.45);
+      }
+
+      .issue-icon {
+        text-shadow: 0 0 2px rgba(0, 0, 0, 0.45);
       }
       .file-icon.js { background: #f1c40f; color: #222; }
       .file-icon.ts { background: #3178c6; }
@@ -815,15 +849,18 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       /* Improved color contrast for better readability */
       .issue.safe { 
         background: var(--vscode-editor-inactiveSelection, rgba(16,124,65,0.08)); 
-        border-color: rgba(16,124,65,0.2);
+        background: var(--baseline-color-safe-surface);
+        border-color: var(--baseline-color-safe);
       }
       .issue.warning { 
         background: rgba(249, 209, 129, 0.12); 
-        border-color: rgba(249, 209, 129, 0.3);
+        background: var(--baseline-color-warning-surface);
+        border-color: var(--baseline-color-warning);
       }
       .issue.blocked { 
         background: rgba(209, 52, 56, 0.15); 
-        border-color: rgba(209, 52, 56, 0.3);
+        background: var(--baseline-color-error-surface);
+        border-color: var(--baseline-color-error);
       }
       .issue.selected {
         outline: 2px solid var(--vscode-focusBorder, rgba(90, 133, 204, 0.8));
@@ -942,15 +979,18 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       
       .grouped-issue.safe { 
         background: var(--vscode-editor-inactiveSelection, rgba(16,124,65,0.08)); 
-        border-color: rgba(16,124,65,0.2);
+        background: var(--baseline-color-safe-surface);
+        border-color: var(--baseline-color-safe);
       }
       .grouped-issue.warning { 
         background: rgba(249, 209, 129, 0.12); 
-        border-color: rgba(249, 209, 129, 0.3);
+        background: var(--baseline-color-warning-surface);
+        border-color: var(--baseline-color-warning);
       }
       .grouped-issue.blocked { 
         background: rgba(209, 52, 56, 0.15); 
-        border-color: rgba(209, 52, 56, 0.3);
+        background: var(--baseline-color-error-surface);
+        border-color: var(--baseline-color-error);
       }
       
       .grouped-issue-header {
@@ -960,7 +1000,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         align-items: center;
         padding: 0.375rem 0.5rem;
         border-bottom: 1px solid var(--vscode-tree-indentGuidesStroke, transparent);
-        background: rgba(0, 0, 0, 0.05);
+        background: var(--vscode-editor-background, rgba(0, 0, 0, 0.05));
       }
       
       .grouped-issue-main {
@@ -1361,6 +1401,16 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         height: 2rem;
         border-radius: 4px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        color: var(--baseline-color-unknown);
+      }
+      .detail-icon.blocked {
+        color: var(--baseline-color-error);
+      }
+      .detail-icon.warning {
+        color: var(--baseline-color-warning);
+      }
+      .detail-icon.safe {
+        color: var(--baseline-color-safe);
       }
       .baseline-icon {
         width: 1.5rem;
@@ -1396,18 +1446,21 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       }
       .detail-badge.blocked { 
         background: rgba(209, 52, 56, 0.15); 
-        color: #d13438; 
-        border: 1px solid rgba(209, 52, 56, 0.3);
+        background: var(--baseline-color-error-surface); 
+        color: var(--baseline-color-error); 
+        border: 1px solid var(--baseline-color-error);
       }
       .detail-badge.warning { 
         background: rgba(249, 209, 129, 0.2); 
-        color: #8d6b0b; 
-        border: 1px solid rgba(249, 209, 129, 0.4);
+        background: var(--baseline-color-warning-surface); 
+        color: var(--baseline-color-warning); 
+        border: 1px solid var(--baseline-color-warning);
       }
       .detail-badge.safe { 
         background: rgba(16, 124, 65, 0.15); 
-        color: #107c41; 
-        border: 1px solid rgba(16, 124, 65, 0.3);
+        background: var(--baseline-color-safe-surface); 
+        color: var(--baseline-color-safe); 
+        border: 1px solid var(--baseline-color-safe);
       }
       .detail-section h4 {
         margin: 0 0 0.5rem;
@@ -1514,16 +1567,16 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         background: var(--vscode-list-hoverBackground);
       }
       .browser-support-row.status-supported {
-        border-left: 3px solid #28a745;
+        border-left: 3px solid var(--baseline-color-safe);
       }
       .browser-support-row.status-blocked {
-        border-left: 3px solid #dc3545;
+        border-left: 3px solid var(--baseline-color-error);
       }
       .browser-support-row.status-unsupported {
-        border-left: 3px solid #ffc107;
+        border-left: 3px solid var(--baseline-color-warning);
       }
       .browser-support-row.status-unknown {
-        border-left: 3px solid #6c757d;
+        border-left: 3px solid var(--baseline-color-unknown);
       }
       .support-table td {
         padding: 0.6rem 0.8rem;
@@ -1583,17 +1636,19 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       .detail-gemini-button {
         border: 1px solid var(--vscode-button-border, transparent);
         border-radius: 4px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
         padding: 0.3rem 0.7rem;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
         gap: 0.3rem;
-        transition: opacity 0.2s ease;
+        transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
       }
       .detail-gemini-button:hover {
-        opacity: 0.9;
+        background: var(--vscode-button-hoverBackground);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
       }
       .gemini-icon {
         font-size: 1em;
@@ -1602,7 +1657,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         background: var(--vscode-editor-inactiveSelectionBackground);
         border-radius: 4px;
         padding: 8px;
-        border-left: 3px solid #667eea;
+        border-left: 3px solid var(--vscode-focusBorder);
       }
       .existing-suggestion {
         background: var(--vscode-editor-background);
@@ -1700,9 +1755,9 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         align-items: center;
         justify-content: center;
         font-size: 16px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: var(--vscode-button-background);
         border-radius: 6px;
-        color: white;
+        color: var(--vscode-button-foreground);
       }
 
       .chat-title h4 {
@@ -1847,8 +1902,8 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       }
 
       .ai-message .message-avatar {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: var(--baseline-color-safe);
+        color: var(--vscode-editor-foreground);
       }
 
       .message-content {
@@ -4068,19 +4123,19 @@ export function buildIssueDetailHtml(options: {
   const getSeverityIconSvg = (verdict: Verdict) => {
     switch (verdict) {
       case 'blocked':
-        return `<svg class="detail-icon blocked" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        return `<svg class="detail-icon blocked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="15" y1="9" x2="9" y2="15"></line>
           <line x1="9" y1="9" x2="15" y2="15"></line>
         </svg>`;
       case 'warning':
-        return `<svg class="detail-icon warning" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        return `<svg class="detail-icon warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
           <line x1="12" y1="9" x2="12" y2="13"></line>
           <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>`;
       case 'safe':
-        return `<svg class="detail-icon safe" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        return `<svg class="detail-icon safe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
           <polyline points="22,4 12,14.01 9,11.01"></polyline>
         </svg>`;

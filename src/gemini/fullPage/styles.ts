@@ -1,5 +1,16 @@
 export function getGeminiFullPageStyles(): string {
   return `<style>
+        :root {
+            color-scheme: var(--vscode-color-scheme);
+            --baseline-color-error: var(--vscode-editorError-foreground, var(--vscode-errorForeground, #d13438));
+            --baseline-color-warning: var(--vscode-editorWarning-foreground, #f1c40f);
+            --baseline-color-safe: var(--vscode-testing-iconPassed, #2e8b57);
+            --baseline-color-unknown: var(--vscode-descriptionForeground, #888888);
+            --baseline-color-error-surface: color-mix(in srgb, var(--baseline-color-error) 16%, transparent);
+            --baseline-color-warning-surface: color-mix(in srgb, var(--baseline-color-warning) 18%, transparent);
+            --baseline-color-safe-surface: color-mix(in srgb, var(--baseline-color-safe) 14%, transparent);
+        }
+
         body {
             font-family: var(--vscode-font-family);
             color: var(--vscode-foreground);
@@ -12,11 +23,7 @@ export function getGeminiFullPageStyles(): string {
 
         /* Global SVG styling */
         svg {
-            color: var(--vscode-foreground);
-            stroke: currentColor;
-        }
-
-        svg[stroke]:not([stroke="none"]):not([stroke="#22c55e"]):not([stroke="#ef4444"]):not([stroke="#f59e0b"]):not([stroke="#4285f4"]):not([stroke="#f97316"]) {
+            color: inherit;
             stroke: currentColor;
         }
 
@@ -60,14 +67,15 @@ export function getGeminiFullPageStyles(): string {
         .gemini-icon {
             width: 32px;
             height: 32px;
-            background: linear-gradient(135deg, #4285f4, #34a853, #fbbc05, #ea4335);
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
             font-weight: bold;
             font-size: 18px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
         }
 
         .header-title h1 {
@@ -592,6 +600,45 @@ export function getGeminiFullPageStyles(): string {
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
+        .suggestion-item.status-error {
+            border-color: var(--baseline-color-error);
+            box-shadow: 0 0 0 1px color-mix(in srgb, var(--baseline-color-error) 35%, transparent);
+        }
+
+        .suggestion-item.status-pending {
+            border-color: var(--baseline-color-warning);
+            box-shadow: 0 0 0 1px color-mix(in srgb, var(--baseline-color-warning) 35%, transparent);
+        }
+
+        .suggestion-item.status-success {
+            border-color: var(--baseline-color-safe);
+            box-shadow: 0 0 0 1px color-mix(in srgb, var(--baseline-color-safe) 35%, transparent);
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            color: var(--baseline-color-unknown);
+        }
+
+        .status-error .status-indicator,
+        .suggestion-item.status-error .status-indicator {
+            color: var(--baseline-color-error);
+        }
+
+        .status-pending .status-indicator,
+        .suggestion-item.status-pending .status-indicator {
+            color: var(--baseline-color-warning);
+        }
+
+        .status-success .status-indicator,
+        .suggestion-item.status-success .status-indicator {
+            color: var(--baseline-color-safe);
+        }
+
         .suggestion-item::before {
             content: '';
             position: absolute;
@@ -599,7 +646,10 @@ export function getGeminiFullPageStyles(): string {
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, #4285f4, #34a853, #fbbc05, #ea4335);
+            background: linear-gradient(90deg,
+                var(--baseline-color-error),
+                var(--baseline-color-warning),
+                var(--baseline-color-safe));
             opacity: 0.8;
         }
 
@@ -628,24 +678,24 @@ export function getGeminiFullPageStyles(): string {
             gap: 8px;
         }
 
-        .issue-section h4::before {
-            content: '';
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='12' y1='8' x2='12' y2='12'/%3E%3Cline x1='12' y1='16' x2='12.01' y2='16'/%3E%3C/svg%3E");
-            background-size: contain;
-            background-repeat: no-repeat;
+        .section-heading {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .suggestion-section h4::before {
-            content: '';
-            display: inline-block;
+        .section-heading .section-icon {
             width: 16px;
             height: 16px;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234285f4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.663 17h4.673M12 3l1.735 3.013 3.408.494-2.463 2.401.582 3.392L12 10.695 8.738 12.3l.582-3.392-2.463-2.401 3.408-.494L12 3z'/%3E%3C/svg%3E");
-            background-size: contain;
-            background-repeat: no-repeat;
+            color: var(--baseline-color-unknown);
+        }
+
+        .issue-section .section-icon {
+            color: var(--baseline-color-warning);
+        }
+
+        .suggestion-section .section-icon {
+            color: var(--baseline-color-safe);
         }
 
         /* Icon button improvements */
@@ -717,11 +767,11 @@ export function getGeminiFullPageStyles(): string {
         .star svg {
             width: 16px;
             height: 16px;
-            color: #fbbf24;
+            color: inherit;
         }
 
         .star-filled svg {
-            fill: #fbbf24;
+            fill: currentColor;
         }
 
         .action-button {
@@ -770,11 +820,11 @@ export function getGeminiFullPageStyles(): string {
 
         .star.filled,
         .star.star-filled {
-            color: #ffd700;
+            color: var(--baseline-color-warning);
         }
 
         .star:hover {
-            color: #ffd700;
+            color: var(--baseline-color-warning);
         }
 
         /* Suggestion footer */

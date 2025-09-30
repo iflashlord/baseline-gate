@@ -151,7 +151,7 @@ suite('SVG Icon Rendering Tests', () => {
       
       // Should contain severity-specific SVG icons
       assert.ok(html.includes('<svg class="detail-icon safe"')); // Safe icon
-      assert.ok(html.includes('stroke="#22c55e"')); // Green for safe
+      assert.ok(html.includes('stroke="currentColor"'));
       
       // Should contain proper structure
       assert.ok(html.includes('viewBox="0 0 24 24"'));
@@ -183,7 +183,7 @@ suite('SVG Icon Rendering Tests', () => {
       
       // Should contain blocked-specific SVG
       assert.ok(html.includes('<svg class="detail-icon blocked"'));
-      assert.ok(html.includes('stroke="#ef4444"')); // Red for blocked
+      assert.ok(html.includes('stroke="currentColor"'));
       assert.ok(html.includes('<circle cx="12" cy="12" r="10"')); // Blocked circle
       assert.ok(html.includes('<line x1="15" y1="9" x2="9" y2="15"')); // X mark
     });
@@ -213,7 +213,7 @@ suite('SVG Icon Rendering Tests', () => {
       
       // Should contain warning-specific SVG
       assert.ok(html.includes('<svg class="detail-icon warning"'));
-      assert.ok(html.includes('stroke="#f59e0b"')); // Orange for warning
+      assert.ok(html.includes('stroke="currentColor"'));
       assert.ok(html.includes('<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"')); // Triangle
     });
 
@@ -294,12 +294,14 @@ suite('SVG Icon Rendering Tests', () => {
       const successHtml = renderSuggestionCard(successSuggestion, '');
       const errorHtml = renderSuggestionCard(errorSuggestion, '');
       
-      // Success should have green checkmark
-      assert.ok(successHtml.includes('stroke="#22c55e"')); // Green
+      // Success should have themable checkmark
+      assert.ok(successHtml.includes('class="suggestion-item status-success"'));
+      assert.ok(successHtml.includes('stroke="currentColor"'));
       assert.ok(successHtml.includes('<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"')); // Checkmark circle
       
-      // Error should have red X or warning
-      assert.ok(errorHtml.includes('stroke="#ef4444"') || errorHtml.includes('stroke="#f59e0b"')); // Red or orange
+      // Error should use currentColor for theming
+      assert.ok(errorHtml.includes('class="suggestion-item status-error"'));
+      assert.ok(errorHtml.includes('stroke="currentColor"'));
     });
 
     test('highlights search terms in suggestion cards', () => {

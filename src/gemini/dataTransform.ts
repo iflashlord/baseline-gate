@@ -44,11 +44,11 @@ export function renderSuggestionCard(suggestion: GeminiSuggestion, searchTerm: s
 
   // Status indicator
   const statusClass = suggestion.status === 'error' ? 'status-error' : suggestion.status === 'pending' ? 'status-pending' : 'status-success';
-  const statusIcon = suggestion.status === 'error' 
-    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`
-    : suggestion.status === 'pending' 
-    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12,6 12,12 16,14"></polyline></svg>`
-    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22,4 12,14.01 9,11.01"></polyline></svg>`;
+  const statusIcon = suggestion.status === 'error'
+    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`
+    : suggestion.status === 'pending'
+    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12,6 12,12 16,14"></polyline></svg>`
+    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22,4 12,14.01 9,11.01"></polyline></svg>`;
 
   // Tags
   const tagsMarkup = suggestion.tags && suggestion.tags.length > 0
@@ -110,12 +110,25 @@ export function renderSuggestionCard(suggestion: GeminiSuggestion, searchTerm: s
             </header>
             <div class="suggestion-content">
                 <div class="issue-section">
-                    <h4>Issue</h4>
+                    <h4 class="section-heading">
+                        <svg class="section-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        Issue
+                    </h4>
                     <div class="issue-text">${highlightText(suggestion.issue, searchTerm)}</div>
                     ${findingButton}
                 </div>
                 <div class="suggestion-section">
-                    <h4>Gemini Suggestion</h4>
+                    <h4 class="section-heading">
+                        <svg class="section-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9.663 17h4.673"></path>
+                            <path d="M12 3l1.735 3.013 3.408.494-2.463 2.401.582 3.392L12 10.695 8.738 12.3l.582-3.392-2.463-2.401 3.408-.494L12 3z"></path>
+                        </svg>
+                        Gemini Suggestion
+                    </h4>
                     <div class="suggestion-text">${renderMarkdown(suggestion.suggestion, searchTerm)}</div>
                 </div>
                 ${tagsMarkup}

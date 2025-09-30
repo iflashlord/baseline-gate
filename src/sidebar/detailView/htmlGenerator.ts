@@ -126,6 +126,13 @@ export class DetailViewHtmlGenerator {
     return `<style>
         :root {
             color-scheme: var(--vscode-color-scheme);
+            --baseline-color-error: var(--vscode-editorError-foreground, var(--vscode-errorForeground, #d13438));
+            --baseline-color-warning: var(--vscode-editorWarning-foreground, #f1c40f);
+            --baseline-color-safe: var(--vscode-testing-iconPassed, #2e8b57);
+            --baseline-color-unknown: var(--vscode-descriptionForeground, #888888);
+            --baseline-color-error-surface: color-mix(in srgb, var(--baseline-color-error) 16%, transparent);
+            --baseline-color-warning-surface: color-mix(in srgb, var(--baseline-color-warning) 18%, transparent);
+            --baseline-color-safe-surface: color-mix(in srgb, var(--baseline-color-safe) 14%, transparent);
         }
 
         *, *::before, *::after {
@@ -349,21 +356,41 @@ export class DetailViewHtmlGenerator {
             font-size: 0.75rem;
             font-weight: 600;
             text-transform: uppercase;
+            border: 1px solid transparent;
         }
 
         .detail-badge.blocked {
-            background: rgba(239, 68, 68, 0.18);
-            color: #ef5350;
+            background: var(--baseline-color-error-surface);
+            color: var(--baseline-color-error);
+            border: 1px solid var(--baseline-color-error);
         }
 
         .detail-badge.warning {
-            background: rgba(245, 158, 11, 0.18);
-            color: #f5a623;
+            background: var(--baseline-color-warning-surface);
+            color: var(--baseline-color-warning);
+            border: 1px solid var(--baseline-color-warning);
         }
 
         .detail-badge.safe {
-            background: rgba(34, 197, 94, 0.18);
-            color: #2ecc71;
+            background: var(--baseline-color-safe-surface);
+            color: var(--baseline-color-safe);
+            border: 1px solid var(--baseline-color-safe);
+        }
+
+        .detail-icon {
+            color: var(--baseline-color-unknown);
+        }
+
+        .detail-icon.blocked {
+            color: var(--baseline-color-error);
+        }
+
+        .detail-icon.warning {
+            color: var(--baseline-color-warning);
+        }
+
+        .detail-icon.safe {
+            color: var(--baseline-color-safe);
         }
 
         .detail-section {
@@ -545,8 +572,13 @@ export class DetailViewHtmlGenerator {
         }
 
         .ai-message .avatar-icon {
-            background: linear-gradient(135deg, #4285f4, #34a853);
-            color: #fff;
+            background: var(--baseline-color-safe);
+            color: var(--vscode-editor-foreground);
+        }
+
+        .ai-avatar-error {
+            background: var(--baseline-color-error);
+            color: var(--vscode-editor-foreground);
         }
 
         .message-content {
@@ -1389,8 +1421,8 @@ export class DetailViewHtmlGenerator {
                 responseHtml = \`
                     <div class="chat-message ai-message">
                         <div class="message-avatar">
-                            <div class="avatar-icon ai-avatar" style="background: #ef4444;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <div class="avatar-icon ai-avatar ai-avatar-error">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="10"></circle>
                                     <line x1="15" y1="9" x2="9" y2="15"></line>
                                     <line x1="9" y1="9" x2="15" y2="15"></line>
