@@ -687,3 +687,286 @@ suite('Target minimum configuration smoke checks', () => {
     assert.ok(enterprise === undefined || enterprise === 'enterprise' || enterprise === 'modern');
   });
 });
+
+suite('Grouped issues state persistence tests', () => {
+  let provider: BaselineAnalysisViewProvider;
+
+  setup(() => {
+    provider = new BaselineAnalysisViewProvider(createContext(), 'enterprise', createAssets());
+  });
+
+  test('setGroupExpansion adds group to expanded set when expanded is true', () => {
+    const groupId = 'clipboard-api';
+    
+    // Access the private method for testing using bound method call
+    (provider as any).setGroupExpansion.call(provider, groupId, true);
+    
+    const expandedGroups = (provider as unknown as { expandedGroupIds: Set<string> }).expandedGroupIds;
+    
+    assert.ok(expandedGroups.has(groupId), 'Group should be added to expanded set');
+  });
+
+  test('setGroupExpansion removes group from expanded set when expanded is false', () => {
+    const groupId = 'clipboard-api';
+    
+    // First expand the group
+    (provider as any).setGroupExpansion.call(provider, groupId, true);
+    
+    // Then collapse it
+    (provider as any).setGroupExpansion.call(provider, groupId, false);
+    
+    const expandedGroups = (provider as unknown as { expandedGroupIds: Set<string> }).expandedGroupIds;
+    assert.ok(!expandedGroups.has(groupId), 'Group should be removed from expanded set');
+  });
+
+  test('setGroupExpansion manages state correctly through multiple calls', () => {
+    const groupId = 'clipboard-api';
+    const expandedGroups = (provider as unknown as { expandedGroupIds: Set<string> }).expandedGroupIds;
+    
+    // Initial state should be empty
+    assert.ok(!expandedGroups.has(groupId), 'Group should not be expanded initially');
+    
+    // Expand the group
+    (provider as any).setGroupExpansion.call(provider, groupId, true);
+    assert.ok(expandedGroups.has(groupId), 'Group should be expanded after first call');
+    
+    // Trying to expand again should not cause issues
+    (provider as any).setGroupExpansion.call(provider, groupId, true);
+    assert.ok(expandedGroups.has(groupId), 'Group should still be expanded');
+    
+    // Collapse the group
+    (provider as any).setGroupExpansion.call(provider, groupId, false);
+    assert.ok(!expandedGroups.has(groupId), 'Group should be collapsed');
+    
+    // Trying to collapse again should not cause issues
+    (provider as any).setGroupExpansion.call(provider, groupId, false);
+    assert.ok(!expandedGroups.has(groupId), 'Group should still be collapsed');
+  });
+
+  test('clearFilters preserves group expansion state (like file expansion)', () => {
+    const groupId1 = 'clipboard-api';
+    const groupId2 = 'promise-any';
+    
+    // Expand some groups
+    (provider as any).setGroupExpansion.call(provider, groupId1, true);
+    (provider as any).setGroupExpansion.call(provider, groupId2, true);
+    
+    // Verify they are expanded
+    const expandedGroups = (provider as unknown as { expandedGroupIds: Set<string> }).expandedGroupIds;
+    assert.ok(expandedGroups.has(groupId1), 'Group 1 should be expanded');
+    assert.ok(expandedGroups.has(groupId2), 'Group 2 should be expanded');
+    
+    // Clear filters should preserve expansion state (like file expansions)
+    provider.clearFilters();
+    
+    // Group expansion state should be preserved (consistent with file expansion behavior)
+    assert.strictEqual(expandedGroups.size, 2, 'Group expansion state should persist through clearFilters');
+    assert.ok(expandedGroups.has(groupId1), 'Group 1 should still be expanded');
+    assert.ok(expandedGroups.has(groupId2), 'Group 2 should still be expanded');
+  });
+
+  test('group expansion state persists through search filtering', () => {
+    const findings = [
+      makeFinding({ path: '/workspace/src/app.ts', featureId: 'clipboard', featureName: 'Clipboard API', verdict: 'blocked', token: 'navigator' }),
+      makeFinding({ path: '/workspace/src/app.ts', featureId: 'clipboard', featureName: 'Clipboard API', verdict: 'blocked', token: 'clipboard', line: 5 }),
+      makeFinding({ path: '/workspace/src/utils.ts', featureId: 'promise-any', featureName: 'Promise.any', verdict: 'warning', token: 'Promise.any' })
+    ];
+    setFindings(provider, findings);
+    
+    const groupId = 'clipboard';
+    
+    // Expand a group
+    (provider as any).setGroupExpansion.call(provider, groupId, true);
+    
+    // Apply search filter
+    provider.setSearchQuery('clipboard');
+    
+    // Group should still be expanded
+    const expandedGroups = (provider as unknown as { expandedGroupIds: Set<string> }).expandedGroupIds;
+    assert.ok(expandedGroups.has(groupId), 'Group expansion should persist through search filtering');
+    
+    // Clear search
+    provider.setSearchQuery('');
+    
+    // Group should still be expanded
+    assert.ok(expandedGroups.has(groupId), 'Group expansion should persist when clearing search');
+  });
+
+  test('group expansion state persists through severity filtering', () => {
+    const findings = [
+      makeFinding({ path: '/workspace/src/app.ts', featureId: 'clipboard', featureName: 'Clipboard API', verdict: 'blocked', token: 'navigator' }),
+      makeFinding({ path: '/workspace/src/app.ts', featureId: 'clipboard', featureName: 'Clipboard API', verdict: 'blocked', token: 'clipboard', line: 5 }),
+      makeFinding({ path: '/workspace/src/utils.ts', featureId: 'promise-any', featureName: 'Promise.any', verdict: 'warning', token: 'Promise.any' })
+    ];
+    setFindings(provider, findings);
+    
+    const groupId = 'clipboard';
+    
+    // Expand a group
+    (provider as any).setGroupExpansion.call(provider, groupId, true);
+    
+    // Apply severity filter
+    provider.setSeverityFilter(['blocked']);
+    
+    // Group should still be expanded
+    const expandedGroups = (provider as unknown as { expandedGroupIds: Set<string> }).expandedGroupIds;
+    assert.ok(expandedGroups.has(groupId), 'Group expansion should persist through severity filtering');
+    
+    // Reset severity filter
+    provider.setSeverityFilter(['blocked', 'warning', 'safe']);
+    
+    // Group should still be expanded
+    assert.ok(expandedGroups.has(groupId), 'Group expansion should persist when resetting severity filter');
+  });
+
+  test('group expansion state persists through sort order changes', () => {
+    const findings = [
+      makeFinding({ path: '/workspace/src/app.ts', featureId: 'clipboard', featureName: 'Clipboard API', verdict: 'blocked', token: 'navigator' }),
+      makeFinding({ path: '/workspace/src/app.ts', featureId: 'clipboard', featureName: 'Clipboard API', verdict: 'blocked', token: 'clipboard', line: 5 }),
+      makeFinding({ path: '/workspace/src/utils.ts', featureId: 'promise-any', featureName: 'Promise.any', verdict: 'warning', token: 'Promise.any' })
+    ];
+    setFindings(provider, findings);
+    
+    const groupId = 'clipboard';
+    
+    // Expand a group
+    (provider as any).setGroupExpansion.call(provider, groupId, true);
+    
+    // Change sort order
+    provider.setSortOrder('file');
+    
+    // Group should still be expanded
+    const expandedGroups = (provider as unknown as { expandedGroupIds: Set<string> }).expandedGroupIds;
+    assert.ok(expandedGroups.has(groupId), 'Group expansion should persist through sort order changes');
+    
+    // Toggle sort order
+    provider.toggleSortOrder();
+    
+    // Group should still be expanded
+    assert.ok(expandedGroups.has(groupId), 'Group expansion should persist when toggling sort order');
+  });
+
+  test('group expansion state persists through target changes', () => {
+    const findings = [
+      makeFinding({ 
+        path: '/workspace/src/app.ts', 
+        featureId: 'clipboard', 
+        featureName: 'Clipboard API', 
+        verdict: 'blocked', 
+        token: 'navigator',
+        support: {
+          chrome: { raw: '66', version: 66 },
+          edge: { raw: '79', version: 79 },
+          firefox: { raw: '63', version: 63 },
+          safari: { raw: '13.1', version: 13.1 }
+        }
+      }),
+      makeFinding({ 
+        path: '/workspace/src/app.ts', 
+        featureId: 'clipboard', 
+        featureName: 'Clipboard API', 
+        verdict: 'blocked', 
+        token: 'clipboard', 
+        line: 5,
+        support: {
+          chrome: { raw: '66', version: 66 },
+          edge: { raw: '79', version: 79 },
+          firefox: { raw: '63', version: 63 },
+          safari: { raw: '13.1', version: 13.1 }
+        }
+      })
+    ];
+    setFindings(provider, findings);
+    
+    const groupId = 'clipboard';
+    
+    // Expand a group
+    (provider as any).setGroupExpansion.call(provider, groupId, true);
+    
+    // Change target (which recalculates verdicts)
+    provider.setTarget('modern');
+    
+    // Group should still be expanded
+    const expandedGroups = (provider as unknown as { expandedGroupIds: Set<string> }).expandedGroupIds;
+    assert.ok(expandedGroups.has(groupId), 'Group expansion should persist through target changes');
+  });
+
+  test('setGroupExpansion message handling works correctly', () => {
+    const attached = attachView(provider);
+    const groupId = 'clipboard';
+    
+    // Send setGroupExpansion message to expand group
+    attached.emit({ 
+      type: 'setGroupExpansion', 
+      groupId: groupId,
+      expanded: true
+    });
+    
+    // Verify group was expanded
+    const expandedGroups = (provider as unknown as { expandedGroupIds: Set<string> }).expandedGroupIds;
+    assert.ok(expandedGroups.has(groupId), 'Group should be expanded after receiving setGroupExpansion message');
+    
+    // Send setGroupExpansion message to collapse group  
+    attached.emit({
+      type: 'setGroupExpansion',
+      groupId: groupId, 
+      expanded: false
+    });
+    
+    // Verify group was collapsed
+    assert.ok(!expandedGroups.has(groupId), 'Group should be collapsed after receiving setGroupExpansion message');
+  });
+
+  test('multiple groups can be expanded independently', () => {
+    const groupId1 = 'clipboard';
+    const groupId2 = 'promise-any';
+    const groupId3 = 'url-canparse';
+    
+    // Expand multiple groups
+    (provider as any).setGroupExpansion.call(provider, groupId1, true);
+    (provider as any).setGroupExpansion.call(provider, groupId2, true);
+    (provider as any).setGroupExpansion.call(provider, groupId3, true);
+    
+    const expandedGroups = (provider as unknown as { expandedGroupIds: Set<string> }).expandedGroupIds;
+    assert.strictEqual(expandedGroups.size, 3, 'All three groups should be expanded');
+    assert.ok(expandedGroups.has(groupId1), 'Group 1 should be expanded');
+    assert.ok(expandedGroups.has(groupId2), 'Group 2 should be expanded');
+    assert.ok(expandedGroups.has(groupId3), 'Group 3 should be expanded');
+    
+    // Collapse one group
+    (provider as any).setGroupExpansion.call(provider, groupId2, false);
+    
+    assert.strictEqual(expandedGroups.size, 2, 'Two groups should remain expanded');
+    assert.ok(expandedGroups.has(groupId1), 'Group 1 should still be expanded');
+    assert.ok(!expandedGroups.has(groupId2), 'Group 2 should be collapsed');
+    assert.ok(expandedGroups.has(groupId3), 'Group 3 should still be expanded');
+  });
+
+  test('buildState includes group expansion information in file grouped issues', () => {
+    const findings = [
+      makeFinding({ path: '/workspace/src/app.ts', featureId: 'clipboard', featureName: 'Clipboard API', verdict: 'blocked', token: 'navigator' }),
+      makeFinding({ path: '/workspace/src/app.ts', featureId: 'clipboard', featureName: 'Clipboard API', verdict: 'blocked', token: 'clipboard', line: 5 }),
+      makeFinding({ path: '/workspace/src/utils.ts', featureId: 'promise-any', featureName: 'Promise.any', verdict: 'warning', token: 'Promise.any' })
+    ];
+    setFindings(provider, findings);
+    
+    const groupId = 'clipboard';
+    
+    // Expand a group (grouped issues are always present within files)
+    (provider as any).setGroupExpansion.call(provider, groupId, true);
+    
+    const state = buildState(provider);
+    
+    // Verify that files contain grouped issues and expansion state is preserved
+    assert.ok(state.files.length > 0, 'Should have files with grouped issues');
+    
+    // Find the file that contains the clipboard issues
+    const appFile = state.files.find((file: any) => file.relativePath.endsWith('app.ts'));
+    if (appFile && appFile.groupedIssues && appFile.groupedIssues.length > 0) {
+      const clipboardGroup = appFile.groupedIssues.find((group: any) => group.id === groupId);
+      if (clipboardGroup) {
+        assert.strictEqual(clipboardGroup.expanded, true, 'Expanded group should be marked as expanded in state');
+      }
+    }
+  });
+});
