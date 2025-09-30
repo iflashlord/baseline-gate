@@ -642,7 +642,6 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         gap: 0.375rem;
         align-items: center;
         padding: 0.375rem 0.5rem;
-        background: var(--vscode-tree-tableColumnsBorder, transparent);
         cursor: pointer;
         min-height: 36px;
         position: relative;
@@ -663,38 +662,29 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         .issue:focus,
         button:focus {
           outline: 3px solid var(--vscode-contrastBorder, #ffffff);
-          background: var(--vscode-editor-selectionHighlightBackground);
+         
         }
       }
-      
-      /* Improved hover states */
-      .file-header:hover {
-        background: var(--vscode-list-hoverBackground);
-      }
-      
+       
       .issue:hover {
         background: var(--vscode-list-hoverBackground);
+        color: var(--vscode-list-hoverForeground);
         border-color: var(--vscode-list-hoverForeground);
       }
       .file-group.selected .file-header {
-        background: var(--vscode-editor-selectionBackground, rgba(128, 128, 128, 0.15));
         border-left: 3px solid var(--vscode-focusBorder);
       }
 
       .file-group.selected .file-header,
       .file-group.selected .file-header :is(.file-path, .file-counts, .file-counts span, .file-meta, .file-meta span, .file-detail-button, .file-toggle, .file-counts strong, svg) {
-        color: var(--vscode-list-activeSelectionForeground);
-        fill: currentColor;
+        color: var(--vscode-badge-foreground);
       }
+      
 
-      .file-group.selected .file-header .file-detail-button {
-        background: transparent;
-        border-color: color-mix(in srgb, var(--vscode-list-activeSelectionForeground) 35%, transparent);
-      }
 
       .file-group.selected .file-header .file-detail-button:hover {
         background: color-mix(in srgb, var(--vscode-list-activeSelectionBackground) 65%, transparent);
-        border-color: var(--vscode-list-activeSelectionForeground);
+         border-color: var(--vscode-list-activeSelectionForeground);
       }
 
       .file-group.selected .file-header .file-icon {
@@ -703,7 +693,6 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
 
       details[open] .file-header {
         border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
-        background: var(--vscode-list-activeSelectionBackground, rgba(128, 128, 128, 0.1));
       }
       .file-icon {
         width: 1rem;
@@ -714,50 +703,237 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         justify-content: center;
         font-weight: 600;
         font-size: 0.65rem;
-        color: #fff;
         text-transform: uppercase;
-        text-shadow: 0 0 2px rgba(0, 0, 0, 0.45);
+        background: var(--file-icon-bg, var(--vscode-badge-background));
+        color: var(--file-icon-foreground, color-mix(in srgb, #ffffff 45%, var(--vscode-foreground) 55%));
+        text-shadow: 0 0 1px rgba(0, 0, 0, 0.25);
+      }
+
+      .vscode-light .file-icon {
+        background: color-mix(in srgb, var(--file-icon-bg, var(--vscode-badge-background)) 45%, #ffffff 55%);
+        color: var(--file-icon-foreground-light, var(--vscode-sideBar-foreground));
+        text-shadow: none;
+      }
+
+      .vscode-dark .file-icon,
+      .vscode-high-contrast-dark .file-icon {
+        background: var(--file-icon-bg, var(--vscode-badge-background));
+        color: var(--file-icon-foreground-dark, #f4f4f4);
       }
 
       .issue-icon {
-        text-shadow: 0 0 2px rgba(0, 0, 0, 0.45);
+        text-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
       }
-      .file-icon.js { background: #f1c40f; color: #222; }
-      .file-icon.ts { background: #3178c6; }
-      .file-icon.tsx { background: #2f74c0; }
-      .file-icon.jsx { background: #61dafb; color: #0b1f33; }
-      .file-icon.css { background: #264de4; font-size: 0.3rem; }
-      .file-icon.scss { background: #c6538c; font-size: 0.3rem;}
-      .file-icon.default { background: #7f8c8d; }
-      .file-icon.html { background: #e34c26; font-size: 0.45rem; }
-      .file-icon.json { background: #f39c12; font-size: 0.45rem; color: #222; }
-      .file-icon.yaml, .file-icon.yml { background: #cb171e; font-size: 0.45rem; color: #fff; }
-      .file-icon.md { background: #2b7489; font-size: 0.45rem; color: #fff; }
-      .file-icon.py { background: #3572A5; font-size: 0.45rem; color: #fff; }
-      .file-icon.go { background: #00ADD8; font-size: 0.45rem; color: #fff; }
-      .file-icon.rb { background: #701516; font-size: 0.45rem; color: #fff; }
-      .file-icon.php { background: #777bb3; font-size: 0.45rem; color: #fff; }
-      .file-icon.java { background: #b07219; font-size: 0.45rem; color: #fff; }
-      .file-icon.c { background: #555555; font-size: 0.45rem; color: #fff; }
-      .file-icon.cpp { background: #f34b7d; font-size: 0.45rem; color: #fff; }
-      .file-icon.cs { background: #178600; font-size: 0.45rem; color: #fff; }
-      .file-icon.swift { background: #ffac45; font-size: 0.45rem; color: #fff; }
-      .file-icon.kt, .file-icon.kts { background: #0095D5; font-size: 0.45rem; color: #fff; }
-      .file-icon.dart { background: #00B4AB; font-size: 0.45rem; color: #fff; }
-      .file-icon.rs { background: #dea584; font-size: 0.45rem; color: #fff; }
-      .file-icon.sh { background: #89e051; font-size: 0.45rem; color: #222; }
-      .file-icon.bash { background: #89e051; font-size: 0.45rem; color: #222; }
-      .file-icon.zsh { background: #89e051; font-size: 0.45rem; color: #222; }
-      .file-icon.dockerfile { background: #384d54; font-size: 0.45rem; color: #fff; }
-      .file-icon.makefile { background: #427819; font-size: 0.45rem; color: #fff; }
-      .file-icon.cmake { background: #6d8086; font-size: 0.45rem; color: #fff; }
-      .file-icon.gradle { background: #02303a; font-size: 0.45rem; color: #fff; }
-      .file-icon.xml { background: #0060ac; font-size: 0.45rem; color: #fff; }
-      .file-icon.toml { background: #9c4221; font-size: 0.45rem; color: #fff; }
-      .file-icon.ini { background: #6d8086; font-size: 0.45rem; color: #fff; }
-      .file-icon.properties { background: #6d8086; font-size: 0.45rem; color: #fff; }
-      .file-icon.dart { background: #00B4AB; font-size: 0.45rem; color: #fff; }
-      .file-icon.lock { background: #444c56; font-size: 0.45rem; color: #fff; }
+
+      .file-icon.js {
+        --file-icon-bg: #f1c40f;
+        --file-icon-foreground: #3a2800;
+        --file-icon-foreground-light: #3a2800;
+        --file-icon-foreground-dark: #3a2800;
+      }
+
+      .file-icon.ts {
+        --file-icon-bg: #3178c6;
+        --file-icon-foreground-dark: #eef4ff;
+      }
+
+      .file-icon.tsx {
+        --file-icon-bg: #2f74c0;
+        --file-icon-foreground-dark: #e8f1ff;
+      }
+
+      .file-icon.jsx {
+        --file-icon-bg: #61dafb;
+        --file-icon-foreground: #0b1f33;
+        --file-icon-foreground-light: #0b1f33;
+        --file-icon-foreground-dark: #0b1f33;
+      }
+
+      .file-icon.css {
+        --file-icon-bg: #264de4;
+        --file-icon-foreground-dark: #f0f3ff;
+        font-size: 0.3rem;
+      }
+
+      .file-icon.scss {
+        --file-icon-bg: #c6538c;
+        --file-icon-foreground-dark: #fff2f8;
+        font-size: 0.3rem;
+      }
+
+      .file-icon.default {
+        --file-icon-bg: #7f8c8d;
+        --file-icon-foreground-dark: #f6f9f9;
+      }
+
+      .file-icon.html {
+        --file-icon-bg: #e34c26;
+        --file-icon-foreground-dark: #ffe9e1;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.json {
+        --file-icon-bg: #f39c12;
+        --file-icon-foreground: #2b1c00;
+        --file-icon-foreground-light: #2b1c00;
+        --file-icon-foreground-dark: #2b1c00;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.yaml,
+      .file-icon.yml {
+        --file-icon-bg: #cb171e;
+        --file-icon-foreground-dark: #ffe9eb;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.md {
+        --file-icon-bg: #2b7489;
+        --file-icon-foreground-dark: #e4f7ff;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.py {
+        --file-icon-bg: #3572A5;
+        --file-icon-foreground-dark: #eaf4ff;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.go {
+        --file-icon-bg: #00ADD8;
+        --file-icon-foreground: #003948;
+        --file-icon-foreground-light: #003948;
+        --file-icon-foreground-dark: #003948;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.rb {
+        --file-icon-bg: #701516;
+        --file-icon-foreground-dark: #ffd9da;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.php {
+        --file-icon-bg: #777bb3;
+        --file-icon-foreground-dark: #f0f2ff;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.java {
+        --file-icon-bg: #b07219;
+        --file-icon-foreground-dark: #fff1dc;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.c {
+        --file-icon-bg: #555555;
+        --file-icon-foreground-dark: #f5f5f5;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.cpp {
+        --file-icon-bg: #f34b7d;
+        --file-icon-foreground-dark: #ffe1eb;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.cs {
+        --file-icon-bg: #178600;
+        --file-icon-foreground-dark: #dfffe1;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.swift {
+        --file-icon-bg: #ffac45;
+        --file-icon-foreground: #3a2000;
+        --file-icon-foreground-light: #3a2000;
+        --file-icon-foreground-dark: #3a2000;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.kt,
+      .file-icon.kts {
+        --file-icon-bg: #0095D5;
+        --file-icon-foreground: #002a3e;
+        --file-icon-foreground-light: #002a3e;
+        --file-icon-foreground-dark: #e9f8ff;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.dart {
+        --file-icon-bg: #00B4AB;
+        --file-icon-foreground: #013e3a;
+        --file-icon-foreground-light: #013e3a;
+        --file-icon-foreground-dark: #e4fffd;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.rs {
+        --file-icon-bg: #dea584;
+        --file-icon-foreground: #3b2a15;
+        --file-icon-foreground-light: #3b2a15;
+        --file-icon-foreground-dark: #3b2a15;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.sh,
+      .file-icon.bash,
+      .file-icon.zsh {
+        --file-icon-bg: #89e051;
+        --file-icon-foreground: #1e2c09;
+        --file-icon-foreground-light: #1e2c09;
+        --file-icon-foreground-dark: #1e2c09;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.dockerfile {
+        --file-icon-bg: #384d54;
+        --file-icon-foreground-dark: #e6f4f8;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.makefile {
+        --file-icon-bg: #427819;
+        --file-icon-foreground-dark: #e3f7d1;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.cmake {
+        --file-icon-bg: #6d8086;
+        --file-icon-foreground-dark: #edf3f5;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.gradle {
+        --file-icon-bg: #02303a;
+        --file-icon-foreground-dark: #e3f4f7;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.xml {
+        --file-icon-bg: #0060ac;
+        --file-icon-foreground-dark: #e7f1ff;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.toml {
+        --file-icon-bg: #9c4221;
+        --file-icon-foreground-dark: #ffe7db;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.ini,
+      .file-icon.properties {
+        --file-icon-bg: #6d8086;
+        --file-icon-foreground-dark: #edf3f5;
+        font-size: 0.45rem;
+      }
+
+      .file-icon.lock {
+        --file-icon-bg: #444c56;
+        --file-icon-foreground-dark: #f1f3f6;
+        font-size: 0.45rem;
+      }
       .file-path {
         overflow: hidden;
         text-overflow: ellipsis;
@@ -792,7 +968,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         border: 1px solid transparent;
         border-radius: 3px;
         background: transparent;
-        color: var(--vscode-button-secondaryForeground);
+        color: var(--vscode-button-secondaryBackground);
         cursor: pointer;
         padding: 0.25rem;
         font-size: 0.8rem;
@@ -866,8 +1042,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         outline: 2px solid var(--vscode-focusBorder, rgba(90, 133, 204, 0.8));
         outline-offset: 1px;
         box-shadow: 0 0 0 1px var(--vscode-focusBorder, rgba(90, 133, 204, 0.4));
-        background: var(--vscode-list-activeSelectionBackground);
-        color: var(--vscode-list-activeSelectionForeground);
+        
       }
       
       /* Better button accessibility */
@@ -885,13 +1060,13 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       
       /* Smooth state transitions - optimized to prevent blinking */
       .file-group.selected .file-header {
-        background: var(--vscode-editor-selectionBackground, rgba(128, 128, 128, 0.15));
         border-left: 3px solid var(--vscode-focusBorder);
+        color: var(--vscode-list-activeSelectionForeground);
       }
       
       details[open] .file-header {
         border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
-        background: var(--vscode-list-activeSelectionBackground, rgba(128, 128, 128, 0.1));
+        color: var(--vscode-list-activeSelectionForeground);
       }
       
       /* Skip link for keyboard users */
@@ -1081,7 +1256,6 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
       }
       
       .occurrence-item.selected {
-        background: var(--vscode-list-activeSelectionBackground);
         color: var(--vscode-list-activeSelectionForeground);
         outline: 2px solid var(--vscode-focusBorder);
         outline-offset: 1px;
@@ -2172,6 +2346,41 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
         font-size: 0.85rem;
         color: var(--vscode-descriptionForeground);
       }
+
+      .issue-detail-button{
+        color: var(--vscode-button-foreground) !important;
+        background: var(--vscode-button-background) !important;
+        border: 1px solid var(--vscode-button-border, transparent);
+      }
+      .issue-detail-button:hover {
+        background: var(--vscode-button-hoverBackground) !important;
+      }
+  
+      .issue-open-button{
+        color: var(--vscode-button-foreground) !important;
+        background: var(--vscode-button-background) !important;
+        border: 1px solid var(--vscode-button-border, transparent);
+      }
+      .issue-open-button:hover {
+        background: var(--vscode-button-hoverBackground) !important;
+      }
+      .issue-docs-button{
+        color: var(--vscode-button-foreground) !important;
+        background: var(--vscode-button-background) !important;
+        border: 1px solid var(--vscode-button-border, transparent);
+      }
+      .issue-docs-button:hover {
+        background: var(--vscode-button-hoverBackground) !important;
+      }
+      .issue-askai-button{
+        color: var(--vscode-button-foreground) !important;
+        background: var(--vscode-button-background) !important;
+        border: 1px solid var(--vscode-button-border, transparent);
+      }
+      .issue-askai-button:hover {
+        background: var(--vscode-button-hoverBackground) !important;
+      }
+
       @media (max-width: 880px) {
         .content {
           flex-direction: column;
@@ -3583,6 +3792,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
 
                 const detailBtn = document.createElement('button');
                 detailBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 12px; height: 12px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
+                detailBtn.className = 'issue-detail-button';
                 detailBtn.title = 'Details';
                 detailBtn.addEventListener('click', (event) => {
                   event.stopPropagation();
@@ -3592,6 +3802,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
 
                 const openBtn = document.createElement('button');
                 openBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>';
+                openBtn.className = 'issue-open-button';
                 openBtn.title = 'Open file';
                 openBtn.addEventListener('click', (event) => {
                   event.stopPropagation();
@@ -3702,6 +3913,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
             const detailBtn = document.createElement('button');
             detailBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>';
             detailBtn.title = 'Details';
+            detailBtn.className = 'issue-detail-button';
             detailBtn.setAttribute('aria-label', 'View details');
             detailBtn.addEventListener('click', (event) => {
               event.stopPropagation();
@@ -3712,6 +3924,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
             const openBtn = document.createElement('button');
             openBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>';
             openBtn.title = 'Open file';
+            openBtn.className = 'issue-open-button';
             openBtn.setAttribute('aria-label', 'Open file');
             openBtn.addEventListener('click', (event) => {
               event.stopPropagation();
@@ -3727,6 +3940,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
             if (issue.docsUrl) {
               const docsBtn = document.createElement('button');
               docsBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>';
+              docsBtn.className = 'issue-docs-button';
               docsBtn.title = 'Open documentation';
               docsBtn.setAttribute('aria-label', 'Open documentation');
               docsBtn.addEventListener('click', (event) => {
@@ -3739,6 +3953,7 @@ export function renderAnalysisWebviewHtml(webview: vscode.Webview): string {
             // const askAiBtn = document.createElement('button');
             // askAiBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
             // askAiBtn.title = 'Ask AI for help';
+            // askAiBtn.className = 'issue-askai-button';
             // askAiBtn.setAttribute('aria-label', 'Ask AI for help');
             // askAiBtn.addEventListener('click', (event) => {
             //   event.stopPropagation();
