@@ -255,16 +255,9 @@ export function getAnalysisViewScript(): string {
           const findingId = geminiButton.getAttribute('data-finding-id');
           const hasExisting = geminiButton.getAttribute('data-has-existing') === 'true';
           
-          if (hasExisting) {
-            // Show chat interface for "Continue with Gemini"
-            const chatSection = document.querySelector('.gemini-chat-section');
-            if (chatSection) {
-              chatSection.style.display = chatSection.style.display === 'none' ? 'block' : 'none';
-            }
-          } else {
-            // Regular "Fix with Gemini" behavior - use featureId for shared conversations
-            vscode.postMessage({ type: 'askGemini', issue, feature: featureId, filePath, findingId });
-          }
+          // Always follow the same 3-step pattern: go to detail view, scroll to AI Assistant, run prompt
+          // Use askGemini command which now handles the detail view navigation
+          vscode.postMessage({ type: 'askGemini', issue, feature: featureId, filePath, findingId });
           return;
         }
 

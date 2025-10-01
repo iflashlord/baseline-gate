@@ -6,7 +6,8 @@ export interface GeminiSuggestion {
   timestamp: Date;
   issue: string;
   suggestion: string;
-  feature?: string;
+  feature?: string; // Human-readable feature name
+  featureId?: string; // Feature ID for linking to baseline data
   file?: string;
   findingId?: string; // Link to the original finding
   conversationId?: string; // For threading conversations

@@ -240,8 +240,65 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
     
-    // Use feature as the primary grouping for shared conversations across all occurrences
-    await geminiProvider.addSuggestion(args.issue, args.feature, undefined, args.findingId);
+    // Get feature information if feature ID is provided
+    let featureName = args.feature;
+    let featureId = args.feature;
+    if (args.feature) {
+      const feature = getFeatureById(args.feature);
+      if (feature) {
+        featureName = feature.name;
+        featureId = feature.id;
+      }
+    }
+    
+    // Create comprehensive default prompt with context
+    const defaultPrompt = `Please help me fix this baseline compatibility issue with ${featureName || 'this feature'}. I need practical solutions that ensure cross-browser compatibility and follow web standards best practices.`;
+    
+    // Add user's message to chat history with default prompt
+    await geminiProvider.addUserMessage(defaultPrompt, featureId, args.findingId);
+    
+    // Create enhanced technical issue description for Gemini
+    let enhancedIssue = args.issue;
+    if (featureName && featureName !== args.issue) {
+      enhancedIssue = `Baseline compatibility issue with ${featureName}: ${args.issue}`;
+    }
+    
+    // Send the technical context to Gemini for response (this will include custom prompt from settings)
+    await geminiProvider.addSuggestion(enhancedIssue, featureName, undefined, args.findingId, featureId);
+    
+    // If called from detail view context, just scroll to AI Assistant (already in detail view)
+    if (args.context === 'detail') {
+      const currentPanel = BaselineDetailViewProvider.getCurrentPanel();
+      if (currentPanel) {
+        currentPanel.webview.postMessage({
+          type: 'scrollToAIAssistant'
+        });
+      }
+      return;
+    }
+    
+    // Otherwise, follow the 3-step pattern: go to detail view, scroll to AI Assistant, run prompt
+    // Try to find the finding from analysisProvider
+    const findings = analysisProvider.getAllFindings();
+    const finding = findings.find(f => computeFindingId(f) === args.findingId);
+    
+    if (!finding) {
+      void vscode.window.showErrorMessage('Finding not found for Gemini suggestion.');
+      return;
+    }
+
+    // Show detail view for this finding
+    BaselineDetailViewProvider.createOrShow(context, finding, target, panelAssets, geminiProvider);
+    
+    // Scroll to AI Assistant section after a delay to ensure detail view is fully loaded and messages are displayed
+    setTimeout(() => {
+      const currentPanel = BaselineDetailViewProvider.getCurrentPanel();
+      if (currentPanel) {
+        currentPanel.webview.postMessage({
+          type: 'scrollToAIAssistant'
+        });
+      }
+    }, 1000);
   });
   context.subscriptions.push(askGemini);
 
@@ -301,12 +358,21 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
+    // Extract feature ID from finding or findingId
+    let featureId = finding.feature?.id;
+    if (!featureId && args.findingId) {
+      const parts = args.findingId.split('::');
+      if (parts.length === 4) {
+        featureId = parts[1]; // featureId is the second part
+      }
+    }
+    
     // Add the user's "Fix with Gemini" message to chat first
     await geminiProvider.addUserMessage(args.initialPrompt, args.findingId, args.feature);
     
     // Then send the actual technical context to Gemini for response
     const contextualIssue = args.hoverContent || `Fix this baseline compatibility issue: ${args.feature}`;
-    await geminiProvider.addSuggestion(contextualIssue, args.feature, undefined, args.findingId);
+    await geminiProvider.addSuggestion(contextualIssue, args.feature, undefined, args.findingId, featureId);
     
     // Show detail view for this finding
     BaselineDetailViewProvider.createOrShow(context, finding, target, panelAssets, geminiProvider);
@@ -329,12 +395,21 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
     
+    // Extract feature ID from findingId if available
+    let featureId = args.feature; // Default to feature name
+    if (args.findingId) {
+      const parts = args.findingId.split('::');
+      if (parts.length === 4) {
+        featureId = parts[1]; // featureId is the second part
+      }
+    }
+    
     // Build context-aware issue for follow-up
     const contextualIssue = `Follow-up question about ${args.feature || 'baseline issue'} in ${args.filePath || 'file'} (Target: ${args.target || 'unknown'}): ${args.question}
 
 Context: This is a follow-up question about fixing a baseline compatibility issue. Please focus on practical solutions and implementation details.`;
     
-    await geminiProvider.addSuggestion(contextualIssue, args.feature, args.filePath, args.findingId);
+    await geminiProvider.addSuggestion(contextualIssue, args.feature, args.filePath, args.findingId, featureId);
   });
   context.subscriptions.push(askGeminiFollowUp);
 
@@ -399,9 +474,62 @@ Context: This is a follow-up question about fixing a baseline compatibility issu
       return;
     }
     
-    // Focus on the analysis view and filter by the finding ID
-    await vscode.commands.executeCommand('baselineGate.analysisView.focus');
-    geminiProvider.focusOnFinding(args.findingId);
+    // Try to find the finding from analysisProvider
+    const findings = analysisProvider.getAllFindings();
+    let finding = findings.find(f => computeFindingId(f) === args.findingId);
+    
+    // If we can't find an exact match, check if this is a hover-triggered request
+    // In that case, we can work with the feature information we have
+    if (!finding && args.feature && args.findingId) {
+      // Parse the findingId to extract file URI and position information
+      const parts = args.findingId.split('::');
+      if (parts.length === 4) {
+        const [uriString, featureId, lineStr, charStr] = parts;
+        const line = parseInt(lineStr, 10);
+        const char = parseInt(charStr, 10);
+        
+        try {
+          const uri = vscode.Uri.parse(uriString);
+          const range = new vscode.Range(line, char, line, char);
+          
+          // Get the feature information
+          const feature = getFeatureById(featureId);
+          if (feature) {
+            // Create a synthetic finding for this hover context
+            const verdict = scoreFeature(feature.support, target);
+            finding = {
+              id: args.findingId,
+              uri,
+              range,
+              feature,
+              verdict,
+              token: args.feature, // Use feature name as token
+              lineText: '' // Will be empty for synthetic findings
+            };
+          }
+        } catch (error) {
+          console.warn('Failed to parse findingId for hover context:', error);
+        }
+      }
+    }
+    
+    if (!finding) {
+      void vscode.window.showErrorMessage('Finding not found for Gemini suggestions.');
+      return;
+    }
+
+    // Show detail view for this finding
+    BaselineDetailViewProvider.createOrShow(context, finding, target, panelAssets, geminiProvider);
+    
+    // Scroll to AI Assistant section after a brief delay
+    setTimeout(() => {
+      const currentPanel = BaselineDetailViewProvider.getCurrentPanel();
+      if (currentPanel) {
+        currentPanel.webview.postMessage({
+          type: 'scrollToAIAssistant'
+        });
+      }
+    }, 500);
   });
   context.subscriptions.push(showGeminiSuggestions);
 

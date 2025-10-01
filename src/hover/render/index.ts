@@ -86,16 +86,7 @@ export function buildFeatureHover(
     ? options.geminiProvider.hasSuggestionForFinding(options.findingId)
     : false;
 
-  if (hasExistingSuggestions) {
-    // Show "View Suggestions" button for existing suggestions
-    const viewSuggestionsCommand = `command:baseline-gate.showGeminiSuggestions?${encodeURIComponent(JSON.stringify({
-      findingId: options.findingId,
-      feature: feature.name
-    }))}`;
-    md.appendMarkdown(`[$(eye) View Existing Suggestions](${viewSuggestionsCommand}) | `);
-  }
-
-  // Always show "Fix with Gemini" button - now works like chat interface
+  // Always show "Fix with Gemini" button first - now works like chat interface
   const geminiCommand = `command:baseline-gate.startGeminiChat?${encodeURIComponent(JSON.stringify({
     initialPrompt: "Fix with Gemini",
     feature: feature.name,
@@ -104,7 +95,18 @@ export function buildFeatureHover(
     hoverContent: hoverContent
   }))}`;
   const askGeminiText = hasExistingSuggestions ? "Ask Gemini Again" : "Fix with Gemini";
-  md.appendMarkdown(`[$(sparkle) ${askGeminiText}](${geminiCommand})\n\n`);
+  md.appendMarkdown(`[$(sparkle) ${askGeminiText}](${geminiCommand})`);
+
+  if (hasExistingSuggestions) {
+    // Show "View Suggestions" button for existing suggestions after Fix with Gemini
+    const viewSuggestionsCommand = `command:baseline-gate.showGeminiSuggestions?${encodeURIComponent(JSON.stringify({
+      findingId: options.findingId,
+      feature: feature.name
+    }))}`;
+    md.appendMarkdown(` | [$(eye) View Existing Suggestions](${viewSuggestionsCommand})`);
+  }
+
+  md.appendMarkdown(`\n\n`);
 
   return md;
 }

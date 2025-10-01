@@ -34,7 +34,8 @@ export class GeminiViewProvider {
       timestamp: new Date(),
       issue: userPrompt,
       suggestion: '', // Empty for user messages
-      feature: featureId, // Use featureId as primary grouping
+      feature: featureId, // Use featureId as primary grouping (will be updated with feature name if available)
+      featureId: featureId, // Store feature ID for linking
       file: undefined,
       findingId,
       status: 'user' as any, // Special status for user messages
@@ -44,9 +45,14 @@ export class GeminiViewProvider {
     this.state = addSuggestionToState(this.state, userMessage);
     await this.saveSuggestions();
     this.refresh();
+    
+    // Notify detail view to refresh if it's showing this finding
+    if (findingId) {
+      await vscode.commands.executeCommand('baseline-gate.refreshDetailView', findingId);
+    }
   }
 
-  public async addSuggestion(issue: string, featureId?: string, file?: string, findingId?: string): Promise<void> {
+  public async addSuggestion(issue: string, featureName?: string, file?: string, findingId?: string, featureId?: string): Promise<void> {
     if (!geminiService.isConfigured()) {
       const action = await vscode.window.showErrorMessage(
         'Gemini API key is not configured.',
@@ -76,7 +82,7 @@ export class GeminiViewProvider {
       async (progress) => {
         try {
           progress.report({ increment: 30, message: 'Connecting to Gemini...' });
-          const response = await geminiService.getSuggestion(issue, featureId, file);
+          const response = await geminiService.getSuggestion(issue, featureName, file);
 
           progress.report({ increment: 70, message: 'Processing response...' });
 
@@ -85,13 +91,14 @@ export class GeminiViewProvider {
             timestamp: new Date(),
             issue,
             suggestion: response.text,
-            feature: featureId, // Use featureId as primary grouping
+            feature: featureName, // Human-readable feature name
+            featureId: featureId || featureName, // Store feature ID for linking
             file,
             findingId,
             status: 'success',
             tokensUsed: response.tokensUsed,
             responseTime: response.responseTime,
-            tags: this.generateTags(issue, featureId, file),
+            tags: this.generateTags(issue, featureName, file),
           };
 
           this.state = addSuggestionToState(this.state, newSuggestion);
@@ -114,11 +121,6 @@ export class GeminiViewProvider {
           
           // Focus the analysis view to show the new suggestion
           await vscode.commands.executeCommand('baselineGate.analysisView.focus');
-          
-          // Don't show success notification for follow-up questions to reduce spam
-          if (!issue.includes('Follow-up question about')) {
-             await vscode.window.showInformationMessage('Gemini suggestion added successfully!');
-          }
 
           // close progress notification
           if (progressResolve) {
@@ -201,11 +203,15 @@ export class GeminiViewProvider {
 
   // Feature-based methods for shared conversations
   public hasSuggestionForFeature(featureId: string): boolean {
-    return this.state.suggestions.some((suggestion) => suggestion.feature === featureId);
+    return this.state.suggestions.some((suggestion) => 
+      suggestion.featureId === featureId || suggestion.feature === featureId
+    );
   }
 
   public getSuggestionsForFeature(featureId: string): GeminiSuggestion[] {
-    return this.state.suggestions.filter((suggestion) => suggestion.feature === featureId);
+    return this.state.suggestions.filter((suggestion) => 
+      suggestion.featureId === featureId || suggestion.feature === featureId
+    );
   }
 
   public focusOnFeature(featureId: string): void {
