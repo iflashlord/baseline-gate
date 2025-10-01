@@ -46,10 +46,10 @@ export class BaselineDetailedAnalysisProvider {
       message => {
         switch (message.type) {
           case 'ready':
-            this.updateContent(panel.webview, analysisProvider);
+            BaselineDetailedAnalysisProvider.updateContent(panel.webview, analysisProvider);
             break;
           case 'refresh':
-            this.updateContent(panel.webview, analysisProvider);
+            BaselineDetailedAnalysisProvider.updateContent(panel.webview, analysisProvider);
             break;
         }
       },
@@ -61,9 +61,6 @@ export class BaselineDetailedAnalysisProvider {
     panel.onDidDispose(() => {
       BaselineDetailedAnalysisProvider.currentPanel = undefined;
     }, null, context.subscriptions);
-
-    // Update content initially
-    this.updateContent(panel.webview, analysisProvider);
   }
 
   /**
@@ -334,8 +331,10 @@ export class BaselineDetailedAnalysisProvider {
         const vscode = acquireVsCodeApi();
         let currentData = null;
 
-        // Request initial data
-        vscode.postMessage({ type: 'ready' });
+        // Request initial data with a small delay to ensure message handler is ready
+        setTimeout(() => {
+            vscode.postMessage({ type: 'ready' });
+        }, 100);
 
         function refreshData() {
             vscode.postMessage({ type: 'refresh' });
@@ -352,7 +351,9 @@ export class BaselineDetailedAnalysisProvider {
         });
 
         function renderContent() {
-            if (!currentData) return;
+            if (!currentData) {
+                return;
+            }
 
             const { summary, summaryFiltered, findings, findingsCount, target, lastScanAt } = currentData;
             
@@ -531,9 +532,21 @@ export class BaselineDetailedAnalysisProvider {
 
         function getRelativePath(uri) {
             if (!uri) return 'Unknown';
+            
+            // Convert to string if it's an object
+            let uriString = uri;
+            if (typeof uri === 'object') {
+                // If it's a VS Code URI object, use the fsPath or path property
+                uriString = uri.fsPath || uri.path || uri.toString();
+            }
+            
+            if (typeof uriString !== 'string') {
+                return 'Unknown';
+            }
+            
             // Simple relative path extraction
-            const parts = uri.split('/');
-            return parts.length > 3 ? '.../' + parts.slice(-3).join('/') : uri;
+            const parts = uriString.split('/');
+            return parts.length > 3 ? '.../' + parts.slice(-3).join('/') : uriString;
         }
     </script>
 </body>
