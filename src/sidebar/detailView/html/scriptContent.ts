@@ -154,6 +154,29 @@ export function getDetailViewScript(): string {
                     }
                 }
 
+                // Handle data-action clicks
+                const actionTarget = target.closest('[data-action]');
+                if (actionTarget instanceof HTMLElement) {
+                    event.preventDefault();
+                    const action = actionTarget.getAttribute('data-action');
+                    
+                    switch (action) {
+                        case 'clear-search':
+                            clearSearch();
+                            break;
+                        case 'refresh-view':
+                            refreshView();
+                            break;
+                        case 'send-follow-up':
+                            sendFollowUpQuestion();
+                            break;
+                        case 'copy-code':
+                            copyCodeToClipboard(actionTarget);
+                            break;
+                    }
+                    return;
+                }
+
                 // Handle occurrence file path clicks
                 const occurrenceTarget = target.closest('.occurrence-file-path');
                 if (occurrenceTarget instanceof HTMLElement) {

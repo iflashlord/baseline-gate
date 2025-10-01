@@ -25,7 +25,7 @@ export function buildEmptyStateMarkup({ totalCount, isGeminiConfigured, searchDi
       return '<div class="empty-state-large"><div class="empty-icon">🤖</div><h2>No suggestions yet</h2><p>Use "Fix with Gemini" on hover tooltips or in the analysis view to start getting AI-powered suggestions for your baseline compatibility issues.</p></div>';
     }
 
-    return '<div class="empty-state-large"><div class="empty-icon">⚠️</div><h2>Gemini not configured</h2><p>Configure your Gemini API key in the settings to start getting AI-powered suggestions.</p><button type="button" class="primary-button" onclick="vscode.postMessage({type: \'openSettings\'})">Open Settings</button></div>';
+    return '<div class="empty-state-large"><div class="empty-icon">⚠️</div><h2>Gemini not configured</h2><p>Configure your Gemini API key in the settings to start getting AI-powered suggestions.</p><button type="button" class="primary-button" data-action="open-settings">Open Settings</button></div>';
   }
 
   const escapedQuery = escapeHtml(searchDisplayValue);
@@ -91,7 +91,7 @@ export function buildHeaderMarkup({
                     <button type="button" class="secondary-button" data-action="clear-all">Clear All</button>`
       : '',
     !isGeminiConfigured
-      ? `<button type="button" class="primary-button" onclick="vscode.postMessage({type: 'openSettings'})">Configure Gemini</button>`
+      ? `<button type="button" class="primary-button" data-action="open-settings">Configure Gemini</button>`
       : ''
   ].filter(Boolean).join('\n                    ');
 

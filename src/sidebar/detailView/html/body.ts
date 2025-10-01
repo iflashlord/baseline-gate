@@ -35,12 +35,11 @@ export function buildDetailViewBody(
                     type="text" 
                     class="search-input" 
                     id="searchInput"
-                    placeholder="Search in page content..."
-                >
-                <button class="search-clear" id="searchClear" onclick="clearSearch()" style="display: none;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    placeholder="Search in page content..."detail-view-button
+                ><button class="search-clear" id="searchClear" data-action="clear-search" style="display: none;">
+                                <button class="search-clear" id="searchClear" data-action="clear-search" style="display: none;">
+                    <svg viewBox="0 0 16 16" width="16" height="16">
+                        <path d="M8 16A8 8 0 1 1 8 0a8 8 0 0 1 0 16zM5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z"/>
                     </svg>
                 </button>
             </div>
@@ -51,7 +50,7 @@ export function buildDetailViewBody(
                 <h1>${DetailViewUtils.escapeHtml(finding.feature.name)}</h1>
             </div>
             <div class="detail-view-actions">
-                <button class="detail-view-button" onclick="refreshView()">
+                <button class="detail-view-button" data-action="refresh-view">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
                         <path d="M21 3v5h-5"></path>
@@ -117,7 +116,7 @@ function renderChatInterface(geminiContext: GeminiSupportContext): string {
                     placeholder="Ask a follow-up question about this issue..."
                     rows="2"
                 ></textarea>
-                <button class="chat-send-button" id="sendButton" onclick="sendFollowUpQuestion()" title="Send message">
+                <button class="chat-send-button" id="sendButton" data-action="send-follow-up" title="Send message">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="22" y1="2" x2="11" y2="13"></line>
                         <polygon points="22,2 15,22 11,13 2,9"></polygon>

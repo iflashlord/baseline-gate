@@ -185,6 +185,10 @@ export function getGeminiFullPageScript(nonce: string, initialState: string): st
                         hideFollowUpInput(suggestionId);
                         break;
                     }
+                    case 'open-settings': {
+                        vscode.postMessage({ type: 'openSettings' });
+                        break;
+                    }
                     default:
                         break;
                 }
