@@ -36,6 +36,7 @@ export interface AnalysisMessageHandlers {
     target: string;
   }) => void;
   copyCodeSnippet: (code: string) => void;
+  showInsights: () => void;
 }
 
 export function processMessage(handlers: AnalysisMessageHandlers, message: MessageFromWebview): void {
@@ -105,6 +106,9 @@ export function processMessage(handlers: AnalysisMessageHandlers, message: Messa
       break;
     case "copyCodeSnippet":
       handlers.copyCodeSnippet(message.code);
+      break;
+    case "showInsights":
+      handlers.showInsights();
       break;
     default:
       break;

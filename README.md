@@ -7,6 +7,7 @@ BaselineGate surfaces Baseline browser support data directly inside VS Code so y
 - [Screenshots](#screenshots)
 - [Getting Started](#getting-started)
 - [Using BaselineGate](#using-baselinegate)
+- [Managing Data & Resets](#managing-data--resets)
 - [Commands](#commands)
 - [Configuration](#configuration)
 - [Gemini AI Workflow](#gemini-ai-workflow)
@@ -27,6 +28,7 @@ BaselineGate surfaces Baseline browser support data directly inside VS Code so y
 - **Gemini integration** – Ask Google Gemini for fixes, capture follow-up questions, and keep conversations grouped by feature.
 - **Storage-aware insights** – Persist scans, AI conversations, and filters inside `.baseline-gate` for project-level history.
 - **Status reminders** – Status bar target indicator and quick actions so teams can align on `enterprise` vs `modern` goals.
+- **Settings submenu & factory reset** – A sidebar dropdown that opens settings instantly or wipes BaselineGate data and configuration with confirmation prompts.
 
 ## Screenshots
 ![Baseline analysis dashboard](media/screenshots/analysis-view.png)
@@ -51,6 +53,12 @@ BaselineGate surfaces Baseline browser support data directly inside VS Code so y
 3. **Filter and sort** – Use the webview toolbar to filter by severity, search by token/file, and toggle between severity vs file order.
 4. **Inspect details** – Click any finding to open the detail panel with support matrices, docs, and remediation notes.
 5. **Get AI help** – Trigger **Fix with Gemini** from a hover, the dashboard, or the detail panel to request guided fixes. Follow-ups stay threaded per feature.
+6. **Manage settings & reset** – Open the settings dropdown in the analysis sidebar to jump into VS Code settings or run a factory reset that clears `.baseline-gate` data and restores defaults after a confirmation.
+
+## Managing Data & Resets
+- **Where data lives**: Scans, Gemini chats, filters, and settings snapshots are stored under `.baseline-gate/` in your workspace.
+- **Factory reset command**: Use `Baseline Gate: Reset to Factory Settings` from the command palette or sidebar menu. It prompts for confirmation, then removes `.baseline-gate` and resets all BaselineGate configuration keys.
+- **Safe experimentation**: Exports and feature tests can be restored by re-running a workspace scan after a reset.
 
 ## Commands
 | Command | Description |
@@ -66,6 +74,7 @@ BaselineGate surfaces Baseline browser support data directly inside VS Code so y
 | `Baseline Gate: View Existing Suggestions` | Focus the dashboard on AI conversations for a finding. |
 | `Baseline Gate: Open Gemini Suggestions in Full View` | Expand Gemini threads into a dedicated panel. |
 | `Baseline Gate: Clear All BaselineGate Data` | Remove stored findings and Gemini transcripts from `.baseline-gate`. |
+| `Baseline Gate: Reset to Factory Settings` | Clear `.baseline-gate`, wipe BaselineGate settings, and restore defaults after confirmation. |
 
 ## Configuration
 All settings live under **Extensions → BaselineGate** or via `settings.json`.
@@ -106,16 +115,16 @@ All settings live under **Extensions → BaselineGate** or via `settings.json`.
 ## Release Workflow
 The repository automates releases through GitHub Actions. A typical release looks like this:
 
-1. **Bump the version**
-   - Open the **Actions** tab and run the **Bump Version** workflow.
-   - Choose the bump type (`patch`, `minor`, `major`). The workflow commits the new version, tags it (`vX.Y.Z`), and pushes to `main`.
+1. **Bump the version (that's it!)**
+   - Run the **Bump Version** workflow in the **Actions** tab and choose `patch`, `minor`, or `major`.
+   - The workflow commits the new version, tags it (`vX.Y.Z`), pushes to `main`, and immediately triggers the release pipeline.
 
 2. **Continuous Integration**
    - The `CI` workflow (`.github/workflows/ci.yml`) runs on every push/PR to `main` and executes `pnpm exec eslint src --max-warnings 0` and `pnpm test`.
 
 3. **Release automation**
-   - The `Release Extension` workflow (`.github/workflows/release.yml`) is dispatched automatically by the version bump workflow and also triggers on any `v*` tag you push manually.
-   - You can additionally run it via **Run workflow** and optionally provide an existing tag to rebuild/publish.
+   - `Release Extension` (`.github/workflows/release.yml`) runs automatically after the version bump or any manually-pushed `v*` tag.
+   - You can also run it via **Run workflow** to rebuild an existing tag.
    - It installs dependencies, runs the full `pnpm test` under `xvfb-run`, packages the extension (`baseline-gate.vsix`), creates a GitHub Release, uploads the VSIX asset, and publishes to the Marketplace when `VSCE_PAT` is available.
 
 4. **Manual verification (optional)**

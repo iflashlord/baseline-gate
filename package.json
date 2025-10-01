@@ -84,7 +84,7 @@
       },
       {
         "command": "baseline-gate.openInsights",
-        "title": "Baseline Gate: View Insights",
+        "title": "Baseline Gate: Detailed Analysis",
         "icon": "$(graph)"
       },
       {

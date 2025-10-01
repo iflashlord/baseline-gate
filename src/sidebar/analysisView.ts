@@ -1052,6 +1052,9 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
         },
         copyCodeSnippet: (code) => {
           void this.copyCodeSnippet(code);
+        },
+        showInsights: () => {
+          this.showInsightsPanel();
         }
       },
       message
@@ -1146,6 +1149,14 @@ export class BaselineAnalysisViewProvider implements vscode.WebviewViewProvider 
     // In the future, we could cache the StoredIssuePayload format in memory
     // and only transform when findings actually change, but for now return findings as-is
     return this.findings;
+  }
+
+  getTarget() {
+    return this.target;
+  }
+
+  getLastScanAt(): Date | undefined {
+    return this.lastScanAt;
   }
 
   private resolveStatusIconUris(): Record<Verdict, string> {

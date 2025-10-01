@@ -6,6 +6,7 @@ import { registerCssHover } from './hover/cssHover';
 import { getFeatureById } from './core/baselineData';
 import { BaselineAnalysisViewProvider } from './sidebar/analysisView';
 import { BaselineDetailViewProvider } from './sidebar/detailView/index';
+import { BaselineDetailedAnalysisProvider } from './sidebar/detailedAnalysisView';
 import type { BaselineAnalysisAssets } from './sidebar/analysis/types';
 import { computeFindingId } from './sidebar/analysis/dataTransformation';
 import { GeminiViewProvider } from './gemini/geminiViewProvider';
@@ -223,9 +224,14 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(openSettings);
 
   const openInsights = vscode.commands.registerCommand('baseline-gate.openInsights', () => {
-    analysisProvider.showInsightsPanel();
+    BaselineDetailedAnalysisProvider.createOrShow(context, analysisProvider, panelAssets);
+  });
+
+  const openDetailedAnalysis = vscode.commands.registerCommand('baseline-gate.openDetailedAnalysis', () => {
+    BaselineDetailedAnalysisProvider.createOrShow(context, analysisProvider, panelAssets);
   });
   context.subscriptions.push(openInsights);
+  context.subscriptions.push(openDetailedAnalysis);
 
   // Register Gemini commands
   const askGemini = vscode.commands.registerCommand('baseline-gate.askGemini', async (args?: { issue: string; feature?: string; context?: string; findingId?: string }) => {

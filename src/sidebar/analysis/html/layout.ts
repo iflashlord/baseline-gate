@@ -4,6 +4,7 @@ export function getAnalysisViewBody(): string {
     <div class="view">
       <div class="controls">
         <button class="primary" data-action="scan">Scan workspace</button>
+        <button class="secondary" data-action="open-detailed-analysis" title="Show Baseline Insights overlay with charts">Insights</button>
       </div>
       <details class="filter-panel" data-filter-panel>
         <summary aria-controls="filters-content" aria-expanded="false">

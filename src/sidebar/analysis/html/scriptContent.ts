@@ -7,6 +7,7 @@ export function getAnalysisViewScript(): string {
 
       const controls = document.querySelector('[data-action="scan"]');
       const clearBtn = document.querySelector('[data-action="clear-filters"]');
+      const detailedAnalysisBtn = document.querySelector('[data-action="open-detailed-analysis"]');
       const searchInput = document.querySelector('[data-search]');
       const severityContainer = document.querySelector('[data-severity]');
       const sortSelect = document.querySelector('[data-sort]');
@@ -151,6 +152,12 @@ export function getAnalysisViewScript(): string {
       clearBtn.addEventListener('click', () => {
         vscode.postMessage({ type: 'clearFilters' });
       });
+
+      if (detailedAnalysisBtn) {
+        detailedAnalysisBtn.addEventListener('click', () => {
+          vscode.postMessage({ type: 'showInsights' });
+        });
+      }
 
       searchInput.addEventListener('input', (event) => {
         const value = event.target.value || '';

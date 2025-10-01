@@ -183,7 +183,8 @@ export type MessageFromWebview =
   | { type: "openFileDetail"; uri: string }
   | { type: "setFileExpansion"; uri: string; expanded: boolean }
   | { type: "setGroupExpansion"; groupId: string; expanded: boolean }
-  | { type: "closeDetail" };
+  | { type: "closeDetail" }
+  | { type: "showInsights" };
 
 export type WebviewStateBuildContext = {
   findings: BaselineFinding[];
