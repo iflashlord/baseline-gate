@@ -2289,6 +2289,12 @@ export function getAnalysisViewStyles(): string {
         box-shadow: none;
       }
 
+      .chat-send-button svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+      }
+
       .send-icon {
         width: 16px;
         height: 16px;
@@ -2408,6 +2414,16 @@ export function getAnalysisViewStyles(): string {
         .file-icon, .issue-icon {
           width: 0.9rem;
           height: 0.9rem;
+        }
+        .chat-send-button {
+          width: 32px !important;
+          height: 32px !important;
+          min-width: 32px;
+          max-width: 32px;
+        }
+        .chat-send-button svg {
+          width: 14px !important;
+          height: 14px !important;
         }
       }
       .hidden {

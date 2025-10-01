@@ -529,6 +529,13 @@ export function getDetailViewStyles(): string {
             justify-content: center;
             cursor: pointer;
             transition: background 0.15s ease, transform 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .chat-send-button svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
         }
 
         .chat-send-button:hover {
@@ -643,7 +650,16 @@ export function getDetailViewStyles(): string {
             }
 
             .chat-send-button {
-                width: 100%;
+                width: 40px !important;
+                height: 40px !important;
+                min-width: 40px;
+                max-width: 40px;
+                flex-shrink: 0;
+            }
+
+            .chat-send-button svg {
+                width: 16px !important;
+                height: 16px !important;
             }
         }
 
