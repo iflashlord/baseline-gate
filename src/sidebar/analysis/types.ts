@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import type { Target } from "../../core/targets";
 import type { Verdict } from "../../core/scoring";
 import type { BaselineFinding } from "../workspaceScanner";
+import type { GeminiSuggestion } from "../../gemini/geminiService";
 
 export type SortOrder = "severity" | "file";
 
@@ -158,6 +159,11 @@ export type WebviewState = {
   budget?: BaselineBudgetSnapshot | null;
   stats?: FindingsStatistics;
 };
+
+export interface GeminiSupportContext {
+  hasExistingSuggestion: boolean;
+  suggestions: GeminiSuggestion[];
+}
 
 export type MessageFromWebview =
   | { type: "ready" }
