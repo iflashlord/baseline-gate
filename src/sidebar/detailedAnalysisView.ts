@@ -71,16 +71,17 @@ export class BaselineDetailedAnalysisProvider {
    */
   private static updateContent(webview: vscode.Webview, analysisProvider: BaselineAnalysisViewProvider): void {
     const summary = analysisProvider.getSummary();
-    const summaryFiltered = analysisProvider.getSummary({ filtered: true });
     const findings = analysisProvider.getOptimizedFindings();
+    
+    // Remove duplicates based on feature name, file, and line number
+    const uniqueFindings = this.removeDuplicateFindings(findings);
     
     webview.postMessage({
       type: 'updateData',
       data: {
         summary,
-        summaryFiltered,
-        findings: findings.slice(0, 100), // Limit for performance
-        findingsCount: findings.length,
+        findings: uniqueFindings.slice(0, 100), // Limit for performance
+        findingsCount: uniqueFindings.length,
         severityFilter: Array.from(analysisProvider.getSeverityFilter()),
         target: analysisProvider.getTarget(),
         lastScanAt: analysisProvider.getLastScanAt()
@@ -89,11 +90,26 @@ export class BaselineDetailedAnalysisProvider {
   }
 
   /**
+   * Remove duplicate findings based on feature name, file URI, and line number
+   */
+  private static removeDuplicateFindings(findings: any[]): any[] {
+    const seen = new Set<string>();
+    return findings.filter(finding => {
+      const key = `${finding.feature?.name || 'Unknown'}-${finding.uri}-${finding.range?.start?.line || 0}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }
+
+  /**
    * Handle export requests from the webview
    */
   private static async handleExport(message: any): Promise<void> {
     try {
-      const { format, data, filename, html } = message;
+      const { format, data, filename } = message;
       
       if (format === 'csv' || format === 'json') {
         // Save file dialog
@@ -108,14 +124,33 @@ export class BaselineDetailedAnalysisProvider {
           await vscode.workspace.fs.writeFile(saveUri, Buffer.from(data, 'utf8'));
           vscode.window.showInformationMessage(`Analysis exported to ${saveUri.fsPath}`);
         }
-      } else if (format === 'pdf') {
-        vscode.window.showInformationMessage(
-          'PDF export requires a PDF library. Use the Print option to print to PDF using your browser.'
-        );
       }
     } catch (error) {
       vscode.window.showErrorMessage(`Export failed: ${error}`);
     }
+  }
+
+
+
+  /**
+   * Get relative path from URI
+   */
+  private static getRelativePath(uri: any): string {
+    if (!uri) {
+      return 'Unknown';
+    }
+    
+    let uriString = uri;
+    if (typeof uri === 'object') {
+      uriString = uri.fsPath || uri.path || uri.toString();
+    }
+    
+    if (typeof uriString !== 'string') {
+      return 'Unknown';
+    }
+    
+    const parts = uriString.split('/');
+    return parts.length > 3 ? '.../' + parts.slice(-3).join('/') : uriString;
   }
 
   /**
@@ -239,105 +274,190 @@ export class BaselineDetailedAnalysisProvider {
         
         .dashboard {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
         }
         
         .card {
             background: var(--vscode-panel-background);
             border: 1px solid var(--vscode-panel-border);
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: box-shadow 0.2s ease-in-out;
+        }
+        
+        .card:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
         }
         
         .card h2 {
             margin-top: 0;
-            margin-bottom: 15px;
-            font-size: 18px;
+            margin-bottom: 20px;
+            font-size: 20px;
             font-weight: 600;
-        }
-        
-        .metric {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
-            padding: 8px 0;
+            gap: 8px;
         }
         
-        .metric:last-child {
-            margin-bottom: 0;
+        .summary-card {
+            grid-column: 1 / -1;
         }
         
-        .metric-label {
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+        }
+        
+        .summary-item {
+            padding: 16px;
+            border-radius: 8px;
+            background: var(--vscode-input-background);
+            border: 1px solid var(--vscode-input-border);
+            text-align: center;
+            transition: transform 0.2s ease-in-out;
+        }
+        
+        .summary-item:hover {
+            transform: translateY(-2px);
+        }
+        
+        .summary-item.blocked {
+            border-color: var(--baseline-color-error);
+            background: color-mix(in srgb, var(--baseline-color-error) 8%, var(--vscode-input-background));
+        }
+        
+        .summary-item.warning {
+            border-color: var(--baseline-color-warning);
+            background: color-mix(in srgb, var(--baseline-color-warning) 8%, var(--vscode-input-background));
+        }
+        
+        .summary-item.safe {
+            border-color: var(--baseline-color-safe);
+            background: color-mix(in srgb, var(--baseline-color-safe) 8%, var(--vscode-input-background));
+        }
+        
+        .summary-item-label {
+            font-size: 12px;
             font-weight: 500;
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
-        .metric-value {
-            font-weight: 600;
-            font-size: 16px;
+        .summary-item-value {
+            font-weight: 700;
+            font-size: 24px;
+            color: var(--vscode-foreground);
         }
         
-        .metric-value.error {
+        .summary-item.blocked .summary-item-value {
             color: var(--baseline-color-error);
         }
         
-        .metric-value.warning {
+        .summary-item.warning .summary-item-value {
             color: var(--baseline-color-warning);
         }
         
-        .metric-value.safe {
+        .summary-item.safe .summary-item-value {
             color: var(--baseline-color-safe);
         }
         
+        .target-name {
+            font-size: 16px !important;
+            color: var(--vscode-textLink-foreground) !important;
+        }
+        
+        .scan-time {
+            font-size: 12px !important;
+            color: var(--vscode-descriptionForeground) !important;
+        }
+        
         .chart-container {
-            height: 200px;
-            margin: 15px 0;
+            height: 240px;
+            margin: 20px 0;
             display: flex;
             align-items: end;
             justify-content: space-around;
             border: 1px solid var(--vscode-panel-border);
             background: var(--vscode-input-background);
-            border-radius: 4px;
-            padding: 10px;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .chart-container::before {
+            content: '';
+            position: absolute;
+            bottom: 16px;
+            left: 20px;
+            right: 20px;
+            height: 1px;
+            background: var(--vscode-panel-border);
+            opacity: 0.5;
         }
         
         .bar {
-            min-width: 20px;
-            border-radius: 3px 3px 0 0;
+            min-width: 40px;
+            max-width: 80px;
+            border-radius: 6px 6px 0 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             position: relative;
+            transition: transform 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        
+        .bar:hover {
+            transform: translateY(-4px);
         }
         
         .bar-blocked {
-            background: var(--baseline-color-error);
+            background: linear-gradient(180deg, var(--baseline-color-error) 0%, color-mix(in srgb, var(--baseline-color-error) 80%, black) 100%);
+            box-shadow: 0 2px 8px color-mix(in srgb, var(--baseline-color-error) 30%, transparent);
         }
         
         .bar-warning {
-            background: var(--baseline-color-warning);
+            background: linear-gradient(180deg, var(--baseline-color-warning) 0%, color-mix(in srgb, var(--baseline-color-warning) 80%, black) 100%);
+            box-shadow: 0 2px 8px color-mix(in srgb, var(--baseline-color-warning) 30%, transparent);
         }
         
         .bar-safe {
-            background: var(--baseline-color-safe);
+            background: linear-gradient(180deg, var(--baseline-color-safe) 0%, color-mix(in srgb, var(--baseline-color-safe) 80%, black) 100%);
+            box-shadow: 0 2px 8px color-mix(in srgb, var(--baseline-color-safe) 30%, transparent);
+        }
+        
+        .bar-feature {
+            border-radius: 6px 6px 0 0;
+            transition: all 0.3s ease-in-out;
         }
         
         .bar-label {
-            font-size: 11px;
-            margin-top: 5px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 8px;
             text-align: center;
-            max-width: 80px;
+            max-width: 100px;
             word-wrap: break-word;
+            color: var(--vscode-descriptionForeground);
         }
         
         .bar-value {
             position: absolute;
-            top: -20px;
-            font-size: 12px;
-            font-weight: 600;
+            top: -28px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--vscode-foreground);
+            background: var(--vscode-panel-background);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--vscode-panel-border);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
         .findings-section {
@@ -397,6 +517,29 @@ export class BaselineDetailedAnalysisProvider {
             color: var(--vscode-descriptionForeground);
         }
         
+        .file-entries {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .file-entry {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 6px;
+            background: var(--vscode-input-background);
+            border-radius: 4px;
+            border: 1px solid var(--vscode-input-border);
+        }
+        
+        .line-numbers {
+            font-family: var(--vscode-editor-font-family);
+            font-size: 11px;
+            color: var(--vscode-descriptionForeground);
+            font-weight: 500;
+        }
+        
         .empty-state {
             text-align: center;
             padding: 40px;
@@ -436,13 +579,6 @@ export class BaselineDetailedAnalysisProvider {
                     Export
                 </button>
                 <div class="dropdown-content">
-                    <button data-action="export-pdf">
-                        <svg class="icon" viewBox="0 0 16 16">
-                            <path d="M4 0h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm0 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H4z"/>
-                            <path d="M4.603 12.087a.81.81 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.198-.307.526-.568.897-.787a7.68 7.68 0 0 1 1.482-.645 19.701 19.701 0 0 0 1.062-2.227 7.269 7.269 0 0 1-.43-1.295c-.086-.4-.119-.796-.046-1.136.075-.354.274-.672.65-.823.192-.077.4-.12.602-.077a.7.7 0 0 1 .477.365c.088.164.12.356.127.538.007.187-.012.395-.047.614-.084.51-.27 1.134-.52 1.794a10.954 10.954 0 0 0 .98 1.686 5.753 5.753 0 0 1 1.334.05c.364.065.734.195.96.465.12.144.193.32.2.518.007.192-.047.382-.138.563a1.04 1.04 0 0 1-.354.416.856.856 0 0 1-.51.138c-.331-.014-.654-.196-.933-.417a5.716 5.716 0 0 1-.911-.95 11.642 11.642 0 0 0-1.997.406 11.311 11.311 0 0 1-1.021 1.51c-.29.35-.608.655-.926.787a.793.793 0 0 1-.58.029zm1.379-1.901c-.166.076-.32.156-.459.238-.328.194-.541.383-.647.547-.094.145-.096.25-.04.361.01.022.02.036.026.044a.27.27 0 0 0 .035-.012c.137-.056.355-.235.635-.572a8.18 8.18 0 0 0 .45-.606zm1.64-1.33a12.647 12.647 0 0 1 1.01-.193 11.666 11.666 0 0 1-.51-.858 20.741 20.741 0 0 1-.5 1.05zm2.446.45c.15.163.296.3.435.41.24.19.407.253.498.256a.107.107 0 0 0 .07-.015.307.307 0 0 0 .094-.125.436.436 0 0 0 .059-.2.095.095 0 0 0-.026-.063c-.052-.062-.2-.152-.518-.209a3.876 3.876 0 0 0-.612-.053zM8.078 5.8a6.7 6.7 0 0 0 .2-.828c.031-.188.043-.343.038-.465a.613.613 0 0 0-.032-.198.517.517 0 0 0-.145.04c-.087.035-.158.106-.196.283-.04.192-.03.469.046.822.024.111.054.227.089.346z"/>
-                        </svg>
-                        Export as PDF
-                    </button>
                     <button data-action="export-csv">
                         <svg class="icon" viewBox="0 0 16 16">
                             <path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5z"/>
@@ -456,13 +592,6 @@ export class BaselineDetailedAnalysisProvider {
                             <path d="M3 9.5a.5.5 0 0 1 .5-.5H4a.5.5 0 0 1 0 1h-.5A.5.5 0 0 1 3 9.5zm-2-3v3a2 2 0 0 0 2 2h1.172a3 3 0 1 1 0 2H3a4 4 0 0 1-4-4v-3a4 4 0 0 1 4-4h9.5a.5.5 0 0 1 0 1H3a3 3 0 0 0-3 3zm10.5-1a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z"/>
                         </svg>
                         Export as JSON
-                    </button>
-                    <button data-action="print-report">
-                        <svg class="icon" viewBox="0 0 16 16">
-                            <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
-                            <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
-                        </svg>
-                        Print Report
                     </button>
                 </div>
             </div>
@@ -494,17 +623,11 @@ export class BaselineDetailedAnalysisProvider {
                 case 'refresh':
                     refreshData();
                     break;
-                case 'export-pdf':
-                    exportToPDF();
-                    break;
                 case 'export-csv':
                     exportToCSV();
                     break;
                 case 'export-json':
                     exportToJSON();
-                    break;
-                case 'print-report':
-                    printReport();
                     break;
             }
         });
@@ -513,40 +636,58 @@ export class BaselineDetailedAnalysisProvider {
             vscode.postMessage({ type: 'refresh' });
         }
 
-        function exportToPDF() {
-            if (!currentData) return;
-            
-            // Create a new window with print-friendly styling
-            const printWindow = document.createElement('div');
-            printWindow.innerHTML = generatePrintableHTML();
-            
-            // Send message to extension to handle PDF generation
-            vscode.postMessage({ 
-                type: 'export', 
-                format: 'pdf',
-                data: currentData,
-                html: generatePrintableHTML()
-            });
-        }
+
 
         function exportToCSV() {
             if (!currentData) return;
             
-            const { findings, summary } = currentData;
-            let csvContent = 'Type,Severity,Feature,File,Line\\n';
+            const { findings, summary, target, lastScanAt } = currentData;
+            let csvContent = 'Type,Severity,Feature,File,Lines\\n';
             
-            // Add summary data
-            csvContent += 'Summary,Blocked,' + summary.blocked + ',Total,\\n';
-            csvContent += 'Summary,Warning,' + summary.warning + ',Total,\\n';
-            csvContent += 'Summary,Safe,' + summary.safe + ',Total,\\n';
+            // Add metadata
+            csvContent += 'Metadata,Target,' + (target?.name || 'enterprise') + ',,\\n';
+            if (lastScanAt) {
+                csvContent += 'Metadata,Generated,' + new Date(lastScanAt).toLocaleString() + ',,\\n';
+            }
             csvContent += '\\n';
             
-            // Add findings data
+            // Add summary data
+            csvContent += 'Summary,Blocked,' + summary.blocked + ',,\\n';
+            csvContent += 'Summary,Warning,' + summary.warning + ',,\\n';
+            csvContent += 'Summary,Safe,' + summary.safe + ',,\\n';
+            csvContent += '\\n';
+            
+            // Group findings like in the UI and add to CSV
+            const groupedFindings = {};
             findings.forEach(finding => {
-                const relativePath = getRelativePath(finding.uri);
-                const line = finding.range?.start?.line + 1 || '?';
-                const feature = (finding.feature?.name || 'Unknown').replace(/,/g, ';');
-                csvContent += 'Finding,' + finding.verdict + ',' + feature + ',' + relativePath + ',' + line + '\\n';
+                const key = \`\${finding.feature?.name || 'Unknown'}-\${finding.verdict}\`;
+                if (!groupedFindings[key]) {
+                    groupedFindings[key] = {
+                        feature: finding.feature?.name || 'Unknown',
+                        verdict: finding.verdict,
+                        files: new Map()
+                    };
+                }
+                
+                const filePath = getRelativePath(finding.uri);
+                const lineNumber = finding.range?.start?.line !== undefined ? finding.range.start.line + 1 : null;
+                
+                if (!groupedFindings[key].files.has(filePath)) {
+                    groupedFindings[key].files.set(filePath, []);
+                }
+                
+                if (lineNumber !== null) {
+                    groupedFindings[key].files.get(filePath).push(lineNumber);
+                }
+            });
+            
+            // Add grouped findings data
+            Object.values(groupedFindings).forEach(group => {
+                Array.from(group.files.entries()).forEach(([filePath, lines]) => {
+                    const feature = group.feature.replace(/,/g, ';');
+                    const linesStr = lines.length > 0 ? lines.join('; ') : '';
+                    csvContent += 'Finding,' + group.verdict + ',' + feature + ',' + filePath + ',' + linesStr + '\\n';
+                });
             });
             
             vscode.postMessage({ 
@@ -560,12 +701,62 @@ export class BaselineDetailedAnalysisProvider {
         function exportToJSON() {
             if (!currentData) return;
             
+            const { findings, summary, target, lastScanAt } = currentData;
+            
+            // Group findings like in the UI for consistent export
+            const groupedFindings = {};
+            findings.forEach(finding => {
+                const key = \`\${finding.feature?.name || 'Unknown'}-\${finding.verdict}\`;
+                if (!groupedFindings[key]) {
+                    groupedFindings[key] = {
+                        feature: finding.feature?.name || 'Unknown',
+                        verdict: finding.verdict,
+                        files: new Map()
+                    };
+                }
+                
+                const filePath = getRelativePath(finding.uri);
+                const lineNumber = finding.range?.start?.line !== undefined ? finding.range.start.line + 1 : null;
+                
+                if (!groupedFindings[key].files.has(filePath)) {
+                    groupedFindings[key].files.set(filePath, []);
+                }
+                
+                if (lineNumber !== null) {
+                    groupedFindings[key].files.get(filePath).push(lineNumber);
+                }
+            });
+            
+            // Convert grouped findings to exportable format
+            const processedFindings = Object.values(groupedFindings).map(group => ({
+                feature: group.feature,
+                severity: group.verdict,
+                files: Array.from(group.files.entries()).map(([filePath, lines]) => ({
+                    path: filePath,
+                    lines: lines.length > 0 ? lines : null
+                }))
+            }));
+            
             const exportData = {
-                ...currentData,
-                exportedAt: new Date().toISOString(),
-                findings: currentData.findings.map(finding => ({
-                    ...finding,
-                    uri: getRelativePath(finding.uri)
+                metadata: {
+                    exportedAt: new Date().toISOString(),
+                    target: target?.name || 'enterprise',
+                    lastScanAt: lastScanAt,
+                    totalFindings: findings.length,
+                    groupedFindings: processedFindings.length
+                },
+                summary: {
+                    blocked: summary.blocked,
+                    warning: summary.warning,
+                    safe: summary.safe,
+                    total: summary.blocked + summary.warning + summary.safe
+                },
+                findings: processedFindings,
+                rawFindings: findings.map(finding => ({
+                    feature: finding.feature?.name || 'Unknown',
+                    severity: finding.verdict,
+                    file: getRelativePath(finding.uri),
+                    line: finding.range?.start?.line !== undefined ? finding.range.start.line + 1 : null
                 }))
             };
             
@@ -577,87 +768,7 @@ export class BaselineDetailedAnalysisProvider {
             });
         }
 
-        function printReport() {
-            if (!currentData) return;
-            
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(generatePrintableHTML());
-            printWindow.document.close();
-            printWindow.print();
-        }
 
-        function generatePrintableHTML() {
-            if (!currentData) return '';
-            
-            const { summary, findings, target, lastScanAt } = currentData;
-            
-            return \`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Baseline Analysis Report</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; }
-                        .header { border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-                        .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-                        .metric-card { border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
-                        .metric-value { font-size: 24px; font-weight: bold; }
-                        .error { color: #d13438; }
-                        .warning { color: #f1c40f; }
-                        .safe { color: #2e8b57; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                        th { background-color: #f2f2f2; }
-                        @media print { body { margin: 0; } }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h1>Baseline Analysis Report</h1>
-                        <p>Target: \${target?.name || 'Unknown'}</p>
-                        \${lastScanAt ? '<p>Generated: ' + new Date(lastScanAt).toLocaleString() + '</p>' : ''}
-                    </div>
-                    
-                    <div class="summary">
-                        <div class="metric-card">
-                            <h3>Blocked Issues</h3>
-                            <div class="metric-value error">\${summary.blocked}</div>
-                        </div>
-                        <div class="metric-card">
-                            <h3>Warnings</h3>
-                            <div class="metric-value warning">\${summary.warning}</div>
-                        </div>
-                        <div class="metric-card">
-                            <h3>Safe Items</h3>
-                            <div class="metric-value safe">\${summary.safe}</div>
-                        </div>
-                    </div>
-                    
-                    <h2>Detailed Findings</h2>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Severity</th>
-                                <th>Feature</th>
-                                <th>File</th>
-                                <th>Line</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            \${findings.slice(0, 50).map(finding => \`
-                                <tr>
-                                    <td class="\${finding.verdict}">\${finding.verdict}</td>
-                                    <td>\${finding.feature?.name || 'Unknown'}</td>
-                                    <td>\${getRelativePath(finding.uri)}</td>
-                                    <td>\${finding.range?.start?.line + 1 || '?'}</td>
-                                </tr>
-                            \`).join('')}
-                        </tbody>
-                    </table>
-                </body>
-                </html>
-            \`;
-        }
 
         // Handle messages from the extension
         window.addEventListener('message', event => {
@@ -674,7 +785,7 @@ export class BaselineDetailedAnalysisProvider {
                 return;
             }
 
-            const { summary, summaryFiltered, findings, findingsCount, target, lastScanAt } = currentData;
+            const { summary, findings, findingsCount, target, lastScanAt } = currentData;
             
             const contentDiv = document.getElementById('content');
             
@@ -690,63 +801,40 @@ export class BaselineDetailedAnalysisProvider {
 
             contentDiv.innerHTML = \`
                 <div class="dashboard">
-                    <div class="card">
+                    <div class="card summary-card">
                         <h2>
                             <svg class="icon" viewBox="0 0 16 16">
                                 <path d="M0 1.5A1.5 1.5 0 0 1 1.5 0H5a1.5 1.5 0 0 1 1.5 1.5v3A1.5 1.5 0 0 1 5 6H1.5A1.5 1.5 0 0 1 0 4.5v-3zM1.5 1a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5H5a.5.5 0 0 0 .5-.5v-3A.5.5 0 0 0 5 1H1.5zm8.5.5A1.5 1.5 0 0 1 11.5 0H15a1.5 1.5 0 0 1 1.5 1.5v3A1.5 1.5 0 0 1 15 6h-3.5A1.5 1.5 0 0 1 10 4.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5H15a.5.5 0 0 0 .5-.5v-3A.5.5 0 0 0 15 1h-3.5zM0 11.5A1.5 1.5 0 0 1 1.5 10H5a1.5 1.5 0 0 1 1.5 1.5v3A1.5 1.5 0 0 1 5 16H1.5A1.5 1.5 0 0 1 0 14.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5H5a.5.5 0 0 0 .5-.5v-3A.5.5 0 0 0 5 11H1.5zm8.5.5A1.5 1.5 0 0 1 11.5 10H15a1.5 1.5 0 0 1 1.5 1.5v3A1.5 1.5 0 0 1 15 16h-3.5A1.5 1.5 0 0 1 10 14.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5H15a.5.5 0 0 0 .5-.5v-3A.5.5 0 0 0 15 11h-3.5z"/>
                             </svg>
-                            Overall Summary
+                            Analysis Summary
                         </h2>
-                        <div class="metric">
-                            <span class="metric-label">Total Findings:</span>
-                            <span class="metric-value">\${findingsCount}</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Blocked:</span>
-                            <span class="metric-value error">\${summary.blocked}</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Warning:</span>
-                            <span class="metric-value warning">\${summary.warning}</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Safe:</span>
-                            <span class="metric-value safe">\${summary.safe}</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Target:</span>
-                            <span class="metric-value">\${target?.name || 'Unknown'}</span>
-                        </div>
-                        \${lastScanAt ? \`
-                        <div class="metric">
-                            <span class="metric-label">Last Scan:</span>
-                            <span class="metric-value">\${new Date(lastScanAt).toLocaleString()}</span>
-                        </div>
-                        \` : ''}
-                    </div>
-                    
-                    <div class="card">
-                        <h2>
-                            <svg class="icon" viewBox="0 0 16 16">
-                                <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
-                            </svg>
-                            Filtered View
-                        </h2>
-                        <div class="metric">
-                            <span class="metric-label">Visible Findings:</span>
-                            <span class="metric-value">\${summaryFiltered.blocked + summaryFiltered.warning + summaryFiltered.safe}</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Blocked:</span>
-                            <span class="metric-value error">\${summaryFiltered.blocked}</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Warning:</span>
-                            <span class="metric-value warning">\${summaryFiltered.warning}</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Safe:</span>
-                            <span class="metric-value safe">\${summaryFiltered.safe}</span>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <div class="summary-item-label">Total Findings</div>
+                                <div class="summary-item-value">\${findingsCount}</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-item-label">Target</div>
+                                <div class="summary-item-value target-name">\${target?.name || 'enterprise'}</div>
+                            </div>
+                            <div class="summary-item blocked">
+                                <div class="summary-item-label">Blocked</div>
+                                <div class="summary-item-value">\${summary.blocked}</div>
+                            </div>
+                            <div class="summary-item warning">
+                                <div class="summary-item-label">Warning</div>
+                                <div class="summary-item-value">\${summary.warning}</div>
+                            </div>
+                            <div class="summary-item safe">
+                                <div class="summary-item-label">Safe</div>
+                                <div class="summary-item-value">\${summary.safe}</div>
+                            </div>
+                            \${lastScanAt ? \`
+                            <div class="summary-item">
+                                <div class="summary-item-label">Last Scan</div>
+                                <div class="summary-item-value scan-time">\${new Date(lastScanAt).toLocaleString()}</div>
+                            </div>
+                            \` : ''}
                         </div>
                     </div>
                     
@@ -782,7 +870,7 @@ export class BaselineDetailedAnalysisProvider {
                                 <path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5L9.5 0zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
                                 <path d="M4.5 6.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zM5 8.5a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1H5zm0 2a.5.5 0 0 0 0 1h2a.5.5 0 0 0 0-1H5z"/>
                             </svg>
-                            Recent Findings (Top 50)
+                            Findings by Feature (Grouped & Deduplicated)
                         </h2>
                         \${renderFindingsTable(findings.slice(0, 50))}
                     </div>
@@ -813,31 +901,50 @@ export class BaselineDetailedAnalysisProvider {
         }
 
         function renderFeatureChart(findings) {
-            // Group findings by feature
+            // Group findings by feature with severity breakdown
             const featureGroups = {};
             findings.forEach(finding => {
                 const featureName = finding.feature?.name || 'Unknown';
-                featureGroups[featureName] = (featureGroups[featureName] || 0) + 1;
+                if (!featureGroups[featureName]) {
+                    featureGroups[featureName] = { blocked: 0, warning: 0, safe: 0, total: 0 };
+                }
+                featureGroups[featureName][finding.verdict] = (featureGroups[featureName][finding.verdict] || 0) + 1;
+                featureGroups[featureName].total++;
             });
             
-            // Get top 10 features
+            // Get top 8 features (fewer for better visibility)
             const topFeatures = Object.entries(featureGroups)
-                .sort(([,a], [,b]) => b - a)
-                .slice(0, 10);
+                .sort(([,a], [,b]) => b.total - a.total)
+                .slice(0, 8);
             
             if (topFeatures.length === 0) {
                 return '<p class="empty-state">No features to display</p>';
             }
             
-            const maxCount = Math.max(...topFeatures.map(([,count]) => count), 1);
+            const maxCount = Math.max(...topFeatures.map(([,data]) => data.total), 1);
+            const colors = [
+                'var(--baseline-color-error)',
+                'var(--baseline-color-warning)', 
+                'var(--baseline-color-safe)',
+                '#8884d8',
+                '#82ca9d',
+                '#ffc658',
+                '#ff7c7c',
+                '#8dd1e1'
+            ];
             
-            return topFeatures.map(([featureName, count]) => \`
-                <div class="bar">
-                    <div class="bar-warning" style="height: \${(count / maxCount) * 150}px;"></div>
-                    <div class="bar-value">\${count}</div>
-                    <div class="bar-label">\${featureName.length > 15 ? featureName.substring(0, 12) + '...' : featureName}</div>
-                </div>
-            \`).join('');
+            return topFeatures.map(([featureName, data], index) => {
+                const color = colors[index % colors.length];
+                const displayName = featureName.length > 12 ? featureName.substring(0, 10) + '...' : featureName;
+                
+                return \`
+                    <div class="bar" title="\${featureName}: \${data.total} findings (Blocked: \${data.blocked}, Warning: \${data.warning}, Safe: \${data.safe})">
+                        <div class="bar-feature" style="height: \${(data.total / maxCount) * 150}px; background: linear-gradient(180deg, \${color} 0%, color-mix(in srgb, \${color} 80%, black) 100%); box-shadow: 0 2px 8px color-mix(in srgb, \${color} 30%, transparent);"></div>
+                        <div class="bar-value">\${data.total}</div>
+                        <div class="bar-label">\${displayName}</div>
+                    </div>
+                \`;
+            }).join('');
         }
 
         function renderFindingsTable(findings) {
@@ -845,29 +952,59 @@ export class BaselineDetailedAnalysisProvider {
                 return '<p class="empty-state">No findings to display</p>';
             }
             
+            // Group findings by feature to show counts per file
+            const groupedFindings = {};
+            findings.forEach(finding => {
+                const key = \`\${finding.feature?.name || 'Unknown'}-\${finding.verdict}\`;
+                if (!groupedFindings[key]) {
+                    groupedFindings[key] = {
+                        feature: finding.feature?.name || 'Unknown',
+                        verdict: finding.verdict,
+                        files: new Map()
+                    };
+                }
+                
+                const filePath = getRelativePath(finding.uri);
+                const lineNumber = finding.range?.start?.line !== undefined ? finding.range.start.line + 1 : null;
+                
+                if (!groupedFindings[key].files.has(filePath)) {
+                    groupedFindings[key].files.set(filePath, []);
+                }
+                
+                // Only add line numbers that are not null/N/A
+                if (lineNumber !== null) {
+                    groupedFindings[key].files.get(filePath).push(lineNumber);
+                }
+            });
+            
             return \`
                 <table class="findings-table">
                     <thead>
                         <tr>
                             <th>Severity</th>
                             <th>Feature</th>
-                            <th>File</th>
-                            <th>Line</th>
+                            <th>Files & Lines</th>
                         </tr>
                     </thead>
                     <tbody>
-                        \${findings.map(finding => \`
+                        \${Object.values(groupedFindings).map(group => \`
                             <tr>
                                 <td>
-                                    <span class="finding-severity \${finding.verdict}">\${finding.verdict}</span>
+                                    <span class="finding-severity \${group.verdict}">\${group.verdict}</span>
                                 </td>
                                 <td>
-                                    <span class="feature-name">\${finding.feature?.name || 'Unknown'}</span>
+                                    <span class="feature-name">\${group.feature}</span>
                                 </td>
                                 <td>
-                                    <span class="file-path">\${getRelativePath(finding.uri)}</span>
+                                    <div class="file-entries">
+                                        \${Array.from(group.files.entries()).map(([filePath, lines]) => \`
+                                            <div class="file-entry">
+                                                <span class="file-path">\${filePath}</span>
+                                                \${lines.length > 0 ? \`<span class="line-numbers">(lines: \${lines.join(', ')})</span>\` : ''}
+                                            </div>
+                                        \`).join('')}
+                                    </div>
                                 </td>
-                                <td>\${finding.range?.start?.line + 1 || '?'}</td>
                             </tr>
                         \`).join('')}
                     </tbody>
