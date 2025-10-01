@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as os from 'os';
+import * as path from 'path';
 import type { BaselineAnalysisViewProvider } from './analysisView';
 import type { BaselineAnalysisAssets } from './analysis/types';
 
@@ -72,6 +74,7 @@ export class BaselineDetailedAnalysisProvider {
   private static updateContent(webview: vscode.Webview, analysisProvider: BaselineAnalysisViewProvider): void {
     const summary = analysisProvider.getSummary();
     const findings = analysisProvider.getOptimizedFindings();
+    const budget = this.getBudgetSnapshot(analysisProvider, summary);
     
     // Remove duplicates based on feature name, file, and line number
     const uniqueFindings = this.removeDuplicateFindings(findings);
@@ -84,9 +87,48 @@ export class BaselineDetailedAnalysisProvider {
         findingsCount: uniqueFindings.length,
         severityFilter: Array.from(analysisProvider.getSeverityFilter()),
         target: analysisProvider.getTarget(),
-        lastScanAt: analysisProvider.getLastScanAt()
+        lastScanAt: analysisProvider.getLastScanAt(),
+        budget: budget
       }
     });
+  }
+
+  /**
+   * Get budget snapshot from analysis provider
+   */
+  private static getBudgetSnapshot(analysisProvider: any, summary: any): any {
+    // Access the budget configuration
+    const config = vscode.workspace.getConfiguration('baselineGate');
+    const sanitize = (value: unknown): number | undefined => {
+      if (typeof value !== 'number') {
+        return undefined;
+      }
+      if (!Number.isFinite(value) || value < 0) {
+        return undefined;
+      }
+      return value;
+    };
+    
+    const budgetConfig = {
+      blockedLimit: sanitize(config.get('blockedBudget')),
+      warningLimit: sanitize(config.get('warningBudget')),
+      safeGoal: sanitize(config.get('safeGoal'))
+    };
+    
+    const { blockedLimit, warningLimit, safeGoal } = budgetConfig;
+    if (blockedLimit === undefined && warningLimit === undefined && safeGoal === undefined) {
+      return null;
+    }
+    
+    return {
+      target: analysisProvider.getTarget(),
+      blockedLimit,
+      warningLimit,
+      safeLimit: safeGoal,
+      blocked: summary.blocked,
+      warning: summary.warning,
+      safe: summary.safe
+    };
   }
 
   /**
@@ -112,9 +154,14 @@ export class BaselineDetailedAnalysisProvider {
       const { format, data, filename } = message;
       
       if (format === 'csv' || format === 'json') {
-        // Save file dialog
+        // Get Downloads directory path, fallback to home directory
+        const downloadsPath = path.join(os.homedir(), 'Downloads');
+        const defaultFilename = filename || `baseline-analysis.${format}`;
+        const defaultPath = path.join(downloadsPath, defaultFilename);
+        
+        // Save file dialog with Downloads directory as default
         const saveUri = await vscode.window.showSaveDialog({
-          defaultUri: vscode.Uri.file(filename || `baseline-analysis.${format}`),
+          defaultUri: vscode.Uri.file(defaultPath),
           filters: format === 'csv' 
             ? { 'CSV files': ['csv'] }
             : { 'JSON files': ['json'] }
@@ -551,6 +598,120 @@ export class BaselineDetailedAnalysisProvider {
             padding: 40px;
             color: var(--vscode-descriptionForeground);
         }
+        
+        /* Budget Styles */
+        .budget-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 16px 0;
+        }
+        
+        .budget-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: var(--vscode-editor-background);
+            border-radius: 8px;
+            border: 1px solid var(--vscode-panel-border);
+            transition: all 0.2s ease;
+        }
+        
+        .budget-row:hover {
+            border-color: var(--vscode-focusBorder);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .budget-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+        
+        .budget-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+        }
+        
+        .budget-meter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+        
+        .budget-bar {
+            flex: 1;
+            height: 8px;
+            background: var(--vscode-input-background);
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid var(--vscode-panel-border);
+        }
+        
+        .budget-progress {
+            height: 100%;
+            transition: width 0.3s ease, background-color 0.3s ease;
+            border-radius: 3px;
+        }
+        
+        .budget-progress.blocked {
+            background: linear-gradient(90deg, var(--baseline-color-blocked) 0%, color-mix(in srgb, var(--baseline-color-blocked) 80%, white) 100%);
+        }
+        
+        .budget-progress.warning {
+            background: linear-gradient(90deg, var(--baseline-color-warning) 0%, color-mix(in srgb, var(--baseline-color-warning) 80%, white) 100%);
+        }
+        
+        .budget-progress.safe {
+            background: linear-gradient(90deg, var(--baseline-color-safe) 0%, color-mix(in srgb, var(--baseline-color-safe) 80%, white) 100%);
+        }
+        
+        .budget-text {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--vscode-descriptionForeground);
+            min-width: 60px;
+            text-align: right;
+        }
+        
+        .budget-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .budget-status.over-budget {
+            background: color-mix(in srgb, var(--baseline-color-blocked) 20%, transparent);
+            color: var(--baseline-color-blocked);
+            border: 1px solid color-mix(in srgb, var(--baseline-color-blocked) 30%, transparent);
+        }
+        
+        .budget-status.under-goal {
+            background: color-mix(in srgb, var(--baseline-color-warning) 20%, transparent);
+            color: var(--baseline-color-warning);
+            border: 1px solid color-mix(in srgb, var(--baseline-color-warning) 30%, transparent);
+        }
+        
+        .budget-status.on-track {
+            background: color-mix(in srgb, var(--baseline-color-safe) 20%, transparent);
+            color: var(--baseline-color-safe);
+            border: 1px solid color-mix(in srgb, var(--baseline-color-safe) 30%, transparent);
+        }
+        
+        .budget-icon {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
@@ -785,7 +946,7 @@ export class BaselineDetailedAnalysisProvider {
                 return;
             }
 
-            const { summary, findings, findingsCount, target, lastScanAt } = currentData;
+            const { summary, findings, findingsCount, target, lastScanAt, budget } = currentData;
             
             const contentDiv = document.getElementById('content');
             
@@ -859,6 +1020,19 @@ export class BaselineDetailedAnalysisProvider {
                         </h2>
                         <div class="chart-container">
                             \${renderFeatureChart(findings)}
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h2>
+                            <svg class="icon" viewBox="0 0 16 16">
+                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                <path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/>
+                            </svg>
+                            Baseline Budgets
+                        </h2>
+                        <div class="budget-container">
+                            \${renderBudgetCard(budget)}
                         </div>
                     </div>
                 </div>
@@ -942,6 +1116,94 @@ export class BaselineDetailedAnalysisProvider {
                         <div class="bar-feature" style="height: \${(data.total / maxCount) * 150}px; background: linear-gradient(180deg, \${color} 0%, color-mix(in srgb, \${color} 80%, black) 100%); box-shadow: 0 2px 8px color-mix(in srgb, \${color} 30%, transparent);"></div>
                         <div class="bar-value">\${data.total}</div>
                         <div class="bar-label">\${displayName}</div>
+                    </div>
+                \`;
+            }).join('');
+        }
+
+        function renderBudgetCard(budget) {
+            if (!budget) {
+                return '<p class="chart-empty">No budgets configured.<br><span class="settings-hint">Set budgets in the Baseline Gate settings to start tracking progress.</span></p>';
+            }
+
+            const metrics = [
+                {
+                    key: 'blocked',
+                    label: 'Blocked',
+                    actual: budget.blocked,
+                    limit: budget.blockedLimit ?? 0,
+                    variant: 'blocked',
+                    type: 'max'
+                },
+                {
+                    key: 'warning',
+                    label: 'Needs Review',
+                    actual: budget.warning,
+                    limit: budget.warningLimit,
+                    variant: 'warning',
+                    type: 'max'
+                },
+                {
+                    key: 'safe',
+                    label: 'Wins',
+                    actual: budget.safe,
+                    limit: budget.safeLimit,
+                    variant: 'safe',
+                    type: 'min'
+                }
+            ];
+
+            return metrics.map(metric => {
+                let statusText = '';
+                let overBudget = false;
+                let underGoal = false;
+
+                if (metric.type === 'max') {
+                    if (metric.limit === undefined) {
+                        statusText = metric.actual + ' findings (no limit)';
+                    } else {
+                        statusText = metric.actual + ' of ' + metric.limit + ' allowed';
+                        if (metric.actual > metric.limit) {
+                            overBudget = true;
+                        }
+                    }
+                } else {
+                    if (metric.limit === undefined || metric.limit === 0) {
+                        statusText = metric.actual + ' safe findings';
+                    } else {
+                        statusText = metric.actual + ' of ' + metric.limit + ' goal';
+                        if (metric.actual < metric.limit) {
+                            underGoal = true;
+                        }
+                    }
+                }
+
+                let ratio = 0;
+                if (metric.type === 'max') {
+                    if (metric.limit !== undefined && metric.limit > 0) {
+                        ratio = Math.min(100, (metric.actual / metric.limit) * 100);
+                    } else if (metric.actual > 0) {
+                        ratio = 100;
+                    }
+                } else if (metric.limit && metric.limit > 0) {
+                    ratio = Math.min(100, (metric.actual / metric.limit) * 100);
+                } else if (metric.actual > 0) {
+                    ratio = 100;
+                }
+
+                const statusClass = overBudget ? 'over-limit' : underGoal ? 'under-goal' : 'on-track';
+                const statusLabel = overBudget ? 'Over Budget' : underGoal ? 'Below Goal' : 'On Track';
+
+                return \`
+                    <div class="budget-row \${statusClass}" title="\${statusText}">
+                        <div class="budget-label">\${metric.label}</div>
+                        <div class="budget-status">\${statusLabel}</div>
+                        <div class="budget-meter">
+                            <div class="budget-meter-track">
+                                <span class="budget-meter-fill \${metric.variant}" style="width: \${ratio}%"></span>
+                            </div>
+                            <div class="budget-meter-text">\${statusText}</div>
+                        </div>
                     </div>
                 \`;
             }).join('');
