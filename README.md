@@ -30,8 +30,16 @@ BaselineGate surfaces Baseline browser support data directly inside VS Code so y
 - **Status & storage guardrails** – Track the active target in the status bar, keep findings and chat history under `.baseline-gate/`, and reset everything safely with one confirmation.
 
 ## Screenshots
-![Baseline analysis dashboard](media/screenshots/analysis-view.png)
-![Finding detail with Gemini guidance](media/screenshots/detail-view.png)
+![Scan view and previous conversations](media/screenshots/1.png)
+![Baseline Insights - Detailed Analysis](media/screenshots/2.png)
+![Gemini Suggestions History](media/screenshots/3.png)
+![Baseline Insights & User Guidance](media/screenshots/4.png)
+![Settings](media/screenshots/5.png)
+![Detail View of Findings](media/screenshots/6.png)
+![Browser Support for both desktop and mobile](media/screenshots/7.png)
+![Hovering over a code and get insights](media/screenshots/8.png)
+![View Gemini Suggestions as a result of LLM prompt](media/screenshots/9.png)
+![Fix with Gemini action](media/screenshots/10.png)
 
 ## Getting Started
 1. **Prerequisites**

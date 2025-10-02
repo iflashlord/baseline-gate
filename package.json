@@ -38,12 +38,44 @@
   ],
   "screenshots": [
     {
-      "path": "media/screenshots/analysis-view.png",
-      "caption": "Baseline analysis dashboard summarising findings and quick Gemini actions"
+      "path": "https://github.com/iflashlord/baseline-gate/media/screenshots/1.png",
+      "caption": "Scan view and previous conversations"
     },
     {
-      "path": "media/screenshots/detail-view.png",
-      "caption": "Detailed finding view with support matrix and Gemini remediation guidance"
+      "path": "https://github.com/iflashlord/baseline-gate/media/screenshots/2.png",
+      "caption": "Baseline Insights - Detailed Analysis"
+    },
+    {
+      "path": "https://github.com/iflashlord/baseline-gate/media/screenshots/3.png",
+      "caption": "Gemini Suggestions History"
+    },
+    {
+      "path": "https://github.com/iflashlord/baseline-gate/media/screenshots/4.png",
+      "caption": "Baseline Insights & User Guidance"
+    },
+    {
+      "path": "https://github.com/iflashlord/baseline-gate/media/screenshots/5.png",
+      "caption": "Settings"
+    },
+    {
+      "path": "https://github.com/iflashlord/baseline-gate/media/screenshots/6.png",
+      "caption": "Detail View of Findings"
+    },
+    {
+      "path": "https://github.com/iflashlord/baseline-gate/media/screenshots/7.png",
+      "caption": "Browser Support for both desktop and mobile"
+    },
+    {
+      "path": "https://github.com/iflashlord/baseline-gate/media/screenshots/8.png",
+      "caption": "Hovering over a code and get insights"
+    },
+    {
+      "path": "https://github.com/iflashlord/baseline-gate/media/screenshots/9.png",
+      "caption": "View Gemini Suggestions as a result of LLM prompt"
+    },
+    {
+      "path": "https://github.com/iflashlord/baseline-gate/media/screenshots/10.png",
+      "caption": "Fix with Gemini action"
     }
   ],
   "activationEvents": [
