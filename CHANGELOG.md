@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Released]
 
 ### Added
 - **Factory Reset Feature**: New "Reset BaselineGate to Factory Settings" command
@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Settings button in sidebar now shows a submenu instead of directly opening settings
 - Improved user experience for accessing settings and reset functionality
 
-## [0.1.0] - 2025-10-03
+## [0.0.10] - 2025-10-02
 ### Added
 - Baseline-aware hover providers for JavaScript, TypeScript, CSS, SCSS, and React variants, including browser support tables and fallback guidance.
 - Activity bar **Baseline Gate** view container with analysis dashboard that summarises findings by severity, file, and feature.
@@ -41,4 +41,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Ensured `pnpm test` runs linting, compilation, and the VS Code integration harness without warnings.
 
-[0.1.0]: https://github.com/iflashlord/baseline-gate/releases/tag/v0.1.0
+[0.0.10]: https://github.com/iflashlord/baseline-gate/releases/tag/v0.0.10
