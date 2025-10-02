@@ -81,16 +81,18 @@ export function buildFeatureHover(
   md.appendMarkdown(`---\n\n`);
   const hoverContent = buildHoverContentForGemini(feature, verdict, target);
   
-  // Check if there are existing suggestions for this feature/finding
-  const hasExistingSuggestions = options.geminiProvider && options.findingId 
-    ? options.geminiProvider.hasSuggestionForFinding(options.findingId)
+  // Check if there are existing suggestions for this feature (use featureId instead of findingId)
+  const hasExistingSuggestions = options.geminiProvider 
+    ? options.geminiProvider.hasSuggestionForFeature(feature.id)
     : false;
 
   // Always show "Fix with Gemini" button first - now works like chat interface
+  // Use findingId if available, otherwise use a feature-based fallback
+  const findingId = options.findingId || `feature::${feature.id}`;
   const geminiCommand = `command:baseline-gate.startGeminiChat?${encodeURIComponent(JSON.stringify({
     initialPrompt: "Fix with Gemini",
     feature: feature.name,
-    findingId: options.findingId,
+    findingId: findingId,
     context: 'hover',
     hoverContent: hoverContent
   }))}`;
@@ -100,7 +102,7 @@ export function buildFeatureHover(
   if (hasExistingSuggestions) {
     // Show "View Suggestions" button for existing suggestions after Fix with Gemini
     const viewSuggestionsCommand = `command:baseline-gate.showGeminiSuggestions?${encodeURIComponent(JSON.stringify({
-      findingId: options.findingId,
+      featureId: feature.id,
       feature: feature.name
     }))}`;
     md.appendMarkdown(` | [$(eye) View Existing Suggestions](${viewSuggestionsCommand})`);

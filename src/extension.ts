@@ -9,6 +9,7 @@ import { BaselineDetailViewProvider } from './sidebar/detailView/index';
 import { BaselineDetailedAnalysisProvider } from './sidebar/detailedAnalysisView';
 import type { BaselineAnalysisAssets } from './sidebar/analysis/types';
 import { computeFindingId } from './sidebar/analysis/dataTransformation';
+import type { BaselineFinding } from './sidebar/workspaceScanner';
 import { GeminiViewProvider } from './gemini/geminiViewProvider';
 import { GeminiFullViewProvider } from './gemini/geminiFullViewProvider';
 import type { Target } from './core/targets';
@@ -47,8 +48,8 @@ export function activate(context: vscode.ExtensionContext) {
   const geminiProvider = new GeminiViewProvider(context);
 
   // Register hover providers with gemini integration
-  registerJsHover(context, target, geminiProvider);
-  registerCssHover(context, target, geminiProvider);
+  let jsHoverRegistration = registerJsHover(context, target, geminiProvider);
+  let cssHoverRegistration = registerCssHover(context, target, geminiProvider);
 
   const analysisProvider = new BaselineAnalysisViewProvider(context, target, panelAssets, geminiProvider);
   context.subscriptions.push(analysisProvider.register());
@@ -350,6 +351,23 @@ export function activate(context: vscode.ExtensionContext) {
         } catch (error) {
           console.warn('Failed to parse findingId for hover context:', error);
         }
+      } else if (parts.length === 2 && parts[0] === 'feature') {
+        // Handle fallback format: feature::${feature.id}
+        const featureId = parts[1];
+        const feature = getFeatureById(featureId);
+        if (feature) {
+          // Create a synthetic finding for this feature-only context
+          const verdict = scoreFeature(feature.support, target);
+          finding = {
+            id: args.findingId,
+            uri: vscode.Uri.parse('untitled:untitled'), // Placeholder URI
+            range: new vscode.Range(0, 0, 0, 0), // Placeholder range
+            feature,
+            verdict,
+            token: args.feature || feature.name, // Use feature name as token
+            lineText: '' // Will be empty for synthetic findings
+          };
+        }
       }
     }
     
@@ -364,6 +382,8 @@ export function activate(context: vscode.ExtensionContext) {
       const parts = args.findingId.split('::');
       if (parts.length === 4) {
         featureId = parts[1]; // featureId is the second part
+      } else if (parts.length === 2 && parts[0] === 'feature') {
+        featureId = parts[1]; // Handle fallback format: feature::${feature.id}
       }
     }
     
@@ -468,15 +488,42 @@ Context: This is a follow-up question about fixing a baseline compatibility issu
   });
   context.subscriptions.push(goToFinding);
 
-  const showGeminiSuggestions = vscode.commands.registerCommand('baseline-gate.showGeminiSuggestions', async (args?: { findingId: string; feature?: string }) => {
-    if (!args || !args.findingId) {
-      void vscode.window.showErrorMessage('No finding ID provided for Gemini suggestions.');
+  const showGeminiSuggestions = vscode.commands.registerCommand('baseline-gate.showGeminiSuggestions', async (args?: { findingId?: string; featureId?: string; feature?: string }) => {
+    if (!args || (!args.findingId && !args.featureId)) {
+      void vscode.window.showErrorMessage('No finding ID or feature ID provided for Gemini suggestions.');
       return;
     }
     
     // Try to find the finding from analysisProvider
     const findings = analysisProvider.getAllFindings();
-    let finding = findings.find(f => computeFindingId(f) === args.findingId);
+    let finding: BaselineFinding | undefined;
+    
+    // If we have a findingId, try to find by that first
+    if (args.findingId) {
+      finding = findings.find(f => computeFindingId(f) === args.findingId);
+    }
+    
+    // If no finding yet and we have a featureId, find the first finding with that feature
+    if (!finding && args.featureId) {
+      finding = findings.find(f => f.feature.id === args.featureId);
+      
+      // If still no finding, create a synthetic one for this feature
+      if (!finding) {
+        const feature = getFeatureById(args.featureId);
+        if (feature) {
+          const verdict = scoreFeature(feature.support, target);
+          finding = {
+            id: `feature::${args.featureId}`,
+            uri: vscode.Uri.parse('untitled:untitled'),
+            range: new vscode.Range(0, 0, 0, 0),
+            feature,
+            verdict,
+            token: args.feature || feature.name,
+            lineText: ''
+          };
+        }
+      }
+    }
     
     // If we can't find an exact match, check if this is a hover-triggered request
     // In that case, we can work with the feature information we have
@@ -509,6 +556,22 @@ Context: This is a follow-up question about fixing a baseline compatibility issu
           }
         } catch (error) {
           console.warn('Failed to parse findingId for hover context:', error);
+        }
+      } else if (parts.length === 2 && parts[0] === 'feature') {
+        // Handle fallback format: feature::${feature.id}
+        const featureId = parts[1];
+        const feature = getFeatureById(featureId);
+        if (feature) {
+          const verdict = scoreFeature(feature.support, target);
+          finding = {
+            id: args.findingId,
+            uri: vscode.Uri.parse('untitled:untitled'),
+            range: new vscode.Range(0, 0, 0, 0),
+            feature,
+            verdict,
+            token: args.feature || feature.name,
+            lineText: ''
+          };
         }
       }
     }
@@ -560,9 +623,11 @@ Context: This is a follow-up question about fixing a baseline compatibility issu
       target = readConfiguredTarget();
       updateStatus();
       analysisProvider.setTarget(target);
-      // Re-register hover providers with new target (note: this will duplicate registrations, but VS Code handles it)
-      registerJsHover(context, target, geminiProvider);
-      registerCssHover(context, target, geminiProvider);
+      // Re-register hover providers with updated target, disposing old registrations to avoid duplicates
+      jsHoverRegistration.dispose();
+      cssHoverRegistration.dispose();
+      jsHoverRegistration = registerJsHover(context, target, geminiProvider);
+      cssHoverRegistration = registerCssHover(context, target, geminiProvider);
     }
     
     if (event.affectsConfiguration('baselineGate.showDesktopBrowsers') || 

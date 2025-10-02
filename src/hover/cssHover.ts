@@ -10,7 +10,7 @@ export function registerCssHover(
   context: vscode.ExtensionContext, 
   target: Target, 
   geminiProvider?: import('../gemini/geminiViewProvider').GeminiViewProvider
-) {
+): vscode.Disposable {
   const assetsRoot = vscode.Uri.joinPath(context.extensionUri, "media", "baseline");
   const provider: vscode.HoverProvider = {
     provideHover(doc, position) {
@@ -44,7 +44,11 @@ export function registerCssHover(
     }
   };
 
-  context.subscriptions.push(
-    vscode.languages.registerHoverProvider([{ language: "css" }, { language: "scss" }], provider)
-  );
+  const disposable = vscode.languages.registerHoverProvider([
+    { language: "css" },
+    { language: "scss" }
+  ], provider);
+
+  context.subscriptions.push(disposable);
+  return disposable;
 }

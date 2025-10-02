@@ -2,24 +2,16 @@ import * as vscode from 'vscode';
 
 export const STORAGE_DIR_NAME = '.baseline-gate';
 
-async function ensureStorageDirectory(): Promise<vscode.Uri | undefined> {
+function getStorageDirectoryUri(): vscode.Uri | undefined {
   const [folder] = vscode.workspace.workspaceFolders ?? [];
   if (!folder) {
     return undefined;
   }
-
-  const storageDir = vscode.Uri.joinPath(folder.uri, STORAGE_DIR_NAME);
-  try {
-    await vscode.workspace.fs.createDirectory(storageDir);
-    return storageDir;
-  } catch (error) {
-    console.warn('[baseline-gate] Failed to ensure storage directory:', error);
-    return undefined;
-  }
+  return vscode.Uri.joinPath(folder.uri, STORAGE_DIR_NAME);
 }
 
 export async function readStorageJson<T>(filename: string): Promise<T | undefined> {
-  const storageDir = await ensureStorageDirectory();
+  const storageDir = getStorageDirectoryUri();
   if (!storageDir) {
     return undefined;
   }
@@ -39,8 +31,15 @@ export async function readStorageJson<T>(filename: string): Promise<T | undefine
 }
 
 export async function writeStorageJson<T>(filename: string, data: T): Promise<void> {
-  const storageDir = await ensureStorageDirectory();
+  const storageDir = getStorageDirectoryUri();
   if (!storageDir) {
+    return;
+  }
+
+  try {
+    await vscode.workspace.fs.createDirectory(storageDir);
+  } catch (error) {
+    console.warn('[baseline-gate] Failed to prepare storage directory:', error);
     return;
   }
 
@@ -54,7 +53,7 @@ export async function writeStorageJson<T>(filename: string, data: T): Promise<vo
 }
 
 export async function deleteStorageFile(filename: string): Promise<void> {
-  const storageDir = await ensureStorageDirectory();
+  const storageDir = getStorageDirectoryUri();
   if (!storageDir) {
     return;
   }
@@ -72,12 +71,11 @@ export async function deleteStorageFile(filename: string): Promise<void> {
 }
 
 export async function storageDirectoryExists(): Promise<boolean> {
-  const [folder] = vscode.workspace.workspaceFolders ?? [];
-  if (!folder) {
+  const storageDir = getStorageDirectoryUri();
+  if (!storageDir) {
     return false;
   }
 
-  const storageDir = vscode.Uri.joinPath(folder.uri, STORAGE_DIR_NAME);
   try {
     await vscode.workspace.fs.stat(storageDir);
     return true;
@@ -87,12 +85,11 @@ export async function storageDirectoryExists(): Promise<boolean> {
 }
 
 export async function clearStorageDirectory(): Promise<void> {
-  const [folder] = vscode.workspace.workspaceFolders ?? [];
-  if (!folder) {
+  const storageDir = getStorageDirectoryUri();
+  if (!storageDir) {
     return;
   }
 
-  const storageDir = vscode.Uri.joinPath(folder.uri, STORAGE_DIR_NAME);
   try {
     await vscode.workspace.fs.delete(storageDir, { recursive: true });
   } catch (error) {

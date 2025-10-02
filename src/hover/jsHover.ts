@@ -10,7 +10,7 @@ export function registerJsHover(
   context: vscode.ExtensionContext, 
   target: Target, 
   geminiProvider?: import('../gemini/geminiViewProvider').GeminiViewProvider
-) {
+): vscode.Disposable {
   const assetsRoot = vscode.Uri.joinPath(context.extensionUri, "media", "baseline");
   const provider: vscode.HoverProvider = {
     provideHover(doc, position) {
@@ -44,15 +44,16 @@ export function registerJsHover(
     }
   };
 
-  context.subscriptions.push(
-    vscode.languages.registerHoverProvider(
-      [
-        { language: "javascript" },
-        { language: "typescript" },
-        { language: "javascriptreact" },
-        { language: "typescriptreact" }
-      ],
-      provider
-    )
+  const disposable = vscode.languages.registerHoverProvider(
+    [
+      { language: "javascript" },
+      { language: "typescript" },
+      { language: "javascriptreact" },
+      { language: "typescriptreact" }
+    ],
+    provider
   );
+
+  context.subscriptions.push(disposable);
+  return disposable;
 }
