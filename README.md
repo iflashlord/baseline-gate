@@ -47,13 +47,14 @@ BaselineGate surfaces Baseline browser support data directly inside VS Code so y
    - Choose **Run Extension** and press **F5**. VS Code compiles with webpack watch mode and opens an Extension Development Host.
 
 ## Using BaselineGate
-1. **Hover over APIs/selectors** – Type `Promise.any`, `URL.canParse`, `:has(...)`, or `@container` and hover to see Baseline badges with desktop/mobile breakdowns and quick links into Gemini.
-2. **Run a workspace scan** – Execute `Baseline Gate: Scan Workspace` from the command palette. The analysis view updates counts, budgets, and the status bar target indicator.
-3. **Triage findings** – Search by token or file, toggle severities, group similar issues, and switch between severity-first vs file order to focus remediation work.
-4. **Open the Insights overlay** – Use the **Insights** button to review scan history, top feature groups, and how close you are to blocked/warning/safe budgets.
-5. **Drill into details & Gemini** – Select any finding to open the detail panel with support matrices, code insights, and controls for **Fix with Gemini** or **Start Gemini Chat**.
-6. **Launch the detailed analysis view** – Click the graph icon in the sidebar title bar or run `Baseline Gate: Detailed Analysis` for a full-page dashboard with charts, sortable tables, and export options.
-7. **Manage settings & reset** – Use the settings menu to jump into VS Code settings or trigger the factory reset workflow that clears `.baseline-gate` data and restores defaults after confirmation.
+1. **📖 New to BaselineGate?** – Click the book icon (📖) in the sidebar or run `Baseline Gate: User Guide` to open an interactive, step-by-step guide covering all features, Gemini AI setup, configuration settings, and troubleshooting tips.
+2. **Hover over APIs/selectors** – Type `Promise.any`, `URL.canParse`, `:has(...)`, or `@container` and hover to see Baseline badges with desktop/mobile breakdowns and quick links into Gemini.
+3. **Run a workspace scan** – Execute `Baseline Gate: Scan Workspace` from the command palette. The analysis view updates counts, budgets, and the status bar target indicator.
+4. **Triage findings** – Search by token or file, toggle severities, group similar issues, and switch between severity-first vs file order to focus remediation work.
+5. **Open the Insights overlay** – Use the **Insights** button to review scan history, top feature groups, and how close you are to blocked/warning/safe budgets.
+6. **Drill into details & Gemini** – Select any finding to open the detail panel with support matrices, code insights, and controls for **Fix with Gemini** or **Start Gemini Chat**.
+7. **Launch the detailed analysis view** – Click the graph icon in the sidebar title bar or run `Baseline Gate: Detailed Analysis` for a full-page dashboard with charts, sortable tables, and export options.
+8. **Manage settings & reset** – Use the settings menu to jump into VS Code settings or trigger the factory reset workflow that clears `.baseline-gate` data and restores defaults after confirmation.
 
 ## Managing Data & Resets
 - **Workspace storage**: Scans, Gemini chats, filters, and settings snapshots live under `.baseline-gate/` so history travels with the repository.
@@ -70,6 +71,7 @@ BaselineGate surfaces Baseline browser support data directly inside VS Code so y
 | `Baseline Gate: Clear Filters` | `baseline-gate.clearFilters` | Reset search, severity filters, grouping, and sort order. |
 | `Baseline Gate: Toggle Sort Order` | `baseline-gate.toggleSortOrder` | Swap between severity-first and file-order sorting. |
 | `Baseline Gate: Open Settings` | `baseline-gate.openSettings` | Jump straight to the BaselineGate section in VS Code settings. |
+| `Baseline Gate: User Guide` | `baseline-gate.openGuide` | Open the comprehensive user guide with step-by-step instructions and feature documentation. |
 | `Baseline Gate: Detailed Analysis` | `baseline-gate.openInsights` | Open the full-page dashboard with charts, tables, and export actions. |
 | `Start Gemini Chat` | `baseline-gate.startGeminiChat` | Begin a threaded AI conversation scoped to the selected finding or hover context. |
 | `Fix with Gemini` | `baseline-gate.askGemini` | Send the current issue context to Gemini and append the response to the chat thread. |

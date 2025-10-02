@@ -7,6 +7,7 @@ import { getFeatureById } from './core/baselineData';
 import { BaselineAnalysisViewProvider } from './sidebar/analysisView';
 import { BaselineDetailViewProvider } from './sidebar/detailView/index';
 import { BaselineDetailedAnalysisProvider } from './sidebar/detailedAnalysisView';
+import { BaselineGuideViewProvider } from './sidebar/guideView';
 import type { BaselineAnalysisAssets } from './sidebar/analysis/types';
 import { computeFindingId } from './sidebar/analysis/dataTransformation';
 import type { BaselineFinding } from './sidebar/workspaceScanner';
@@ -223,6 +224,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.executeCommand('workbench.action.openSettings', 'baselineGate');
   });
   context.subscriptions.push(openSettings);
+
+  // Register Guide View Command
+  const openGuide = vscode.commands.registerCommand('baseline-gate.openGuide', () => {
+    BaselineGuideViewProvider.createOrShow(context.extensionUri);
+  });
+  context.subscriptions.push(openGuide);
 
   const openInsights = vscode.commands.registerCommand('baseline-gate.openInsights', () => {
     BaselineDetailedAnalysisProvider.createOrShow(context, analysisProvider, panelAssets);

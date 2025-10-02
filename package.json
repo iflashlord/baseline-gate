@@ -83,6 +83,11 @@
         "icon": "$(settings-gear)"
       },
       {
+        "command": "baseline-gate.openGuide",
+        "title": "Baseline Gate: User Guide",
+        "icon": "$(book)"
+      },
+      {
         "command": "baseline-gate.openInsights",
         "title": "Baseline Gate: Detailed Analysis",
         "icon": "$(graph)"
@@ -212,6 +217,10 @@
           "group": "1_settings@1"
         },
         {
+          "command": "baseline-gate.openGuide",
+          "group": "1_settings@2"
+        },
+        {
           "command": "baseline-gate.resetToFactory",
           "group": "2_reset@1"
         }
@@ -224,16 +233,22 @@
           "icon": "$(history)"
         },
         {
-          "submenu": "baseline-gate.settings",
-          "when": "view == baselineGate.analysisView",
-          "group": "navigation@2",
-          "icon": "$(settings-gear)"
-        },
-        {
           "command": "baseline-gate.openInsights",
           "when": "view == baselineGate.analysisView",
           "group": "navigation@1.5",
           "icon": "$(graph)"
+        },
+        {
+          "command": "baseline-gate.openGuide",
+          "when": "view == baselineGate.analysisView",
+          "group": "navigation@1.7",
+          "icon": "$(book)"
+        },
+        {
+          "submenu": "baseline-gate.settings",
+          "when": "view == baselineGate.analysisView",
+          "group": "navigation@2",
+          "icon": "$(settings-gear)"
         }
       ]
     }
